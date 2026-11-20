@@ -1,0 +1,1580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HackGpt</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#080d08;--panel:#111a0f;--line:#364e26;--lime:#baff56;--muted:#a0b38c;--paper:#e7f3da;
+  --scene-top:#1c2b14;--scene-bottom:#080c08;--glow:#75b02b22;--scrim:#000a;
+  --mine:#182411;--selection:#263d19;--disabled:#889578;
+  --primary-bg:#baff56;--primary-text:#080d08;
+  --danger:#ff665d;--warning:#ffc4b6;--danger-panel:#3b211e;--danger-line:#8b4940;
+  --chat-font-size:16px;
+  font-family:"Courier New",monospace;
+}
+:root[data-theme="light"]{
+  color-scheme:light;
+  --ink:#fff;--panel:#f6f9f3;--line:#a5b79a;--lime:#315c16;--muted:#4d6245;--paper:#152411;
+  --scene-top:#fafff7;--scene-bottom:#e7eee3;--glow:#2e5d1e22;--scrim:#21301d66;
+  --mine:#e6f4da;--selection:#e1f0d5;--disabled:#667762;
+  --primary-bg:#bde98d;--primary-text:#182b0c;
+  --danger:#ad3028;--warning:#8b342a;--danger-panel:#fae8e4;--danger-line:#b95d52;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse at top,var(--scene-top),var(--scene-bottom) 65%);color:var(--paper)}
+main{width:min(100%,414px);height:min(820px,100vh);height:min(820px,100dvh);min-height:380px;background:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 0 42px var(--glow);padding:20px;display:flex;flex-direction:column}
+#composer{display:flex;align-items:center;gap:8px;justify-content:space-between}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--lime);border-radius:4px;min-height:44px;padding:7px 12px;font:inherit;font-size:13px;font-weight:bold}
+.send,.icon{width:44px;padding:0;font-size:20px}
+header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
+.header-actions{display:flex;align-items:center;gap:2px}
+.icon{display:grid;place-items:center;height:44px;line-height:1;border:0;background:transparent;font-family:"Segoe UI Symbol","Courier New",monospace}
+button:disabled{cursor:default;color:var(--disabled)}
+.primary{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
+small{font-size:12px;color:var(--muted)}
+#reset{color:var(--lime)}
+#reset::before,#new-provider::before{
+  content:"";
+  width:18px;
+  height:18px;
+  background:linear-gradient(currentColor,currentColor) center/18px 2px no-repeat,
+             linear-gradient(currentColor,currentColor) center/2px 18px no-repeat;
+}
+#provider::before{
+  content:"";
+  width:18px;
+  height:18px;
+  background:radial-gradient(circle,transparent 3px,currentColor 3.5px);
+  clip-path:polygon(85.1% 35.5%, 87.4% 43.4%, 98.3% 41.5%, 98.3% 58.5%, 87.4% 56.6%, 85.1% 64.5%, 85.1% 64.5%, 81.1% 71.8%, 90.1% 78.1%, 78.1% 90.1%, 71.8% 81.1%, 64.5% 85.1%, 64.5% 85.1%, 56.6% 87.4%, 58.5% 98.3%, 41.5% 98.3%, 43.4% 87.4%, 35.5% 85.1%, 35.5% 85.1%, 28.2% 81.1%, 21.9% 90.1%, 9.9% 78.1%, 18.9% 71.8%, 14.9% 64.5%, 14.9% 64.5%, 12.6% 56.6%, 1.7% 58.5%, 1.7% 41.5%, 12.6% 43.4%, 14.9% 35.5%, 14.9% 35.5%, 18.9% 28.2%, 9.9% 21.9%, 21.9% 9.9%, 28.2% 18.9%, 35.5% 14.9%, 35.5% 14.9%, 43.4% 12.6%, 41.5% 1.7%, 58.5% 1.7%, 56.6% 12.6%, 64.5% 14.9%, 64.5% 14.9%, 71.8% 18.9%, 78.1% 9.9%, 90.1% 21.9%, 81.1% 28.2%, 85.1% 35.5%);
+}
+article small{color:var(--lime)}
+#messages{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0}
+h2{font-size:20px;margin:4px 0}
+p{overflow-wrap:anywhere}
+canvas{max-width:100%;height:auto}
+article{background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:4px}
+article.mine{background:var(--mine)}
+article p{margin:6px 0 0;white-space:pre-wrap}
+#composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);padding:5px;border-radius:4px}
+textarea{resize:vertical;min-width:0;max-height:110px;flex:1;border:0;padding:9px;background:transparent;color:var(--paper);font:inherit}
+textarea::placeholder{color:var(--muted)}
+dialog{width:min(390px,calc(100% - 24px));background:var(--panel);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px}
+dialog::backdrop{background:var(--scrim)}
+#model-button::before{
+  content:"";
+  width:18px;
+  height:14px;
+  border:2px solid currentColor;
+  border-radius:3px;
+  box-shadow:inset 0 0 0 2px var(--ink);
+  background:repeating-linear-gradient(to bottom,transparent 0 3px,currentColor 3px 4px);
+}
+#model-list{display:grid;gap:8px;max-height:55vh;max-height:55dvh;overflow:auto}
+#model-list button{text-align:left}
+#model-list button[aria-pressed="true"]{border-color:var(--lime);background:var(--selection)}
+#demo-status{overflow-wrap:anywhere}
+#history-button::before{
+  content:"";
+  width:18px;
+  height:18px;
+  border:2px solid currentColor;
+  border-radius:50%;
+  background:linear-gradient(currentColor,currentColor) 50% 3px/2px 5px no-repeat,
+             linear-gradient(currentColor,currentColor) 6px 7px/5px 2px no-repeat;
+}
+#history-list{
+  max-height:min(75dvh,560px);
+  overflow-y:auto;
+  margin:0 -12px 0 0;
+  padding-right:14px;
+  overscroll-behavior:contain;
+  scrollbar-width:none;
+}
+.swipe-row{position:relative;overflow:hidden;margin:6px 0;border-radius:4px}
+.swipe-button{position:relative;display:block;width:100%;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:pan-y;user-select:none;transform:translateX(var(--swipe-x,0px));transition:transform 140ms ease}
+.swipe-row.dragging .swipe-button{transition:none}
+.swipe-button:focus-visible{outline-offset:-3px}
+.swipe-cue{position:absolute;inset:0;display:none;align-items:center;padding:0 14px;font:20px "Segoe UI Symbol",sans-serif}
+.rename-cue{background:var(--selection);color:var(--lime)}
+.delete-cue{justify-content:flex-end;background:var(--danger-panel);color:var(--warning)}
+.swipe-row[data-swipe="right"] .rename-cue,.swipe-row[data-swipe="left"] .delete-cue{display:flex}
+@media(prefers-reduced-motion:reduce){.swipe-button{transition:none}}
+.swipe-button[aria-current="true"]{border-color:var(--lime)}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+#chat-title{width:100%;padding:10px;font:inherit;background:var(--ink);color:var(--paper);border:1px solid var(--line)}
+#history-status{color:var(--muted);font-size:12px}
+#history-status:empty{display:none}
+@media(max-width:440px){main{border-radius:0;border:0}}
+#settings label{display:block;margin-top:12px;color:var(--muted);font-size:13px}
+#settings input,#settings select,#model-search,#history-search{width:100%;min-height:40px;margin:5px 0;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--ink);color:var(--paper);font:inherit}
+.provider-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.provider-actions>button{min-width:0;min-height:44px;padding:5px;overflow-wrap:anywhere}
+.provider-actions.is-connected{grid-template-columns:repeat(4,minmax(0,1fr))}
+#disconnect-provider[hidden]{display:none}
+.disconnect-icon{position:relative;width:20px;height:20px;display:grid;place-items:center}
+.disconnect-icon .connect-icon{transform:rotate(-30deg)}
+.disconnect-icon::after{content:"";position:absolute;width:21px;height:2px;background:currentColor;box-shadow:0 1px var(--panel);transform:rotate(-45deg)}
+.saved-providers[hidden]{display:none}
+#provider-status{color:var(--muted);font-size:13px;margin:10px 0}
+#model-list small{display:block;margin-top:4px;font-weight:normal}
+#model-search{margin-bottom:10px}
+#chat-error{color:var(--warning);margin:5px 0}
+#provider-models{margin:10px 0 0;padding:0;min-width:0;border:0}
+#provider-model-list{max-height:min(28vh,230px);max-height:min(28dvh,230px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+#settings .provider-model-row{display:flex;align-items:center;gap:10px;min-height:42px;margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:4px;color:var(--paper);overflow-wrap:anywhere;cursor:pointer}
+#settings .provider-model-row input{width:16px;height:16px;min-height:0;margin:0;flex:none;accent-color:var(--lime)}
+#provider-model-list p{font-size:13px;color:var(--muted)}
+.key-field,.url-field,.name-field,.provider-field{position:relative;min-width:0}
+.provider-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+#provider-type{text-overflow:ellipsis}
+#settings .key-field input,#settings .url-field input,#settings .name-field input,#settings .provider-field select{padding-left:37px}
+.key-icon{position:absolute;left:12px;top:50%;width:16px;height:14px;transform:translateY(-50%);color:var(--lime);pointer-events:none}
+.key-icon::before{content:"";position:absolute;left:0;top:3px;width:8px;height:8px;border:2px solid currentColor;border-radius:50%;box-sizing:border-box}
+.key-icon::after{content:"";position:absolute;left:6px;top:6px;width:10px;height:5px;background:linear-gradient(currentColor,currentColor) top/100% 2px no-repeat,linear-gradient(currentColor,currentColor) right/2px 100% no-repeat}
+.url-icon{position:absolute;left:12px;top:50%;width:16px;height:16px;transform:translateY(-50%);color:var(--lime);pointer-events:none;border:1.5px solid currentColor;border-radius:50%;background:linear-gradient(currentColor,currentColor) center/100% 1px no-repeat}
+.url-icon::before{content:"";position:absolute;inset:-1px 3px;border:1px solid currentColor;border-radius:50%}
+.name-icon{position:absolute;left:12px;top:50%;width:16px;height:12px;transform:translateY(-50%);pointer-events:none;background:radial-gradient(circle at 5px 6px,var(--ink) 1.5px,var(--lime) 1.7px);clip-path:polygon(0 50%,35% 0,100% 0,100% 100%,35% 100%)}
+.provider-icon{position:absolute;left:12px;top:50%;width:16px;height:14px;transform:translateY(-50%);color:var(--lime);pointer-events:none}
+.provider-icon::before,.provider-icon::after{content:"";position:absolute;left:0;width:16px;height:6px;box-sizing:border-box;border:1px solid currentColor;border-radius:2px;background:radial-gradient(circle at 3px 2px,currentColor 1px,transparent 1.2px)}
+.provider-icon::before{top:0}
+.provider-icon::after{bottom:0}
+.connect-button{display:grid;place-items:center;min-height:0;padding:0;border-color:var(--line)}
+.connect-icon{position:relative;width:16px;height:18px}
+.connect-icon::before{content:"";position:absolute;inset:5px 2px 4px;background:currentColor;border-radius:2px 2px 5px 5px}
+.connect-icon::after{content:"";position:absolute;inset:0;background:linear-gradient(currentColor,currentColor) 5px 0/2px 6px no-repeat,linear-gradient(currentColor,currentColor) 9px 0/2px 6px no-repeat,linear-gradient(currentColor,currentColor) center bottom/2px 5px no-repeat}
+.model-filter-row{display:grid;grid-template-columns:40px 40px minmax(0,1fr);align-items:stretch;gap:8px;margin:5px 0}
+#settings .model-filter-row input{display:block;margin:0}
+#toggle-provider-models span{display:grid;place-items:center;width:17px;height:17px;border:1.5px solid currentColor;border-radius:3px;font-size:14px;line-height:1}
+.test-icon{font:18px/1 "Segoe UI Symbol",monospace}
+.model-test-dot{width:8px;height:8px;margin-left:auto;border-radius:50%;flex:none;background:#72806c}
+.model-test-dot[data-state="pending"]{background:var(--muted)}
+.model-test-dot[data-state="passed"]{background:var(--lime)}
+.model-test-dot[data-state="failed"]{background:var(--danger)}
+.model-stats{display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font:12px/18px "Courier New",monospace}
+.model-stats>span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.model-stats [role="img"]{display:inline-grid;place-items:center;width:12px;height:18px;line-height:1}
+.model-stat-separator{font-weight:bold}
+@media(max-width:340px){.model-stats{gap:4px;font-size:11px}}
+.model-passed{color:var(--lime)}
+.model-failed{color:var(--danger)}
+.model-failed-icon{position:relative;top:-1px}
+.model-failed-icon::before,.model-failed-icon::after{content:"";position:absolute;left:50%;top:50%}
+.model-failed-icon::before{width:10px;height:10px;border:1px solid currentColor;border-radius:50%;box-sizing:border-box;transform:translate(-50%,-50%)}
+.model-failed-icon::after{width:8px;height:1px;background:currentColor;transform:translate(-50%,-50%) rotate(-45deg)}
+#provider-status:empty{display:none}
+.saved-providers{display:grid;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+#saved-provider-list{display:grid;gap:5px;max-height:min(18vh,135px);max-height:min(18dvh,135px);overflow:auto}
+#saved-provider-list:empty{display:none}
+.saved-provider{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left}
+.saved-provider>span{min-width:0;overflow-wrap:anywhere}
+.saved-provider small{flex:none;font-weight:normal}
+.saved-provider[aria-pressed="true"]{border-color:var(--lime)}
+.save-icon{position:relative;width:17px;height:17px;background:currentColor;clip-path:polygon(0 0,72% 0,100% 28%,100% 100%,0 100%);border-radius:2px}
+.save-icon::before,.save-icon::after{content:"";position:absolute;left:4px;background:var(--primary-bg)}
+.save-icon::before{top:2px;width:7px;height:5px;border-right:2px solid currentColor}
+.save-icon::after{bottom:2px;width:9px;height:6px;border-radius:1px}
+.saved-provider-row{margin:0}
+.delete-provider-button{color:var(--warning);border-color:var(--danger-line);background:var(--danger-panel)}
+#provider-delete-error{color:var(--warning)}
+.model-group{display:grid;gap:6px;min-width:0}
+.model-group + .model-group{margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
+.model-group h2{margin:0 0 2px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.model-group button{overflow-wrap:anywhere}
+#settings .key-field input[data-saved-key="true"]::placeholder{color:var(--paper);letter-spacing:2px}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+#empty{display:grid;place-items:center;min-height:100%;margin:0;background:none;border:0;padding:14px;pointer-events:none}
+#empty canvas{display:block;width:min(220px,70%);height:auto;opacity:.38}
+#composer .attach{display:grid;place-items:center;flex:none;width:36px;min-height:40px;padding:0;background:transparent;border:0}
+.attach span{width:10px;height:19px;border:1.5px solid currentColor;border-radius:7px;transform:rotate(38deg);position:relative}
+.attach span::after{content:"";position:absolute;inset:2px 2px 4px;border:1px solid currentColor;border-top:0;border-radius:0 0 5px 5px}
+#pending-files,.message-files{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0}
+#pending-files[hidden]{display:none}
+.file-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:4px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.file-chip button{min-height:24px;min-width:24px;padding:0;border:0;background:transparent;font-size:16px}
+article .reply-meta{display:block;margin-top:8px;color:var(--muted);font-size:11px}
+article details{margin-top:8px;padding:5px 7px;border-left:1px solid var(--line);color:var(--muted);font-size:12px}
+article details summary{cursor:pointer}
+article .pending-reply{color:var(--muted)}
+#appearance-button::before{
+  content:"";
+  width:17px;
+  height:17px;
+  border:1.5px solid currentColor;
+  border-radius:50%;
+  background:linear-gradient(90deg,currentColor 50%,transparent 50%);
+}
+.appearance-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.appearance-options button[aria-pressed="true"]{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
+.font-size-label{display:flex;justify-content:space-between;align-items:center;color:var(--paper);font-size:13px}
+#chat-font-size{width:100%;margin:12px 0 0;accent-color:var(--lime)}
+#history-search{margin:0 0 6px}
+#history-list{max-height:min(68vh,520px);max-height:min(68dvh,520px)}
+#messages article{align-self:flex-start;max-width:90%;width:fit-content;min-width:0}
+#messages article.mine{align-self:flex-end}
+#messages article p,#prompt{font-size:var(--chat-font-size);line-height:1.45}
+:root[data-theme="light"] #empty canvas{filter:brightness(.37) saturate(1.3)}
+@media(max-width:340px){header{margin-left:-10px;margin-right:-14px}.header-actions{gap:0}}
+#history-list::-webkit-scrollbar,#provider-model-list::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="header-actions">
+<button id="provider" class="icon" disabled aria-label="Settings" title="Settings"></button>
+<button id="model-button" class="icon" aria-label="Select model" title="Select model"></button>
+<button id="history-button" class="icon" aria-label="Chat history" title="Chat history"></button>
+<button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
+</div>
+<button id="reset" class="icon" aria-label="New chat" title="New chat" disabled></button>
+</header>
+<section id="messages" aria-label="Conversation" aria-live="polite">
+<div id="empty" aria-hidden="true"><canvas id="signal" width="440" height="420"></canvas></div>
+</section>
+<small id="chat-error" role="alert" hidden></small>
+<small id="demo-status" aria-live="polite"></small>
+<div id="pending-files" aria-label="Attached files" hidden></div>
+<form id="composer">
+<button id="attach-files" class="attach" type="button" aria-label="Attach files" title="Attach files" disabled><span aria-hidden="true"></span></button>
+<input id="file-picker" type="file" multiple hidden>
+<textarea id="prompt" rows="1" aria-label="Message" placeholder="Message"></textarea>
+<button class="primary send" aria-label="Send" title="Send">➤</button>
+</form>
+</main>
+<dialog id="settings" aria-label="Provider settings">
+<form id="provider-form" autocomplete="off">
+<div class="saved-providers" hidden>
+<div id="saved-provider-list" aria-label="Saved providers"></div>
+</div>
+<div class="provider-row">
+<div class="name-field">
+<span class="name-icon" aria-hidden="true"></span>
+<input id="provider-name" aria-label="Provider name" maxlength="80" placeholder="Provider display name">
+</div>
+<div class="provider-field">
+<span class="provider-icon" aria-hidden="true"></span>
+<select id="provider-type" aria-label="Provider">
+<option value="openrouter">OpenRouter</option>
+<option value="openai">OpenAI</option>
+<option value="gemini">Gemini</option>
+<option value="custom">Custom (OpenAI-compatible)</option>
+</select>
+</div>
+</div>
+<div class="url-field">
+<span class="url-icon" aria-hidden="true"></span>
+<input id="provider-base" aria-label="API base URL" type="url" placeholder="https://api.example.com/v1" required>
+</div>
+<div class="key-field">
+<span class="key-icon" aria-hidden="true"></span>
+<input id="provider-key" aria-label="API key" aria-describedby="provider-key-hint" type="password" autocomplete="new-password" spellcheck="false" placeholder="Enter your provider key">
+<span id="provider-key-hint" class="visually-hidden"></span>
+</div>
+<p id="provider-status" role="status"></p>
+<fieldset id="provider-models" aria-label="Models shown in the picker" hidden>
+<div class="model-filter-row">
+<button id="toggle-provider-models" class="primary connect-button" type="button" aria-label="Select all or none" title="Select all models"><span aria-hidden="true"></span></button>
+<button id="test-model" class="primary connect-button" type="button" aria-label="Test selected models" title="Test selected models (may incur usage charges)"><span class="test-icon" aria-hidden="true">&#9654;</span></button>
+<input id="provider-model-search" type="search" aria-label="Filter provider models" placeholder="Filter models">
+</div>
+<div id="provider-model-list" tabindex="0" aria-label="Provider models"></div>
+<div id="provider-model-stats" class="model-stats" role="status" aria-live="polite">
+<span id="model-selection-count" title="Selected / total models"></span>
+<span class="model-stat-separator" aria-hidden="true">&middot;</span>
+<span class="model-passed"><span id="passed-count"></span><span role="img" aria-label="Passed">✓</span></span>
+<span class="model-stat-separator" aria-hidden="true">&middot;</span>
+<span class="model-failed"><span id="failed-count"></span><span class="model-failed-icon" role="img" aria-label="Failed"></span></span>
+</div>
+</fieldset>
+<div class="provider-actions">
+<button id="new-provider" class="connect-button" type="button" aria-label="Add provider" title="Add provider"></button>
+<button id="load-models" class="primary connect-button" type="submit" aria-label="Connect and load models" title="Connect and load models"><span class="connect-icon" aria-hidden="true"></span></button>
+<button id="save-provider" class="primary connect-button" type="button" aria-label="Save provider" title="Save provider" disabled><span class="save-icon" aria-hidden="true"></span></button>
+<button id="disconnect-provider" class="connect-button" type="button" aria-label="Disconnect provider" title="Disconnect and remove the saved API key" hidden><span class="disconnect-icon" aria-hidden="true"><span class="connect-icon"></span></span></button>
+</div>
+</form>
+</dialog>
+<dialog id="provider-delete-dialog" aria-labelledby="provider-delete-heading">
+<h2 id="provider-delete-heading">Delete provider?</h2>
+<p id="provider-delete-message"></p>
+<small id="provider-delete-error" role="alert" hidden></small>
+<div class="dialog-actions">
+<button id="cancel-provider-delete" type="button">Cancel</button>
+<button id="confirm-provider-delete" type="button" class="delete-provider-button">Delete</button>
+</div>
+</dialog>
+<dialog id="model-dialog" aria-label="Select model">
+<input id="model-search" type="search" aria-label="Search models" placeholder="Search models">
+<div id="model-list"></div>
+</dialog>
+<dialog id="appearance-dialog" aria-labelledby="appearance-title">
+<h2 id="appearance-title">Appearance</h2>
+<div class="appearance-options" role="group" aria-label="Color theme">
+<button type="button" data-theme-option="dark" aria-pressed="true">Dark</button>
+<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+</div>
+<label class="font-size-label" for="chat-font-size">Chat font size <output id="chat-font-size-value" for="chat-font-size">16 px</output></label>
+<input id="chat-font-size" type="range" min="12" max="22" step="1" value="16">
+</dialog>
+<dialog id="history-dialog" aria-label="Chat history">
+<input id="history-search" type="search" aria-label="Search chats" placeholder="Search chats">
+<div id="history-list" tabindex="-1" autofocus></div>
+<small id="history-status" role="status"></small>
+</dialog>
+<dialog id="chat-action" aria-labelledby="chat-action-heading">
+<h2 id="chat-action-heading"></h2>
+<form id="chat-action-form">
+<div id="rename-field"><label for="chat-title">Chat title</label><input id="chat-title" maxlength="100"></div>
+<p id="delete-message" hidden></p>
+<div class="dialog-actions">
+<button id="cancel-action" type="button">Cancel</button>
+<button id="confirm-action" class="primary"></button>
+</div>
+</form>
+</dialog>
+<script>
+const find = id => document.getElementById(id);
+
+function clearContents(element) {
+  element.textContent = '';
+}
+
+function newId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), byte =>
+    byte.toString(16).padStart(2, '0')).join('');
+}
+const messages = find('messages');
+const promptBox = find('prompt');
+const reset = find('reset');
+const empty = find('empty');
+
+function appendMessage(author, content, mine) {
+  const message = document.createElement('article');
+  if (mine) message.className = 'mine';
+  const label = document.createElement('small');
+  label.textContent = author;
+  const text = document.createElement('p');
+  text.textContent = content;
+  message.append(label, text);
+  messages.append(message);
+  return message;
+}
+
+const presets = {
+  openrouter: 'https://openrouter.ai/api/v1',
+  openai: 'https://api.openai.com/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai'
+};
+const demoModels = ['GPT-4.1 mini', 'Claude Sonnet 4', 'Gemini 2.5 Flash'].map(name => ({id: name, name}));
+const modelKey = 'neural-link.demo-model.v1';
+const liveModelKey = 'neural-link.active-provider-model.v1';
+const modelDialog = find('model-dialog');
+const settings = find('settings');
+const form = find('provider-form');
+const typeInput = find('provider-type');
+const nameInput = find('provider-name');
+const baseInput = find('provider-base');
+const keyInput = find('provider-key');
+const modelSearch = find('model-search');
+const sendButton = find('composer').querySelector('.send');
+const fileButton = find('attach-files');
+const filePicker = find('file-picker');
+let attachments = [];
+let readingFiles = false;
+let attachmentVersion = 0;
+let demoModel = demoModels[0].id;
+let sending = false;
+let configuring = false;
+
+function stored(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function remember(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* Session state is still available. */ }
+}
+
+if (demoModels.some(model => model.id === stored(modelKey))) demoModel = stored(modelKey);
+
+let nativeSequence = 0;
+const nativePending = new Map();
+
+window.hackGptNativeEvent = (id, encoded) => {
+  const operation = nativePending.get(id);
+  if (!operation) return;
+  const {kind, payload} = JSON.parse(encoded);
+  if (kind === 'event') {
+    operation.onEvent?.(payload);
+    return;
+  }
+  nativePending.delete(id);
+  operation.cleanup();
+  if (kind === 'error') operation.reject(new Error(payload));
+  else operation.resolve(payload);
+};
+
+function androidRequest(path, body, onEvent, signal) {
+  return new Promise((resolve, reject) => {
+    const id = String(++nativeSequence);
+    const abort = () => {
+      nativePending.delete(id);
+      reject(new DOMException('Response stopped', 'AbortError'));
+      window.HackGptAndroid.cancel(id);
+    };
+    if (signal?.aborted) {
+      reject(new DOMException('Response stopped', 'AbortError'));
+      return;
+    }
+    signal?.addEventListener('abort', abort, {once: true});
+    nativePending.set(id, {
+      resolve, reject, onEvent,
+      cleanup: () => signal?.removeEventListener('abort', abort)
+    });
+    try {
+      window.HackGptAndroid.request(id, path, JSON.stringify(body ?? {}));
+    } catch {
+      nativePending.delete(id);
+      signal?.removeEventListener('abort', abort);
+      reject(new Error('The Android app could not start the request.'));
+    }
+  });
+}
+
+
+async function localApi(path, body) {
+  if (window.HackGptAndroid) return androidRequest(path, body);
+  const options = body === undefined ? {} : {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  };
+  let response;
+  try { response = await fetch('/api/' + path, options); }
+  catch { throw new Error('Could not reach the local preview server.'); }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error || 'The local preview request failed.');
+  return data;
+}
+
+const profilesKey = 'neural-link.saved-providers.v1';
+let profiles = readArray(profilesKey);
+const connections = new Map();
+let editingId = null;
+let settingsInitialized = false;
+let draft = null;
+let liveModel = stored(liveModelKey);
+const modelTests = new Map();
+
+function readArray(key) {
+  try {
+    const value = JSON.parse(stored(key));
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveProfiles(next) {
+  try {
+    localStorage.setItem(profilesKey, JSON.stringify(next));
+  } catch {
+    throw new Error('Could not save providers in this browser.');
+  }
+  profiles = next;
+}
+
+function draftModels() {
+  return draft ? draft.models.filter(model => !draft.hidden.has(model.id)) : [];
+}
+
+function savedModels() {
+  if (!profiles.length) return demoModels;
+  return profiles.flatMap(profile => {
+    const hidden = new Set(profile.hidden);
+    const connection = connections.get(profile.connectionId);
+    return profile.models.filter(model => !hidden.has(model.id)).map(model => ({
+      ...model, profile, connection, selection: JSON.stringify([profile.id, model.id])
+    }));
+  });
+}
+
+function currentModel() {
+  const models = savedModels().filter(model => !model.profile || model.connection);
+  return models.find(model => model.profile ? model.selection === liveModel : model.id === demoModel) ?? models[0];
+}
+
+function updateModelStatus() {
+  const model = currentModel();
+  find('demo-status').textContent = model
+    ? model.name + ' · ' + (model.profile?.name ?? 'Simulated replies')
+    : 'Connect a provider and select models in Settings';
+  sendButton.disabled = !sending && !model;
+  updateAttachmentControl(model);
+  find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
+}
+
+function renderModels() {
+  const list = find('model-list');
+  clearContents(list);
+  const search = modelSearch.value.trim().toLowerCase();
+  const models = savedModels().filter(model =>
+    (model.name + ' ' + model.id + ' ' + (model.profile?.name ?? '')).toLowerCase().includes(search));
+  const active = currentModel();
+  const groups = new Map();
+  for (const model of models) {
+    const groupId = model.profile?.id ?? null;
+    let group = groups.get(groupId);
+    if (!group) {
+      group = document.createElement('section');
+      group.className = 'model-group';
+      group.setAttribute('role', 'group');
+      const heading = document.createElement('h2');
+      heading.id = 'model-group-heading-' + groups.size;
+      heading.textContent = model.profile?.name ?? 'Demo models';
+      group.setAttribute('aria-labelledby', heading.id);
+      group.append(heading);
+      groups.set(groupId, group);
+      list.append(group);
+    }
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.textContent = model.name;
+    option.setAttribute('aria-pressed', String(active
+      ? (model.selection ?? model.id) === (active.selection ?? active.id) : false));
+    if (model.profile) {
+      const details = [model.name === model.id ? '' : model.id, !model.connection ? 'Key needed' : '']
+        .filter(Boolean).join(' · ');
+      if (details) {
+        const subtitle = document.createElement('small');
+        subtitle.textContent = details;
+        option.append(subtitle);
+      }
+      option.disabled = !model.connection;
+    }
+    option.onclick = () => {
+      if (model.profile) {
+        liveModel = model.selection;
+        remember(liveModelKey, liveModel);
+      } else {
+        demoModel = model.id;
+        remember(modelKey, demoModel);
+      }
+      updateModelStatus();
+      modelDialog.close();
+    };
+    group.append(option);
+  }
+  if (!models.length) list.textContent = search ? 'No matching models.' : 'Enable and save models in Settings.';
+}
+
+
+find('model-button').onclick = () => {
+  modelSearch.value = '';
+  modelSearch.hidden = !profiles.length;
+  renderModels();
+  modelDialog.showModal();
+  if (profiles.length) modelSearch.focus();
+  else find('model-list').querySelector('[aria-pressed="true"]')?.focus();
+};
+modelSearch.oninput = renderModels;
+
+function renderSavedProviders() {
+  const list = find('saved-provider-list');
+  list.parentElement.hidden = !profiles.length;
+  clearContents(list);
+  for (const profile of profiles) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'swipe-button saved-provider';
+    button.setAttribute('aria-description', 'Swipe left or press Left Arrow to delete.');
+    button.setAttribute('aria-keyshortcuts', 'ArrowLeft');
+    button.disabled = configuring;
+    button.setAttribute('aria-pressed', String(editingId === profile.id));
+    const name = document.createElement('span');
+    name.textContent = profile.name;
+    const details = document.createElement('small');
+    const hidden = new Set(profile.hidden);
+    const count = profile.models.filter(model => !hidden.has(model.id)).length;
+    details.textContent = count + (count === 1 ? ' model' : ' models');
+    button.append(name, details);
+    button.onclick = () => editProvider(profile);
+    const row = document.createElement('div');
+    row.className = 'swipe-row saved-provider-row';
+    row.append(swipeCue(true), button);
+    attachSwipeGesture(row, button, {left: () => confirmDeleteProvider(profile)});
+    list.append(row);
+  }
+}
+
+function releaseDraftConnection() {
+  const id = draft?.connectionId;
+  if (!id || profiles.some(profile => profile.connectionId === id)) return;
+  connections.delete(id);
+  localApi('disconnect', {connection: id}).catch(() => {});
+}
+
+function editProvider(profile, pendingConnection) {
+  settingsInitialized = true;
+  releaseDraftConnection();
+  editingId = profile?.id ?? null;
+  draft = profile ? {...profile, hidden: new Set(profile.hidden)} : null;
+  if (draft && pendingConnection) {
+    draft.connectionId = pendingConnection.id;
+    draft.models = pendingConnection.models;
+  }
+  typeInput.value = profile?.type ?? 'openrouter';
+  nameInput.value = profile?.name ?? 'OpenRouter';
+  baseInput.value = profile?.base ?? presets.openrouter;
+  keyInput.value = '';
+  find('provider-model-search').value = '';
+  modelTests.clear();
+  find('provider-status').textContent = '';
+  refreshSettings();
+}
+
+function matchesDraftFields() {
+  return draft?.type === typeInput.value
+    && draft.base === baseInput.value.trim().replace(/\/+$/, '');
+}
+
+function refreshSettings() {
+  baseInput.readOnly = typeInput.value !== 'custom';
+  const matches = matchesDraftFields();
+  const deferredKey = keyInput.value.trim() !== '';
+  const connected = matches && connections.has(draft.connectionId);
+  const savedKey = connected && connections.get(draft.connectionId).saved === true;
+  keyInput.dataset.savedKey = String(savedKey);
+  keyInput.placeholder = savedKey ? '••••••••••••••••'
+    : connected ? 'Reuse connected key' : 'Enter your provider key';
+  find('provider-key-hint').textContent = savedKey
+    ? 'Saved API key in use. Type a new key to replace it.' : '';
+  find('save-provider').disabled = configuring || !connected || deferredKey;
+  find('disconnect-provider').hidden = !connected;
+  find('disconnect-provider').parentElement.classList.toggle('is-connected', connected);
+  renderSavedProviders();
+  renderProviderModels();
+  find('provider-models').hidden = !matches;
+  updateModelStatus();
+}
+
+find('provider').onclick = () => {
+  if (!settingsInitialized) {
+    const profile = profiles[0];
+    let pending;
+    if (profile && !connections.has(profile.connectionId)
+        && profiles.filter(item => item.base === profile.base && item.type === profile.type).length === 1) {
+      const candidates = [...connections.values()].filter(connection =>
+        connection.base === profile.base && connection.type === profile.type
+        && !profiles.some(item => item.connectionId === connection.id));
+      if (candidates.length === 1) pending = candidates[0];
+    }
+    editProvider(profile, pending);
+  } else {
+    refreshSettings();
+  }
+  settings.showModal();
+};
+find('new-provider').onclick = () => editProvider(null);
+settings.onclose = () => { keyInput.value = ''; };
+typeInput.onchange = () => {
+  const saved = profiles.find(profile => profile.id === editingId && profile.type === typeInput.value);
+  nameInput.value = saved?.name ?? typeInput.selectedOptions[0].textContent.replace(/ \(.*\)$/, '');
+  baseInput.value = presets[typeInput.value] ?? saved?.base ?? '';
+  keyInput.value = '';
+  refreshSettings();
+};
+baseInput.oninput = refreshSettings;
+keyInput.oninput = () => {
+  find('save-provider').disabled = configuring || !matchesDraftFields() || !connections.has(draft.connectionId) || !!keyInput.value.trim();
+};
+
+async function settingsRequest(message, action) {
+  if (configuring) return;
+  configuring = true;
+  for (const control of form.elements) control.disabled = true;
+  const status = find('provider-status');
+  status.textContent = message;
+  try {
+    status.textContent = await action();
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    for (const control of form.elements) control.disabled = false;
+    configuring = false;
+    refreshSettings();
+  }
+}
+
+function connect() {
+  if (!form.reportValidity()) return;
+  const input = {
+    type: typeInput.value, base: baseInput.value, key: keyInput.value,
+    connection: matchesDraftFields() ? draft.connectionId : undefined
+  };
+  settingsRequest('Loading provider models…', async () => {
+    const connection = await localApi('connect', input);
+    const hidden = matchesDraftFields() ? draft.hidden : new Set();
+    releaseDraftConnection();
+    connections.set(connection.id, connection);
+    draft = {...connection, connectionId: connection.id, hidden};
+    baseInput.value = connection.base;
+    keyInput.value = '';
+    modelTests.clear();
+    return 'Choose models, then save this provider.';
+  });
+}
+
+form.onsubmit = event => {
+  event.preventDefault();
+  connect();
+};
+
+find('save-provider').onclick = () => {
+  if (!matchesDraftFields() || !connections.has(draft.connectionId) || keyInput.value.trim()) return;
+  const index = profiles.findIndex(profile => profile.id === editingId);
+  const previous = profiles[index];
+  const saved = {
+    id: previous?.id ?? newId(),
+    name: nameInput.value.trim() || draft.name,
+    type: draft.type, base: draft.base, models: draft.models,
+    hidden: [...draft.hidden], connectionId: draft.connectionId
+  };
+  settingsRequest('Saving provider…', async () => {
+    const connection = await localApi('save', {connection: saved.connectionId});
+    connections.set(connection.id, connection);
+    const next = [...profiles];
+    if (index === -1) next.push(saved);
+    else next[index] = saved;
+    saveProfiles(next);
+    editingId = saved.id;
+    draft = {...saved, hidden: new Set(saved.hidden)};
+    nameInput.value = saved.name;
+    if (previous?.connectionId && previous.connectionId !== saved.connectionId
+        && connections.has(previous.connectionId)) {
+      await localApi('disconnect', {connection: previous.connectionId});
+      connections.delete(previous.connectionId);
+    }
+    return 'Saved ' + saved.name + '.';
+  });
+};
+
+const providerDeleteDialog = find('provider-delete-dialog');
+const providerDeleteError = find('provider-delete-error');
+const confirmProviderDelete = find('confirm-provider-delete');
+const cancelProviderDelete = find('cancel-provider-delete');
+let pendingProviderDelete = null;
+let deletingProvider = false;
+
+function confirmDeleteProvider(profile) {
+  if (configuring || deletingProvider) return;
+  pendingProviderDelete = profile;
+  find('provider-delete-message').textContent =
+    'Delete "' + profile.name + '" and its saved models and API key? Existing chats will be kept.';
+  providerDeleteError.hidden = true;
+  providerDeleteDialog.showModal();
+  cancelProviderDelete.focus();
+}
+
+cancelProviderDelete.onclick = () => providerDeleteDialog.close();
+providerDeleteDialog.addEventListener('cancel', event => {
+  if (deletingProvider) event.preventDefault();
+});
+confirmProviderDelete.onclick = async () => {
+  const profile = pendingProviderDelete;
+  if (!profile || deletingProvider) return;
+  deletingProvider = true;
+  confirmProviderDelete.disabled = true;
+  cancelProviderDelete.disabled = true;
+  providerDeleteError.hidden = true;
+  try {
+    if (profile.connectionId) {
+      await localApi('disconnect', {connection: profile.connectionId});
+      connections.delete(profile.connectionId);
+    }
+    saveProfiles(profiles.filter(item => item.id !== profile.id));
+    if (liveModel && !savedModels().some(model => model.selection === liveModel)) {
+      liveModel = null;
+      remember(liveModelKey, '');
+    }
+    providerDeleteDialog.close();
+    if (editingId === profile.id) editProvider(profiles[0]);
+    else refreshSettings();
+    find('saved-provider-list').querySelector('button')?.focus();
+    if (!profiles.length) find('new-provider').focus();
+  } catch (error) {
+    providerDeleteError.textContent = error.message;
+    providerDeleteError.hidden = false;
+    updateModelStatus();
+  } finally {
+    deletingProvider = false;
+    confirmProviderDelete.disabled = false;
+    cancelProviderDelete.disabled = false;
+  }
+};
+
+
+find('disconnect-provider').onclick = () => settingsRequest('Disconnecting…', async () => {
+  const id = draft.connectionId;
+  await localApi('disconnect', {connection: id});
+  connections.delete(id);
+  keyInput.value = '';
+  modelTests.clear();
+  return 'Disconnected and removed the saved API key.';
+});
+
+function updateProviderModelToggle() {
+  const button = find('toggle-provider-models');
+  const count = draftModels().length;
+  const all = count === draft.models.length;
+  button.setAttribute('aria-pressed', all ? 'true' : count ? 'mixed' : 'false');
+  button.title = all ? 'Deselect all models' : 'Select all models';
+  button.firstElementChild.textContent = all ? '✓' : count ? '−' : '';
+  button.onclick = () => {
+    draft.hidden = new Set(all ? draft.models.map(model => model.id) : []);
+    updateDraftModelVisibility();
+    renderProviderModels();
+  };
+}
+
+function updateDraftModelVisibility() {
+  updateProviderModelStats();
+  updateModelStatus();
+}
+
+function renderProviderModels() {
+  const list = find('provider-model-list');
+  clearContents(list);
+  find('provider-models').hidden = !draft;
+  if (!draft) return;
+  updateProviderModelToggle();
+  const filter = find('provider-model-search').value.trim().toLowerCase();
+  for (const model of draft.models) {
+    if (!(model.name + ' ' + model.id).toLowerCase().includes(filter)) continue;
+    const row = document.createElement('label');
+    row.className = 'provider-model-row';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.setAttribute('aria-label', model.name);
+    checkbox.disabled = configuring;
+    checkbox.checked = !draft.hidden.has(model.id);
+    checkbox.onchange = () => {
+      if (checkbox.checked) draft.hidden.delete(model.id);
+      else draft.hidden.add(model.id);
+      updateDraftModelVisibility();
+      updateProviderModelToggle();
+    };
+    const label = document.createElement('span');
+    label.textContent = model.name;
+    label.title = model.id;
+    const dot = document.createElement('span');
+    dot.className = 'model-test-dot';
+    dot.dataset.model = model.id;
+    dot.setAttribute('role', 'img');
+    row.append(checkbox, label, dot);
+    list.append(row);
+  }
+  if (!list.childElementCount) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No matching models.';
+    list.append(empty);
+  }
+  updateModelTestDots();
+}
+find('provider-model-search').oninput = renderProviderModels;
+
+function updateProviderModelStats() {
+  const results = [...modelTests.values()];
+  const selected = draftModels().length;
+  const total = draft?.models.length ?? 0;
+  find('model-selection-count').textContent = selected + ' / ' + total;
+  find('passed-count').textContent = results.filter(result => result.state === 'passed').length;
+  find('failed-count').textContent = results.filter(result => result.state === 'failed').length;
+}
+
+function updateModelTestDots() {
+  updateProviderModelStats();
+  for (const dot of find('provider-model-list').querySelectorAll('.model-test-dot')) {
+    const result = modelTests.get(dot.dataset.model);
+    dot.dataset.state = result?.state ?? '';
+    dot.title = result?.label ?? 'Not tested';
+    dot.setAttribute('aria-label', dot.title);
+  }
+}
+
+find('test-model').onclick = () => {
+  const connection = connections.get(draft?.connectionId);
+  const models = draftModels();
+  if (!connection || !models.length || configuring) return;
+  const status = find('provider-status');
+  settingsRequest('Testing 0 of ' + models.length + ' models…', async () => {
+    modelTests.clear();
+    for (const model of models) modelTests.set(model.id, {state: 'pending', label: 'Waiting for test'});
+    updateModelTestDots();
+    for (const [index, model] of models.entries()) {
+      try {
+        const {reply} = await localApi('chat', {
+          connection: connection.id, model: model.id,
+          messages: [{role: 'user', content: 'Reply with a short hello.'}]
+        });
+        if (typeof reply !== 'string' || !reply.trim()) throw new Error('No text reply.');
+        modelTests.set(model.id, {state: 'passed', label: 'Test passed'});
+      } catch (error) {
+        modelTests.set(model.id, {state: 'failed', label: 'Test failed: ' + error.message});
+      }
+      updateModelTestDots();
+      status.textContent = 'Tested ' + (index + 1) + ' of ' + models.length + ' models…';
+    }
+    return '';
+  });
+};
+
+async function restoreConnections() {
+  try {
+    let liveConnections;
+    try {
+      liveConnections = await localApi('providers');
+    } catch {
+      // Import the connection and preferences from the previous single-provider preview.
+      const legacy = await localApi('provider');
+      liveConnections = legacy ? [legacy] : [];
+      if (legacy && !profiles.some(profile => profile.base === legacy.base)) {
+        const migrated = {
+          ...legacy,
+          name: stored('neural-link.provider-name:' + legacy.base) || legacy.name,
+          hidden: readArray('neural-link.hidden-models:' + legacy.base),
+          connectionId: legacy.id
+        };
+        saveProfiles([...profiles, migrated]);
+        const modelId = stored('neural-link.live-model.v1:' + legacy.base);
+        if (modelId) {
+          liveModel = JSON.stringify([migrated.id, modelId]);
+          remember(liveModelKey, liveModel);
+        }
+      }
+    }
+    for (const item of liveConnections) connections.set(item.id, item);
+  } catch {
+    // Saved provider details remain available if the local server is unreachable.
+  } finally {
+    find('provider').disabled = false;
+    updateModelStatus();
+  }
+}
+updateModelStatus();
+restoreConnections();
+
+const historyDialog = find('history-dialog');
+const historyList = find('history-list');
+const historySearch = find('history-search');
+const actionDialog = find('chat-action');
+const titleInput = find('chat-title');
+const storageKey = 'neural-link.history.v1';
+let chats = [];
+let activeId = null;
+let pendingAction;
+
+try {
+  const saved = JSON.parse(localStorage.getItem(storageKey));
+  if (Array.isArray(saved)) chats = saved;
+} catch {
+  find('history-status').textContent = 'Saved history could not be loaded.';
+}
+
+function saveChats() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(chats));
+    find('history-status').textContent = '';
+  } catch {
+    find('history-status').textContent = 'History could not be saved to this browser.';
+  }
+}
+
+function showChat(chat) {
+  attachments = [];
+  attachmentVersion++;
+  renderAttachments();
+  showChatError('');
+  activeId = chat?.id ?? null;
+  clearContents(messages);
+  promptBox.value = '';
+  reset.disabled = !chat;
+  if (!chat) {
+    messages.append(empty);
+    return;
+  }
+  for (const turn of chat.turns) {
+    showTurn(turn);
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function historyButton(text, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = text;
+  button.onclick = action;
+  return button;
+}
+
+function swipeCue(deleting) {
+  const cue = document.createElement('span');
+  cue.className = 'swipe-cue ' + (deleting ? 'delete-cue' : 'rename-cue');
+  cue.setAttribute('aria-hidden', 'true');
+  cue.textContent = deleting ? '\u{1f5d1}\ufe0e' : '\u270e';
+  return cue;
+}
+
+function attachSwipeGesture(row, button, actions) {
+  const threshold = 64;
+  let start = null;
+  let dragging = false;
+  let suppressClick = false;
+
+  button.onpointerdown = event => {
+    if (!event.isPrimary || event.button !== 0) return;
+    start = {id: event.pointerId, x: event.clientX, y: event.clientY};
+    dragging = false;
+    suppressClick = false;
+  };
+
+  button.onpointermove = event => {
+    if (start?.id !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const direction = dx < 0 ? 'left' : 'right';
+    if (!dragging) {
+      if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) {
+        start = null;
+        return;
+      }
+      if (Math.abs(dx) < 8) return;
+      dragging = true;
+      suppressClick = true;
+      button.setPointerCapture(event.pointerId);
+      row.classList.add('dragging');
+    }
+    row.dataset.swipe = actions[direction] ? direction : '';
+    const offset = actions[direction] ? dx : 0;
+    button.style.setProperty('--swipe-x', Math.max(-96, Math.min(96, offset)) + 'px');
+  };
+
+  function finish(event, commit) {
+    if (start?.id !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const shouldOpen = commit && dragging && Math.abs(dx) >= threshold;
+    start = null;
+    dragging = false;
+    row.classList.remove('dragging');
+    delete row.dataset.swipe;
+    button.style.removeProperty('--swipe-x');
+    if (shouldOpen) actions[dx < 0 ? 'left' : 'right']?.();
+  }
+
+  button.onpointerup = event => finish(event, true);
+  button.onpointerleave = event => { if (!dragging) finish(event, false); };
+  button.onpointercancel = event => finish(event, false);
+  button.onlostpointercapture = event => finish(event, false);
+  row.addEventListener('click', event => {
+    if (!suppressClick || event.detail === 0) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+
+  button.onkeydown = event => {
+    const action = event.key === 'ArrowLeft' ? actions.left : event.key === 'ArrowRight' ? actions.right : null;
+    if (!action) return;
+    event.preventDefault();
+    action();
+  };
+}
+
+function renderHistory() {
+  const query = historySearch.value.trim().toLowerCase();
+  const matches = !query ? chats : chats.filter(chat =>
+    chat.title.toLowerCase().includes(query) || chat.turns.some(turn =>
+      [turn.question, turn.reply, ...(turn.files ?? [])].some(value =>
+        typeof value === 'string' && value.toLowerCase().includes(query))));
+  clearContents(historyList);
+  if (!matches.length) {
+    const note = document.createElement('p');
+    note.textContent = query ? 'No matching chats.' : 'No saved chats yet. Send a message to start one.';
+    historyList.append(note);
+    return;
+  }
+  for (const chat of matches) {
+    const row = document.createElement('div');
+    row.className = 'swipe-row';
+    const open = historyButton(chat.title, () => {
+      showChat(chat);
+      historyDialog.close();
+      promptBox.focus();
+    });
+    open.className = 'swipe-button';
+    open.title = chat.title;
+    if (chat.id === activeId) open.setAttribute('aria-current', 'true');
+    open.setAttribute('aria-description', 'Swipe right or press Right Arrow to rename. Swipe left or press Left Arrow to delete.');
+    open.setAttribute('aria-keyshortcuts', 'ArrowRight ArrowLeft');
+    row.append(swipeCue(false), swipeCue(true), open);
+    attachSwipeGesture(row, open, {left: () => editChat(chat, true), right: () => editChat(chat, false)});
+    historyList.append(row);
+  }
+}
+
+historySearch.oninput = () => {
+  renderHistory();
+  historyList.scrollTop = 0;
+};
+find('history-button').onclick = () => {
+  historySearch.value = '';
+  renderHistory();
+  historyDialog.showModal();
+  historyList.focus();
+};
+
+function dismissOnBackdrop(dialog) {
+  function isBackdrop(event) {
+    if (event.target !== dialog) return false;
+    const bounds = dialog.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX >= bounds.right
+      || event.clientY < bounds.top || event.clientY >= bounds.bottom;
+  }
+
+  let startedOnBackdrop = false;
+  dialog.addEventListener('pointerdown', event => {
+    startedOnBackdrop = isBackdrop(event);
+  });
+  dialog.addEventListener('click', event => {
+    if (startedOnBackdrop && isBackdrop(event)) dialog.close();
+    startedOnBackdrop = false;
+  });
+}
+
+dismissOnBackdrop(historyDialog);
+dismissOnBackdrop(modelDialog);
+dismissOnBackdrop(settings);
+
+const appearanceDialog = find('appearance-dialog');
+const fontSize = find('chat-font-size');
+const themeButtons = [...appearanceDialog.querySelectorAll('[data-theme-option]')];
+const themeKey = 'neural-link.theme';
+const fontSizeKey = 'neural-link.chat-font-size';
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  window.HackGptAndroid?.setLightTheme(theme === 'light');
+  for (const button of themeButtons) {
+    button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme));
+  }
+}
+
+function applyFontSize(value) {
+  fontSize.value = value;
+  document.documentElement.style.setProperty('--chat-font-size', fontSize.value + 'px');
+  find('chat-font-size-value').textContent = fontSize.value + ' px';
+}
+
+applyTheme(stored(themeKey) === 'light' ? 'light' : 'dark');
+applyFontSize(stored(fontSizeKey) ?? '16');
+for (const button of themeButtons) {
+  button.onclick = () => {
+    const theme = button.dataset.themeOption;
+    applyTheme(theme);
+    remember(themeKey, theme);
+  };
+}
+fontSize.oninput = () => {
+  applyFontSize(fontSize.value);
+  remember(fontSizeKey, fontSize.value);
+};
+find('appearance-button').onclick = () => appearanceDialog.showModal();
+dismissOnBackdrop(appearanceDialog);
+
+window.hackGptHandleBack = () => {
+  const dialogs = [...document.querySelectorAll('dialog[open]')];
+  const dialog = dialogs[dialogs.length - 1];
+  if (!dialog) return false;
+  if (dialog.dispatchEvent(new Event('cancel', {cancelable:true}))) dialog.close();
+  return true;
+};
+
+
+
+function editChat(chat, deleting) {
+  pendingAction = {chat, deleting};
+  find('chat-action-heading').textContent = deleting ? 'Delete chat?' : 'Rename chat';
+  find('rename-field').hidden = deleting;
+  const warning = find('delete-message');
+  warning.hidden = !deleting;
+  warning.textContent = deleting ? 'Delete "' + chat.title + '" from chat history?' : '';
+  titleInput.required = !deleting;
+  titleInput.setCustomValidity('');
+  titleInput.value = deleting ? '' : chat.title;
+  find('confirm-action').textContent = deleting ? 'Delete' : 'Save';
+  actionDialog.showModal();
+  if (deleting) find('cancel-action').focus();
+  else titleInput.select();
+}
+
+titleInput.oninput = () => titleInput.setCustomValidity('');
+find('cancel-action').onclick = () => actionDialog.close();
+find('chat-action-form').onsubmit = event => {
+  event.preventDefault();
+  const {chat, deleting} = pendingAction;
+  if (deleting) {
+    chats = chats.filter(item => item.id !== chat.id);
+    if (activeId === chat.id) showChat(null);
+  } else {
+    const title = titleInput.value.trim();
+    if (!title) {
+      titleInput.setCustomValidity('Enter a chat title.');
+      titleInput.reportValidity();
+      return;
+    }
+    chat.title = title;
+  }
+  saveChats();
+  actionDialog.close();
+  renderHistory();
+  const next = historyList.querySelector('button') ?? historyList;
+  next.focus();
+};
+
+const turnFiles = new WeakMap();
+let requestAbort = null;
+
+function attachmentCapabilities(model) {
+  const connection = model?.connection;
+  const advertised = connection?.models.find(item => item.id === model.id)?.input;
+  return {
+    image: !!connection && advertised?.image !== false,
+    pdf: !!connection && connection.type !== 'gemini' && advertised?.pdf !== false
+  };
+}
+
+function updateAttachmentControl(model) {
+  fileButton.disabled = sending || readingFiles || !model?.connection;
+  const {image, pdf} = attachmentCapabilities(model);
+  filePicker.accept = [
+    '.txt,.md,.csv,.tsv,.json,.jsonl,.xml,.log',
+    image && '.png,.jpg,.jpeg,.gif,.webp',
+    pdf && '.pdf'
+  ].filter(Boolean).join(',');
+  fileButton.title = model?.connection ? 'Attach ' + [
+    'text or data', image && 'images', pdf && 'PDFs'
+  ].filter(Boolean).join(', ') : 'Connect a model to attach files';
+}
+
+function showChatError(message) {
+  const label = find('chat-error');
+  label.textContent = message;
+  label.hidden = !message;
+}
+
+function fileChips(names, remove) {
+  const list = document.createDocumentFragment();
+  for (const [index, name] of names.entries()) {
+    const chip = document.createElement('span');
+    chip.className = 'file-chip';
+    chip.append(name);
+    if (remove) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = '×';
+      button.setAttribute('aria-label', 'Remove ' + name);
+      button.onclick = () => remove(index);
+      chip.append(button);
+    }
+    list.append(chip);
+  }
+  return list;
+}
+
+function renderAttachments() {
+  const row = find('pending-files');
+  clearContents(row);
+  row.append(fileChips(attachments.map(file => file.name), index => {
+    if (sending) return;
+    attachments.splice(index, 1);
+    renderAttachments();
+  }));
+  for (const button of row.querySelectorAll('button')) button.disabled = sending;
+  row.hidden = !attachments.length;
+}
+
+function fileEncoding(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',', 2)[1]);
+    reader.onerror = () => reject(new Error('Could not read ' + file.name + '.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function acceptsFile(file, model) {
+  const support = attachmentCapabilities(model);
+  return !!model?.connection && (file.kind === 'text' || support[file.kind]);
+}
+
+fileButton.onclick = () => {
+  if (window.HackGptAndroid) addAttachments(() => androidRequest('pickFiles'));
+  else filePicker.click();
+};
+filePicker.onchange = () => {
+  const files = [...filePicker.files];
+  filePicker.value = '';
+  addAttachments(() => files);
+};
+
+async function addAttachments(load) {
+  if (sending || readingFiles) return;
+  readingFiles = true;
+  const version = attachmentVersion;
+  updateAttachmentControl(currentModel());
+  showChatError('');
+  const model = currentModel();
+  const accepted = [];
+  const images = {png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp'};
+  let size = attachments.reduce((sum, file) => sum + file.size, 0);
+  try {
+    const files = await load();
+    for (const file of files) {
+      if (attachments.length + accepted.length >= 4) throw new Error('Choose up to 4 files per message.');
+      const ext = file.name.split('.').pop().toLowerCase();
+      const mime = Object.prototype.hasOwnProperty.call(images, ext) ? images[ext] : ext === 'pdf' ? 'application/pdf' : '';
+      const kind = mime ? (ext === 'pdf' ? 'pdf' : 'image') : 'text';
+      if (!mime && !/\.(txt|md|csv|tsv|json|jsonl|xml|log)$/i.test(file.name)) {
+        throw new Error('Use an image, PDF, or UTF-8 file such as TXT, CSV, or JSON.');
+      }
+      if (!acceptsFile({kind}, model)) throw new Error('The selected model does not support ' + kind + ' attachments.');
+      if (file.size > (kind === 'text' ? 256_000 : 5_000_000)) {
+        throw new Error(kind === 'text' ? 'Text and data files must be under 256 KB.' : 'Images and PDFs must be under 5 MB.');
+      }
+      size += file.size;
+      if (size > 6_000_000) throw new Error('Attachments must be under 6 MB in total.');
+      const data = typeof file.data === 'string' ? file.data
+        : kind === 'text' ? await file.text() : await fileEncoding(file);
+      if (!data || (kind === 'text' && data.includes('\u0000'))) throw new Error('No usable data in ' + file.name + '.');
+      accepted.push({name: file.name, kind, mime, size: file.size, data});
+    }
+    if (sending || version !== attachmentVersion) return;
+    attachments.push(...accepted);
+    renderAttachments();
+  } catch (error) {
+    if (version === attachmentVersion) showChatError(error.message);
+  } finally {
+    readingFiles = false;
+    updateAttachmentControl(currentModel());
+  }
+}
+
+function showFileNames(message, names) {
+  if (!names?.length) return;
+  const list = document.createElement('div');
+  list.className = 'message-files';
+  list.append(fileChips(names));
+  message.append(list);
+}
+
+function showTurn(turn) {
+  showFileNames(appendMessage('YOU', turn.question, true), turn.files);
+  const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false);
+  if (turn.reasoningSummary) {
+    const detail = document.createElement('details');
+    const heading = document.createElement('summary');
+    heading.textContent = 'Reasoning summary';
+    const text = document.createElement('p');
+    text.textContent = turn.reasoningSummary;
+    detail.append(heading, text);
+    answer.append(detail);
+  }
+  const stats = turn.stats ?? {};
+  const items = [
+    stats.durationMs == null ? '' : (stats.durationMs / 1000).toFixed(2) + ' s',
+    stats.firstTokenMs == null ? '' : 'First token ' + (stats.firstTokenMs / 1000).toFixed(2) + ' s',
+    stats.inputTokens == null ? '' : stats.inputTokens + ' in',
+    stats.outputTokens == null ? '' : stats.outputTokens + ' out',
+    stats.reasoningTokens ? stats.reasoningTokens + ' reasoning' : '',
+    stats.tokensPerSecond == null ? '' : stats.tokensPerSecond + ' tok/s',
+    turn.stopped ? 'Stopped' : ''
+  ].filter(Boolean);
+  if (items.length) {
+    const meta = document.createElement('small');
+    meta.className = 'reply-meta';
+    meta.textContent = items.join(' · ');
+    answer.append(meta);
+  }
+}
+
+function setSending(value) {
+  sending = value;
+  for (const id of ['history-button', 'provider', 'model-button', 'prompt']) find(id).disabled = value;
+  reset.disabled = value || !activeId;
+  messages.setAttribute('aria-busy', String(value));
+  sendButton.textContent = value ? '■' : '➤';
+  sendButton.title = value ? 'Stop response' : 'Send';
+  sendButton.setAttribute('aria-label', sendButton.title);
+  updateModelStatus();
+  renderAttachments();
+}
+
+async function receiveReply(payload, onEvent, signal) {
+  if (window.HackGptAndroid) return androidRequest('chat/stream', payload, onEvent, signal);
+  const response = await fetch('/api/chat/stream', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload), signal
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || 'The chat request failed.');
+  }
+  const decoded = response.body.pipeThrough(new TextDecoderStream());
+  let buffer = '';
+  let stats = null;
+  for await (const chunk of decoded) {
+    buffer += chunk;
+    let breakIndex;
+    while ((breakIndex = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, breakIndex).trim();
+      buffer = buffer.slice(breakIndex + 1);
+      if (!line) continue;
+      const event = JSON.parse(line);
+      if (event.type === 'error') throw new Error(event.message);
+      if (event.type === 'done') stats = event.stats;
+      else onEvent(event);
+    }
+  }
+  if (!stats) throw new Error('The response ended before the model finished.');
+  return stats;
+}
+
+find('composer').onsubmit = async event => {
+  event.preventDefault();
+  if (sending) {
+    requestAbort?.abort();
+    return;
+  }
+  if (readingFiles) return;
+  const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
+  const model = currentModel();
+  if (!text || !model) return;
+  if (!attachments.every(file => acceptsFile(file, model))) {
+    showChatError('Remove attachments this model cannot use, or choose a compatible model.');
+    return;
+  }
+  const connection = model.connection;
+  const source = model.profile?.id ?? null;
+  let chat = chats.find(item => item.id === activeId && (item.source ?? null) === source);
+  const files = [...attachments];
+  const turn = {question: text, files: files.map(file => file.name), model: model.name,
+    reply: 'This is a simulated reply. Connect a provider in Settings to use a live model.'};
+  showChatError('');
+
+  if (connection) {
+    const previous = (chat?.turns ?? []).flatMap(item => [
+      {role: 'user', content: item.question, files: (turnFiles.get(item) ?? []).filter(file => acceptsFile(file, model))},
+      {role: 'assistant', content: item.reply}
+    ]);
+    const originalChat = chats.find(item => item.id === activeId);
+    const originalDraft = promptBox.value;
+    if (!chat) clearContents(messages);
+    requestAbort = new AbortController();
+    setSending(true);
+    showFileNames(appendMessage('YOU', text, true), turn.files);
+    const pending = appendMessage(model.name, 'Waiting for reply…', false);
+    const body = pending.lastElementChild;
+    body.className = 'pending-reply';
+    messages.scrollTop = messages.scrollHeight;
+    turn.reply = '';
+    try {
+      turn.stats = await receiveReply({
+        connection: connection.id, model: model.id,
+        messages: [...previous, {role: 'user', content: text, files}]
+      }, update => {
+        if (update.type === 'thinking' && !turn.reply) body.textContent = 'Reasoning…';
+        if (update.type === 'summary') turn.reasoningSummary = (turn.reasoningSummary ?? '') + update.text;
+        if (update.type !== 'delta') return;
+        const pinned = messages.scrollHeight - messages.clientHeight - messages.scrollTop < 48;
+        if (!turn.reply) {
+          body.textContent = '';
+          body.className = '';
+        }
+        turn.reply += update.text;
+        body.append(update.text);
+        if (pinned) messages.scrollTop = messages.scrollHeight;
+      }, requestAbort.signal);
+    } catch (error) {
+      if (requestAbort.signal.aborted && turn.reply.trim()) {
+        turn.stopped = true;
+      } else {
+        showChat(originalChat);
+        promptBox.value = originalDraft;
+        attachments.push(...files);
+        showChatError(requestAbort.signal.aborted ? 'Response stopped.' : error.message);
+        return;
+      }
+    } finally {
+      setSending(false);
+      requestAbort = null;
+      promptBox.focus();
+    }
+  }
+
+  if (!chat) chat = {id: newId(), title: text.replace(/\s+/g, ' ').slice(0, 60), source, turns: []};
+  if (files.length) turnFiles.set(turn, files);
+  chat.turns.push(turn);
+  chats = [chat, ...chats.filter(item => item.id !== chat.id)];
+  saveChats();
+  showChat(chat);
+  promptBox.focus();
+};
+
+
+reset.onclick = () => {
+  showChat(null);
+  promptBox.focus();
+};
+
+const art = find('signal').getContext('2d');
+art.scale(2, 2);
+art.strokeStyle = '#baff56';
+art.fillStyle = '#baff56';
+art.lineCap = 'round';
+art.lineJoin = 'round';
+
+function trace(points, width) {
+  art.lineWidth = width;
+  art.beginPath();
+  art.moveTo(...points[0]);
+  for (const point of points.slice(1)) art.lineTo(...point);
+  art.stroke();
+}
+
+art.globalAlpha = .46;
+trace([[110,17],[169,49],[184,104],[169,160],[110,193],[51,160],[36,104],[51,49],[110,17]], 1);
+trace([[110,28],[159,56],[172,104],[159,152],[110,180],[61,152],[48,104],[61,56],[110,28]], .75);
+for (const [side, y] of [[-1,75],[1,75],[-1,134],[1,134]]) {
+  const x = 110 + side * 60;
+  const end = 110 + side * 91;
+  trace([[x,y],[x + side * 9,y],[end - side * 8,y - 8],[end,y - 8]], 1);
+  art.beginPath();
+  art.arc(end,y - 8,2,0,Math.PI * 2);
+  art.fill();
+}
+art.globalAlpha = 1;
+trace([[67,130],[72,92],[89,66],[110,56],[131,66],[148,92],[153,130],[135,140],[124,153],[96,153],[85,140],[67,130]], 2);
+trace([[82,107],[90,90],[110,83],[130,90],[138,107],[132,123],[110,132],[88,123],[82,107]], 1.4);
+trace([[98,99],[106,106],[98,113]], 2.4);
+trace([[113,114],[123,114]], 2);
+art.globalAlpha = .54;
+trace([[93,145],[110,150],[127,145]], 1);
+trace([[101,36],[119,36]], 1.2);
+trace([[101,171],[119,171]], 1.2);
+</script>
+</body>
+</html>
