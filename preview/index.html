@@ -57,8 +57,7 @@ article small{color:var(--lime)}
 h2{font-size:20px;margin:4px 0}
 p{overflow-wrap:anywhere}
 canvas{max-width:100%;height:auto}
-article{background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:4px}
-article.mine{background:var(--mine);border-inline-end:2px solid var(--lime);border-bottom-right-radius:0}
+article.mine{background:var(--mine);border:1px solid var(--line);border-inline-end:2px solid var(--lime);border-radius:4px 4px 0 4px;padding:12px}
 article.mine>p{margin-top:0}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
@@ -208,7 +207,7 @@ article .reply-meta{display:block;margin-top:8px;color:var(--muted);font-size:11
 article details{margin-top:8px;padding:5px 7px;border-left:1px solid var(--line);color:var(--muted);font-size:12px}
 article details summary{cursor:pointer}
 article .pending-reply{color:var(--muted)}
-#messages article.streaming-reply{width:min(90%,34rem);flex-shrink:0}
+#messages article.streaming-reply{flex-shrink:0}
 .streaming-reply>p{max-height:min(7em,25vh);overflow-y:auto}
 #appearance-button::before{
   content:"";
@@ -227,8 +226,9 @@ article .pending-reply{color:var(--muted)}
 #chat-font-size{width:100%;margin:12px 0 0;accent-color:var(--lime)}
 #history-search{margin:0 0 6px}
 #history-list{max-height:min(68vh,520px);max-height:min(68dvh,520px)}
-#messages article{align-self:flex-start;max-width:90%;width:fit-content;min-width:0}
-#messages article.mine{align-self:flex-end}
+#messages article{min-width:0}
+#messages article:not(.mine){align-self:stretch;padding-block:8px}
+#messages article.mine{align-self:flex-end;max-width:90%;width:fit-content}
 #messages article p,#prompt{font-size:var(--chat-font-size);line-height:1.45}
 :root[data-theme="light"] #empty canvas{filter:brightness(.37) saturate(1.3)}
 @media(max-width:340px){header{margin-left:-10px;margin-right:-14px}.header-actions{gap:0}}
