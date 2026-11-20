@@ -44,6 +44,11 @@ const server = http.createServer(async (request, response) => {
             response.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'}).end(page);
             return;
         }
+        if (request.method === 'GET' && request.url === '/markdown-it.min.js') {
+            const script = await fs.readFile(path.join(__dirname, 'vendor', 'markdown-it.min.js'));
+            response.writeHead(200, {'Content-Type': 'application/javascript; charset=utf-8'}).end(script);
+            return;
+        }
         if (request.method === 'GET' && request.url === '/api/providers') {
             return send(response, 200, [...connections.values()].map(publicProvider));
         }

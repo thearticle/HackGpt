@@ -225,6 +225,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .android-app body{display:block;background:var(--ink)}
 .android-app main{width:100%;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;padding:8px 14px 12px}
 .android-app header{margin-left:-6px;margin-right:-6px;transform:none}
+.android-app.fullscreen main{padding-top:0}
 #appearance-dialog .fullscreen-option{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:var(--paper);cursor:pointer}
 #appearance-dialog .fullscreen-option[hidden]{display:none}
 #appearance-dialog .fullscreen-option input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--lime)}
@@ -245,7 +246,25 @@ html.android-app,.android-app body{height:100%;min-height:0}
   #reset:not(:disabled)::before,#reset.holding::after,#empty.credits-view>div{animation:none}
   #reset.holding::after{opacity:.75}
 }
+.model-markdown{margin-top:6px;font-size:var(--chat-font-size);line-height:1.45;overflow-wrap:anywhere;min-width:0}
+#messages .model-markdown p{white-space:normal}
+.model-markdown>:first-child{margin-top:0}
+.model-markdown>:last-child{margin-bottom:0}
+.model-markdown h1,.model-markdown h2,.model-markdown h3,.model-markdown h4,.model-markdown h5,.model-markdown h6{font-size:1.1em;margin:12px 0 4px;line-height:1.3}
+.model-markdown ul,.model-markdown ol{padding-left:1.35em;margin:6px 0}
+.model-markdown li+li{margin-top:3px}
+.model-markdown a{color:var(--lime)}
+.model-markdown blockquote{margin:8px 0;padding:2px 8px;border-left:2px solid var(--line);color:var(--muted)}
+.model-markdown hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+.model-markdown code{font:inherit;background:var(--ink);padding:1px 3px;border-radius:3px}
+.model-markdown pre,.markdown-scroll{margin:8px 0;max-width:100%;overflow-x:auto}
+.model-markdown pre{background:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;font:inherit;white-space:pre;overflow-wrap:normal}
+.model-markdown pre code{padding:0}
+.model-markdown table{border-collapse:collapse;font-size:.88em;min-width:100%}
+.model-markdown th,.model-markdown td{border:1px solid var(--line);padding:5px 8px;text-align:left;min-width:7em}
+.model-markdown th{background:var(--mine)}
 </style>
+<script src="/markdown-it.min.js"></script>
 </head>
 <body>
 <main>
@@ -1199,7 +1218,11 @@ dismissOnBackdrop(settings);
 if (window.HackGptAndroid?.setFullScreen) {
   const toggle = find('fullscreen-toggle');
   toggle.checked = window.HackGptAndroid.isFullScreen();
-  toggle.onchange = () => window.HackGptAndroid.setFullScreen(toggle.checked);
+  document.documentElement.classList.toggle('fullscreen', toggle.checked);
+  toggle.onchange = () => {
+    document.documentElement.classList.toggle('fullscreen', toggle.checked);
+    window.HackGptAndroid.setFullScreen(toggle.checked);
+  };
   find('fullscreen-option').hidden = false;
 }
 
@@ -1425,9 +1448,52 @@ function showFileNames(message, names) {
   message.append(list);
 }
 
+const replyMarkdown = window.markdownit?.({html: false, breaks: true, linkify: true, maxNesting: 20});
+if (replyMarkdown) {
+  replyMarkdown.validateLink = url => /^https:\/\//i.test(url);
+  replyMarkdown.renderer.rules.image = (tokens, index) =>
+    replyMarkdown.utils.escapeHtml(tokens[index].content);
+  replyMarkdown.renderer.rules.link_open = (tokens, index, options, env, renderer) => {
+    if (!window.HackGptAndroid) tokens[index].attrSet('target', '_blank');
+    tokens[index].attrSet('rel', 'noopener noreferrer');
+    return renderer.renderToken(tokens, index, options);
+  };
+  replyMarkdown.renderer.rules.table_open = () =>
+    '<div class="markdown-scroll" role="region" aria-label="Table" tabindex="0"><table>';
+  replyMarkdown.renderer.rules.table_close = () => '</table></div>\n';
+  replyMarkdown.inline.ruler.before('text', 'underline', (state, silent) => {
+    const htmlLike = state.src.startsWith('<u>', state.pos);
+    const marker = htmlLike ? '<u>' : '++';
+    if (!state.src.startsWith(marker, state.pos)) return false;
+    const start = state.pos + marker.length;
+    const closing = htmlLike ? '</u>' : marker;
+    const end = state.src.indexOf(closing, start);
+    if (end <= start || end + closing.length > state.posMax
+        || !state.src.slice(start, end).trim()) return false;
+    if (!silent) {
+      const token = state.push('underline', 'u', 0);
+      token.content = state.src.slice(start, end);
+    }
+    state.pos = end + closing.length;
+    return true;
+  });
+  replyMarkdown.renderer.rules.underline = (tokens, index) =>
+    '<u>' + replyMarkdown.utils.escapeHtml(tokens[index].content) + '</u>';
+}
+
+function renderReplyMarkup(article, reply) {
+  if (!replyMarkdown || reply.length > 250_000) return;
+  const rich = document.createElement('div');
+  rich.className = 'model-markdown';
+  rich.innerHTML = replyMarkdown.render(reply);
+  article.replaceChild(rich, article.lastElementChild);
+}
+
+
 function showTurn(turn) {
   showFileNames(appendMessage('YOU', turn.question, true), turn.files);
   const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false);
+  renderReplyMarkup(answer, turn.reply);
   if (turn.reasoningSummary) {
     const detail = document.createElement('details');
     const heading = document.createElement('summary');

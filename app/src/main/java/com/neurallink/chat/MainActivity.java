@@ -42,8 +42,10 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
             root.setOnApplyWindowInsetsListener((view, insets) -> {
-                var bounds = insets.getInsets(WindowInsets.Type.systemBars()
-                        | WindowInsets.Type.ime() | WindowInsets.Type.displayCutout());
+                int bars = fullScreen
+                        ? WindowInsets.Type.navigationBars() | WindowInsets.Type.captionBar()
+                        : WindowInsets.Type.systemBars();
+                var bounds = insets.getInsets(bars | WindowInsets.Type.ime() | WindowInsets.Type.displayCutout());
                 view.setPadding(bounds.left, bounds.top, bounds.right, bounds.bottom);
                 return insets;
             });
@@ -57,7 +59,16 @@ public final class MainActivity extends Activity {
         settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return !APP_URL.equals(request.getUrl().toString());
+                Uri url = request.getUrl();
+                if (APP_URL.equals(url.toString())) return false;
+                if (request.isForMainFrame() && request.hasGesture() && "https".equals(url.getScheme())) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, url).addCategory(Intent.CATEGORY_BROWSABLE));
+                    } catch (ActivityNotFoundException ignored) {
+                        // Keep the chat open if no browser can handle the link.
+                    }
+                }
+                return true;
             }
 
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -65,13 +76,22 @@ public final class MainActivity extends Activity {
                         && "GET".equals(request.getMethod())) {
                     try {
                         var headers = new HashMap<String, String>();
-                        headers.put("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; "
+                        headers.put("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; "
                                 + "style-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'");
                         headers.put("X-Content-Type-Options", "nosniff");
                         return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
                                 headers, getAssets().open("index.html"));
                     } catch (IOException ignored) {
                         // Return a local error without requesting the virtual origin over the network.
+                    }
+                }
+                if (!request.isForMainFrame() && "GET".equals(request.getMethod())
+                        && (APP_URL + "markdown-it.min.js").equals(request.getUrl().toString())) {
+                    try {
+                        return new WebResourceResponse("application/javascript", "UTF-8",
+                                getAssets().open("markdown-it.min.js"));
+                    } catch (IOException ignored) {
+                        // Fall back to plain-text chat if the bundled script is unavailable.
                     }
                 }
                 return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found",

@@ -4,17 +4,20 @@ import java.nio.file.StandardCopyOption
 plugins { id 'com.android.application' version '9.0.1' }
 
 abstract class BundleChatUi extends DefaultTask {
-    @InputFile
-    abstract RegularFileProperty getPage()
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    abstract ConfigurableFileCollection getUiFiles()
 
     @OutputDirectory
     abstract DirectoryProperty getOutputDirectory()
 
     @TaskAction
     void bundle() {
-        def destination = outputDirectory.file('index.html').get().asFile.toPath()
-        Files.createDirectories(destination.parent)
-        Files.copy(page.get().asFile.toPath(), destination, StandardCopyOption.REPLACE_EXISTING)
+        def directory = outputDirectory.get().asFile.toPath()
+        Files.createDirectories(directory)
+        uiFiles.each { file ->
+            Files.copy(file.toPath(), directory.resolve(file.name), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 }
 
@@ -26,8 +29,8 @@ android {
         applicationId 'com.thearticle.hackgpt'
         minSdk 26
         targetSdk 36
-        versionCode 6
-        versionName '1.0.4'
+        versionCode 7
+        versionName '1.0.5'
     }
 
     buildTypes {
@@ -47,7 +50,11 @@ android {
 androidComponents {
     onVariants(selector().all()) { variant ->
         def bundle = tasks.register('bundle' + variant.name.capitalize() + 'ChatUi', BundleChatUi) {
-            page.set(rootProject.layout.projectDirectory.file('preview/index.html'))
+            uiFiles.from(
+                rootProject.file('preview/index.html'),
+                rootProject.file('preview/vendor/markdown-it.min.js'),
+                rootProject.file('preview/vendor/markdown-it.NOTICES.txt')
+            )
             outputDirectory.set(layout.buildDirectory.dir('generated/chat-ui/' + variant.name))
         }
         variant.sources.assets.addGeneratedSourceDirectory(bundle, { task -> task.outputDirectory })
