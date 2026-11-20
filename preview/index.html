@@ -28,7 +28,7 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse at top,var(--scene-top),var(--scene-bottom) 65%);color:var(--paper)}
 main{width:min(100%,414px);height:min(820px,100vh);height:min(820px,100dvh);min-height:380px;background:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 0 42px var(--glow);padding:20px;display:flex;flex-direction:column}
-#composer{display:flex;align-items:center;gap:8px;justify-content:space-between}
+#composer{display:flex;align-items:stretch}
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--lime);border-radius:4px;min-height:44px;padding:7px 12px;font:inherit;font-size:13px;font-weight:bold}
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
@@ -60,9 +60,10 @@ canvas{max-width:100%;height:auto}
 article{background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:4px}
 article.mine{background:var(--mine)}
 article p{margin:6px 0 0;white-space:pre-wrap}
-#composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);padding:5px;border-radius:4px}
+#composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+#composer .send{flex:none;min-height:44px;border-radius:0 3px 3px 0;touch-action:pan-y;user-select:none;-webkit-touch-callout:none}
+#composer .send span{display:inline-block;transform:translateX(clamp(-10px,var(--swipe-x,0px),0px))}
 textarea{resize:vertical;min-width:0;max-height:110px;flex:1;border:0;padding:9px;background:transparent;color:var(--paper);font:inherit}
-textarea::placeholder{color:var(--muted)}
 dialog{width:min(390px,calc(100% - 24px));background:var(--panel);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px}
 dialog::backdrop{background:var(--scrim)}
 #model-button::before{
@@ -190,9 +191,6 @@ dialog::backdrop{background:var(--scrim)}
 #empty{display:grid;place-items:center;min-height:100%;margin:0;background:none;border:0;padding:14px;pointer-events:none}
 #empty>div{display:grid;justify-items:center;max-width:100%}
 #empty canvas{display:block;width:min(220px,70vw);height:auto;opacity:.38}
-#composer .attach{display:grid;place-items:center;flex:none;width:36px;min-height:40px;padding:0;background:transparent;border:0}
-.attach span{width:10px;height:19px;border:1.5px solid currentColor;border-radius:7px;transform:rotate(38deg);position:relative}
-.attach span::after{content:"";position:absolute;inset:2px 2px 4px;border:1px solid currentColor;border-top:0;border-radius:0 0 5px 5px}
 #pending-files,.message-files{display:flex;flex-wrap:wrap;gap:5px;margin:5px 0}
 #pending-files[hidden]{display:none}
 .file-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:4px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
@@ -263,6 +261,25 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .model-markdown table{border-collapse:collapse;font-size:.88em;min-width:100%}
 .model-markdown th,.model-markdown td{border:1px solid var(--line);padding:5px 8px;text-align:left;min-width:7em}
 .model-markdown th{background:var(--mine)}
+.android-app.fullscreen header .icon{align-items:start;padding-top:0}
+.android-app.fullscreen #reset::after{inset:0 auto auto calc(50% - 10px);width:20px;height:20px}
+.chat-visual{margin:9px 0;padding:9px;border:1px solid var(--line);border-radius:4px;font-size:.86em}
+.chat-visual figcaption{color:var(--lime);font-weight:bold}
+.model-markdown .chat-chart{list-style:none;padding:0}
+.chat-chart li{display:grid;grid-template-columns:minmax(4em,1fr) minmax(3em,1.6fr) auto;gap:6px;align-items:center}
+.bar-track{height:8px;border-radius:3px;background:var(--ink);position:relative;overflow:hidden}
+.bar-track i{display:block;height:100%;position:absolute;background:var(--lime)}
+.bar-track i.negative{background:var(--danger)}
+.bar-value{font-variant-numeric:tabular-nums}
+.model-markdown .chat-mindmap ul{list-style:none;border-left:1px solid var(--line);margin:5px 0;padding-left:12px}
+.chat-mindmap li{position:relative}
+.chat-mindmap li::before{content:"";position:absolute;width:9px;height:1px;top:.7em;left:-12px;background:var(--line)}
+.chat-mindmap li>span{display:inline-block;padding:1px 4px;background:var(--mine);border-radius:3px}
+.model-markdown .diagram-connections{padding-left:15px}
+.diagram-connections li{display:grid;grid-template-columns:minmax(0,1fr) minmax(1.5em,auto) minmax(0,1fr);gap:5px;align-items:center;margin:6px 0;padding-left:3px}
+.diagram-node{padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--mine);text-align:center;overflow-wrap:anywhere}
+.diagram-arrow{display:grid;justify-items:center;color:var(--lime);text-align:center}
+.diagram-arrow small{color:var(--muted);max-width:8em;text-wrap:wrap;overflow-wrap:anywhere}
 </style>
 <script src="/markdown-it.min.js"></script>
 </head>
@@ -288,10 +305,9 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <small id="demo-status" aria-live="polite"></small>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
-<button id="attach-files" class="attach" type="button" aria-label="Attach files" title="Attach files" disabled><span aria-hidden="true"></span></button>
 <input id="file-picker" type="file" multiple hidden>
-<textarea id="prompt" rows="1" aria-label="Message" placeholder="Message"></textarea>
-<button class="primary send" aria-label="Send" title="Send">➤</button>
+<textarea id="prompt" rows="1" aria-label="Message"></textarea>
+<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files" title="Send · Swipe left to attach files"><span aria-hidden="true">➤</span></button>
 </form>
 </main>
 <dialog id="settings" aria-label="Provider settings">
@@ -435,7 +451,7 @@ const baseInput = find('provider-base');
 const keyInput = find('provider-key');
 const modelSearch = find('model-search');
 const sendButton = find('composer').querySelector('.send');
-const fileButton = find('attach-files');
+const sendSymbol = sendButton.querySelector('span');
 const filePicker = find('file-picker');
 let attachments = [];
 let readingFiles = false;
@@ -1325,16 +1341,12 @@ function attachmentCapabilities(model) {
 }
 
 function updateAttachmentControl(model) {
-  fileButton.disabled = sending || readingFiles;
   const {image, pdf} = attachmentCapabilities(model);
   filePicker.accept = [
     '.txt,.md,.csv,.tsv,.json,.jsonl,.xml,.log',
     (image || !model?.connection) && '.png,.jpg,.jpeg,.gif,.webp',
     (pdf || !model?.connection) && '.pdf'
   ].filter(Boolean).join(',');
-  fileButton.title = model?.connection ? 'Attach ' + [
-    'text or data', image && 'images', pdf && 'PDFs'
-  ].filter(Boolean).join(', ') : 'Choose files to attach';
 }
 
 function showChatError(message) {
@@ -1388,10 +1400,15 @@ function acceptsFile(file, model) {
   return !!model?.connection && (file.kind === 'text' || support[file.kind]);
 }
 
-fileButton.onclick = () => {
+function openAttachmentPicker() {
+  if (sending || readingFiles) return;
   if (window.HackGptAndroid) addAttachments(() => androidRequest('pickFiles'));
   else filePicker.click();
-};
+}
+attachSwipeGesture(sendButton, sendButton, {left: openAttachmentPicker});
+sendButton.addEventListener('pointerdown', event => {
+  if (event.isPrimary && event.button === 0) sendButton.setPointerCapture(event.pointerId);
+});
 filePicker.onchange = () => {
   const files = [...filePicker.files];
   filePicker.value = '';
@@ -1448,8 +1465,136 @@ function showFileNames(message, names) {
   message.append(list);
 }
 
+function parseVisualSpec(source) {
+  try { return JSON.parse(source); } catch {
+    // Some models return Python-style quoted strings in otherwise structured data.
+    const strings = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b(?:True|False|None)\b/g;
+    const normalized = source.replace(strings, token => {
+      if (token[0] === '"') return token;
+      if (token[0] === "'") {
+        const content = token.slice(1, -1).replace(/\\.|"/g, part => {
+          if (part === "\\'") return "'";
+          return part === '"' ? '\\"' : part;
+        });
+        return '"' + content + '"';
+      }
+      return {True:'true', False:'false', None:'null'}[token];
+    });
+    try { return JSON.parse(normalized); } catch { return null; }
+  }
+}
+
+function renderDiagramConnections(spec, kind, title, escape) {
+  const flow = kind === 'flowchart';
+  const members = flow ? spec.nodes : spec.participants ?? spec.actors;
+  const links = flow ? spec.edges ?? spec.links ?? spec.connections
+    : spec.messages ?? spec.steps ?? spec.interactions ?? spec.events ?? spec.sequence;
+  if (!Array.isArray(members) || !members.length || members.length > 24
+      || !Array.isArray(links) || !links.length || links.length > 36) return null;
+  const labels = new Map();
+  for (const item of members) {
+    const name = typeof item === 'string' ? item : item?.label ?? item?.name ?? item?.id;
+    const id = typeof item === 'string' ? item : item?.id ?? item?.name ?? name;
+    if (typeof name !== 'string' || typeof id !== 'string' || !name.trim()) return null;
+    labels.set(id, name);
+    if (!labels.has(name)) labels.set(name, name);
+  }
+
+  const rows = [];
+  for (const link of links) {
+    const from = link?.from ?? link?.source ?? link?.sender ?? link?.start;
+    const to = link?.to ?? link?.target ?? link?.receiver ?? link?.end;
+    const label = link?.label ?? link?.message ?? link?.text ?? link?.description ?? link?.condition ?? link?.action ?? '';
+    if (!labels.has(from) || !labels.has(to) || typeof label !== 'string') return null;
+    rows.push('<li><span class="diagram-node">' + escape(labels.get(from).slice(0, 90))
+      + '</span><span class="diagram-arrow"><span aria-label="to">→</span>'
+      + (label ? '<small>' + escape(label.slice(0, 120)) + '</small>' : '')
+      + '</span><span class="diagram-node">' + escape(labels.get(to).slice(0, 90)) + '</span></li>');
+  }
+  return '<figure class="chat-visual"><figcaption>' + title + '</figcaption><ol class="diagram-connections">'
+    + rows.join('') + '</ol></figure>';
+}
+
+
+function renderInlineVisual(kind, source, escape) {
+  if (source.length > 12_000 || !['', 'json', 'diagram', 'chart', 'mindmap', 'flowchart', 'orgchart', 'sequence'].includes(kind)) return null;
+  const spec = parseVisualSpec(source);
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return null;
+  const type = spec.type ?? kind;
+  if (!['chart', 'mindmap', 'flowchart', 'orgchart', 'sequence'].includes(type)) return null;
+  const fallback = {chart:'Bar chart',mindmap:'Mind map',flowchart:'Flowchart',orgchart:'Org chart',sequence:'Sequence diagram'};
+  const value = typeof spec.title === 'string' && spec.title.trim() ? spec.title : fallback[type];
+  const title = escape(value.slice(0, 100));
+  if (type === 'flowchart' || type === 'sequence') {
+    return renderDiagramConnections(spec, type, title, escape);
+  }
+  if (type === 'chart') {
+    const {labels, values} = spec;
+    if (!Array.isArray(labels) || !Array.isArray(values) || !labels.length
+        || labels.length !== values.length || labels.length > 12
+        || labels.some(label => typeof label !== 'string')
+        || values.some(value => typeof value !== 'number' || !Number.isFinite(value) || Math.abs(value) > 1e12)) return null;
+    const min = Math.min(0, ...values);
+    const max = Math.max(0, ...values);
+    const span = max - min || 1;
+    const rows = values.map((value, index) => {
+      const start = ((Math.min(value, 0) - min) / span * 100).toFixed(2);
+      const width = (Math.abs(value) / span * 100).toFixed(2);
+      return '<li><span>' + escape(labels[index].slice(0, 60)) + '</span>'
+        + '<span class="bar-track" aria-hidden="true"><i class="' + (value < 0 ? 'negative' : '')
+        + '" style="left:' + start + '%;width:' + width + '%"></i></span>'
+        + '<span class="bar-value">' + value + '</span></li>';
+    }).join('');
+    return '<figure class="chat-visual"><figcaption>' + title + '</figcaption><ul class="chat-chart">' + rows + '</ul></figure>';
+  }
+
+  let count = 0;
+  function tree(children, depth) {
+    if (!Array.isArray(children) || depth > 4 || children.length > 12) return null;
+    if (!children.length) return '';
+    let nodes = '';
+    for (const child of children) {
+      if (++count > 32) return null;
+      const label = typeof child === 'string' ? child : child?.label;
+      if (typeof label !== 'string' || !label.trim()) return null;
+      const branches = child?.children === undefined ? '' : tree(child.children, depth + 1);
+      if (branches === null) return null;
+      nodes += '<li><span>' + escape(label.slice(0, 100)) + '</span>' + branches + '</li>';
+    }
+    return '<ul>' + nodes + '</ul>';
+  }
+  const root = type === 'orgchart' ? spec.root : null;
+  if (type === 'orgchart' && !root && !Array.isArray(spec.children)) return null;
+  const branches = tree(root ? [root] : spec.children, 1);
+  return branches ? '<figure class="chat-visual chat-mindmap"><figcaption>' + title + '</figcaption>' + branches + '</figure>' : null;
+}
+
+function promptWithVisualFormats(text) {
+  if (!/\b(?:charts?|bar graphs?|mind[ -]*maps?|grafik|peta pikiran|diagrams?|flow[ -]*charts?|org[ -]*charts?|sequences?)\b/i.test(text)) return text;
+  const fence = String.fromCharCode(96).repeat(3);
+  const examples = [
+    {type:'chart',title:'Bar chart',labels:['A','B'],values:[3,5]},
+    {type:'mindmap',title:'Mind map',children:[{label:'Branch',children:['Leaf']}]},
+    {type:'flowchart',title:'Process',nodes:[{id:'a',label:'Start'},{id:'b',label:'Finish'}],edges:[{from:'a',to:'b',label:'Next'}]},
+    {type:'orgchart',title:'Organization',root:{label:'Lead',children:[{label:'Team'}]}},
+    {type:'sequence',title:'Sequence',participants:['User','App'],messages:[{from:'User',to:'App',label:'Open'}]}
+  ];
+  return text + '\n\nIf a diagram or chart fits the request, use a fenced json block containing one object '
+    + 'with a type field. Use double-quoted JSON, short labels, and the schema for the requested visual. '
+    + 'Use separate blocks when asked for multiple visuals. Supported examples:\n'
+    + examples.map(example => fence + 'json\n' + JSON.stringify(example) + '\n' + fence).join('\n');
+}
+
+
 const replyMarkdown = window.markdownit?.({html: false, breaks: true, linkify: true, maxNesting: 20});
 if (replyMarkdown) {
+  const standardFence = replyMarkdown.renderer.rules.fence;
+  replyMarkdown.renderer.rules.fence = (tokens, index, options, env, renderer) => {
+    const token = tokens[index];
+    const kind = token.info.trim().split(/\s+/, 1)[0].toLowerCase();
+    return renderInlineVisual(kind, token.content, replyMarkdown.utils.escapeHtml)
+      ?? standardFence(tokens, index, options, env, renderer);
+  };
   replyMarkdown.validateLink = url => /^https:\/\//i.test(url);
   replyMarkdown.renderer.rules.image = (tokens, index) =>
     replyMarkdown.utils.escapeHtml(tokens[index].content);
@@ -1526,9 +1671,9 @@ function setSending(value) {
   for (const id of ['history-button', 'provider', 'model-button', 'prompt']) find(id).disabled = value;
   reset.disabled = value;
   messages.setAttribute('aria-busy', String(value));
-  sendButton.textContent = value ? '■' : '➤';
-  sendButton.title = value ? 'Stop response' : 'Send';
-  sendButton.setAttribute('aria-label', sendButton.title);
+  sendSymbol.textContent = value ? '■' : '➤';
+  sendButton.title = value ? 'Stop response' : 'Send · Swipe left to attach files';
+  sendButton.setAttribute('aria-label', value ? 'Stop response' : 'Send');
   updateModelStatus();
   renderAttachments();
 }
@@ -1608,7 +1753,7 @@ find('composer').onsubmit = async event => {
     try {
       turn.stats = await receiveReply({
         connection: connection.id, model: model.id,
-        messages: [...previous, {role: 'user', content: text, files}]
+        messages: [...previous, {role: 'user', content: promptWithVisualFormats(text), files}]
       }, update => {
         if (update.type === 'thinking' && !turn.reply) body.textContent = 'Reasoning…';
         if (update.type === 'summary') turn.reasoningSummary = (turn.reasoningSummary ?? '') + update.text;
@@ -1654,6 +1799,7 @@ let holdTimer;
 let heldPointer;
 let heldKey;
 let holdOrigin;
+let touchId;
 let skipNewChatClick = false;
 
 function openNewChat(credits = false) {
@@ -1668,6 +1814,7 @@ function endNewChatHold() {
   heldPointer = undefined;
   heldKey = undefined;
   holdOrigin = undefined;
+  touchId = undefined;
   reset.classList.remove('holding');
 }
 
@@ -1681,8 +1828,42 @@ function beginNewChatHold() {
   }, CREDITS_HOLD_MS);
 }
 
+reset.addEventListener('touchstart', event => {
+  if (reset.disabled) return;
+  event.preventDefault();
+  endNewChatHold();
+  if (event.touches.length !== 1) return;
+  const touch = event.changedTouches[0];
+  touchId = touch.identifier;
+  holdOrigin = [touch.clientX, touch.clientY];
+  beginNewChatHold();
+}, {passive: false});
+reset.addEventListener('touchmove', event => {
+  const touch = Array.from(event.changedTouches).find(item => item.identifier === touchId);
+  if (!touch || !holdOrigin) return;
+  event.preventDefault();
+  if (Math.hypot(touch.clientX - holdOrigin[0], touch.clientY - holdOrigin[1]) > 18) {
+    skipNewChatClick = true;
+    endNewChatHold();
+    touchId = undefined;
+  }
+}, {passive: false});
+reset.addEventListener('touchend', event => {
+  if (!Array.from(event.changedTouches).some(touch => touch.identifier === touchId)) return;
+  event.preventDefault();
+  touchId = undefined;
+  const quickTap = !skipNewChatClick;
+  endNewChatHold();
+  skipNewChatClick = false;
+  if (quickTap && !reset.disabled) openNewChat();
+}, {passive: false});
+reset.addEventListener('touchcancel', () => {
+  touchId = undefined;
+  endNewChatHold();
+});
+
 reset.onpointerdown = event => {
-  if (reset.disabled || !event.isPrimary || event.button !== 0) return;
+  if (reset.disabled || event.pointerType === 'touch' || !event.isPrimary || event.button !== 0) return;
   endNewChatHold();
   heldPointer = event.pointerId;
   holdOrigin = [event.clientX, event.clientY];
