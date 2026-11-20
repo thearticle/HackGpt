@@ -28,6 +28,7 @@ public final class MainActivity extends Activity {
     private ProviderBridge bridge;
     private String fileRequest;
     private int fileRequestCode;
+    private volatile boolean fullScreen;
     private android.window.OnBackInvokedCallback backCallback;
 
     @Override public void onCreate(Bundle state) {
@@ -81,6 +82,8 @@ public final class MainActivity extends Activity {
         web.addJavascriptInterface(bridge, "HackGptAndroid");
         setContentView(root);
         applyTheme(false);
+        fullScreen = getPreferences(MODE_PRIVATE).getBoolean("full_screen", false);
+        if (fullScreen) applyStatusBarVisibility();
         root.post(root::requestApplyInsets);
         web.loadUrl(APP_URL);
         if (Build.VERSION.SDK_INT >= 33) {
@@ -91,6 +94,41 @@ public final class MainActivity extends Activity {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, backCallback);
         }
+    }
+
+    boolean isFullScreen() {
+        return fullScreen;
+    }
+
+    void setFullScreen(boolean enabled) {
+        fullScreen = enabled;
+        getPreferences(MODE_PRIVATE).edit().putBoolean("full_screen", enabled).apply();
+        applyStatusBarVisibility();
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && fullScreen) applyStatusBarVisibility();
+    }
+
+    private void applyStatusBarVisibility() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            var controller = root.getWindowInsetsController();
+            if (controller == null) return;
+            int status = WindowInsets.Type.statusBars();
+            if (fullScreen) {
+                controller.setSystemBarsBehavior(
+                        android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                controller.hide(status);
+            } else {
+                controller.show(status);
+            }
+        } else {
+            int flag = android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN;
+            if (fullScreen) getWindow().addFlags(flag);
+            else getWindow().clearFlags(flag);
+        }
+        root.requestApplyInsets();
     }
 
     void applyTheme(boolean light) {

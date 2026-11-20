@@ -101,6 +101,16 @@ final class ProviderBridge {
         }
     }
 
+    @JavascriptInterface public boolean isFullScreen() {
+        return activity.isFullScreen();
+    }
+
+    @JavascriptInterface public void setFullScreen(boolean enabled) {
+        web.post(() -> {
+            if (!closed) activity.setFullScreen(enabled);
+        });
+    }
+
     @JavascriptInterface public void setLightTheme(boolean light) {
         web.post(() -> {
             if (!closed) activity.applyTheme(light);

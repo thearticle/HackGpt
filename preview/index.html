@@ -224,6 +224,9 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .android-app body{display:block;background:var(--ink)}
 .android-app main{width:100%;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;padding:8px 14px 12px}
 .android-app header{margin-left:-6px;margin-right:-6px;transform:none}
+#appearance-dialog .fullscreen-option{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:var(--paper);cursor:pointer}
+#appearance-dialog .fullscreen-option[hidden]{display:none}
+#appearance-dialog .fullscreen-option input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--lime)}
 </style>
 </head>
 <body>
@@ -324,6 +327,10 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 <label class="font-size-label" for="chat-font-size">Chat font size <output id="chat-font-size-value" for="chat-font-size">16 px</output></label>
 <input id="chat-font-size" type="range" min="12" max="22" step="1" value="16">
+<label id="fullscreen-option" class="fullscreen-option" hidden>
+<span>Full screen</span>
+<input id="fullscreen-toggle" type="checkbox" role="switch">
+</label>
 </dialog>
 <dialog id="history-dialog" aria-label="Chat history">
 <input id="history-search" type="search" aria-label="Search chats" placeholder="Search chats">
@@ -1163,6 +1170,13 @@ function dismissOnBackdrop(dialog) {
 dismissOnBackdrop(historyDialog);
 dismissOnBackdrop(modelDialog);
 dismissOnBackdrop(settings);
+
+if (window.HackGptAndroid?.setFullScreen) {
+  const toggle = find('fullscreen-toggle');
+  toggle.checked = window.HackGptAndroid.isFullScreen();
+  toggle.onchange = () => window.HackGptAndroid.setFullScreen(toggle.checked);
+  find('fullscreen-option').hidden = false;
+}
 
 const appearanceDialog = find('appearance-dialog');
 const fontSize = find('chat-font-size');
