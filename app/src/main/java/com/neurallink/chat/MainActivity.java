@@ -15,7 +15,10 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
 import java.io.ByteArrayInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -74,10 +77,16 @@ public final class MainActivity extends Activity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 if (request.isForMainFrame() && APP_URL.equals(request.getUrl().toString())
                         && "GET".equals(request.getMethod())) {
-                    try {
+                    try (var digest = new BufferedReader(new InputStreamReader(
+                            getAssets().open("chat-script.sha256"), StandardCharsets.US_ASCII))) {
                         var headers = new HashMap<String, String>();
-                        headers.put("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; "
-                                + "style-src 'unsafe-inline'; img-src data: blob:; base-uri 'none'; form-action 'none'");
+                        String hashes = digest.readLine();
+                        if (hashes == null || !hashes.matches("[A-Za-z0-9+/]{43}=( [A-Za-z0-9+/]{43}=)*")) {
+                            throw new IOException("Missing bundled script digests");
+                        }
+                        headers.put("Content-Security-Policy", "default-src 'none'; script-src 'self' 'sha256-"
+                                + hashes.replace(" ", "' 'sha256-") + "'; style-src 'unsafe-inline'; img-src data: blob:; "
+                                + "base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
                         headers.put("X-Content-Type-Options", "nosniff");
                         return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
                                 headers, getAssets().open("index.html"));

@@ -1,0 +1,10 @@
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="app_webview/" />
+        <exclude domain="sharedpref" path="provider-vault.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="app_webview/" />
+        <exclude domain="sharedpref" path="provider-vault.xml" />
+    </device-transfer>
+</data-extraction-rules>
