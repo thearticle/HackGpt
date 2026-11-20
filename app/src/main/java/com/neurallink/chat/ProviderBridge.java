@@ -105,6 +105,12 @@ final class ProviderBridge {
         return activity.isFullScreen();
     }
 
+    @JavascriptInterface public void playCreditsHaptic() {
+        activity.runOnUiThread(() -> {
+            if (!closed) web.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        });
+    }
+
     @JavascriptInterface public void setFullScreen(boolean enabled) {
         web.post(() -> {
             if (!closed) activity.setFullScreen(enabled);

@@ -61,8 +61,12 @@ article{background:var(--panel);border:1px solid var(--line);padding:12px;border
 article.mine{background:var(--mine)}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
-#composer .send{flex:none;min-height:44px;border-radius:0 3px 3px 0;touch-action:pan-y;user-select:none;-webkit-touch-callout:none}
-#composer .send span{display:inline-block;transform:translateX(clamp(-10px,var(--swipe-x,0px),0px))}
+#composer .send{display:grid;place-items:center;flex:none;min-height:44px;border-radius:0 3px 3px 0;touch-action:pan-y;user-select:none;-webkit-touch-callout:none}
+#composer .send span:empty{display:none}
+.send-mark{width:12px;height:12px;transform:translateX(clamp(-10px,var(--swipe-x,0px),10px))}
+.send-mark::after{content:"";display:block;width:100%;height:100%;border-radius:50%;background:currentColor;animation:send-pulse 1.8s ease-in-out infinite}
+@keyframes send-pulse{0%,100%{transform:scale(.85);opacity:.7}50%{transform:scale(1.15);opacity:1}}
+@media(prefers-reduced-motion:reduce){.send-mark::after{animation:none}}
 textarea{resize:vertical;min-width:0;max-height:110px;flex:1;border:0;padding:9px;background:transparent;color:var(--paper);font:inherit}
 dialog{width:min(390px,calc(100% - 24px));background:var(--panel);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px}
 dialog::backdrop{background:var(--scrim)}
@@ -124,6 +128,7 @@ dialog::backdrop{background:var(--scrim)}
 #provider-status{color:var(--muted);font-size:13px;margin:10px 0}
 #model-list small{display:block;margin-top:4px;font-weight:normal}
 #model-search{margin-bottom:10px}
+#model-provider-summary{margin:0 0 5px;max-height:5em;overflow:auto;overflow-wrap:anywhere;font-size:12px;line-height:1.5;color:var(--muted)}
 #chat-error{color:var(--warning);margin:5px 0}
 #provider-models{margin:10px 0 0;padding:0;min-width:0;border:0}
 #provider-model-list{max-height:min(28vh,230px);max-height:min(28dvh,230px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
@@ -221,28 +226,32 @@ article .pending-reply{color:var(--muted)}
 #history-list::-webkit-scrollbar,#provider-model-list::-webkit-scrollbar{display:none}
 html.android-app,.android-app body{height:100%;min-height:0}
 .android-app body{display:block;background:var(--ink)}
+.android-app{--toolbar-height:44px}
 .android-app main{width:100%;height:100%;min-height:0;border:0;border-radius:0;box-shadow:none;padding:8px 14px 12px}
-.android-app header{margin-left:-6px;margin-right:-6px;transform:none}
-.android-app.fullscreen main{padding-top:0}
+.android-app header{position:relative;z-index:1;margin-left:-6px;margin-right:-6px;transform:none;background:transparent;pointer-events:none}
+.android-app header .icon{height:var(--toolbar-height);pointer-events:auto}
+.android-app #messages{margin-top:calc(-1 * var(--toolbar-height));padding-top:calc(var(--toolbar-height) + 8px)}
 #appearance-dialog .fullscreen-option{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:var(--paper);cursor:pointer}
 #appearance-dialog .fullscreen-option[hidden]{display:none}
 #appearance-dialog .fullscreen-option input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--lime)}
 #reset{position:relative;touch-action:none;user-select:none;-webkit-touch-callout:none;isolation:isolate}
 #reset:not(:disabled)::before{animation:new-chat-glow 2.8s ease-in-out infinite}
 #reset::after{content:"";position:absolute;inset:4px;border:1px solid currentColor;border-radius:50%;opacity:0;pointer-events:none}
-#reset.holding::after{animation:new-chat-ring 1.25s ease-out 4}
+#reset.holding::after{animation:new-chat-ring 1s ease-out infinite}
 #empty.credits-view{pointer-events:auto}
 #creator-credits{margin-top:-8px;text-align:center;letter-spacing:.08em;color:var(--paper);opacity:.68}
 #creator-credits strong{display:block;font-size:17px}
 #creator-credits small{display:block;margin-top:6px;color:inherit}
-#empty.credits-view>div{display:grid;justify-items:center;animation:credits-reveal .95s ease-out}
+#empty.credits-view>div{display:grid;justify-items:center}
 #empty.credits-view canvas{width:min(150px,60vw)}
 @keyframes new-chat-glow{0%,100%{filter:drop-shadow(0 0 2px currentColor)}50%{filter:drop-shadow(0 0 6px currentColor)}}
 @keyframes new-chat-ring{0%{transform:scale(.7);opacity:.85}100%{transform:scale(1.16);opacity:0}}
-@keyframes credits-reveal{0%{opacity:.25}23%{opacity:1}44%{opacity:.57}67%{opacity:1}83%{opacity:.8}100%{opacity:1}}
+.credits-flash::after{content:"";position:fixed;inset:0;z-index:2;pointer-events:none;background:#baff56;animation:credits-flash 420ms ease-out both}
+@keyframes credits-flash{0%,100%{opacity:0}22%{opacity:.32}}
 @media(prefers-reduced-motion:reduce){
-  #reset:not(:disabled)::before,#reset.holding::after,#empty.credits-view>div{animation:none}
+  #reset:not(:disabled)::before,#reset.holding::after{animation:none}
   #reset.holding::after{opacity:.75}
+  .credits-flash::after{content:none}
 }
 .model-markdown{margin-top:6px;font-size:var(--chat-font-size);line-height:1.45;overflow-wrap:anywhere;min-width:0}
 #messages .model-markdown p{white-space:normal}
@@ -261,8 +270,6 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .model-markdown table{border-collapse:collapse;font-size:.88em;min-width:100%}
 .model-markdown th,.model-markdown td{border:1px solid var(--line);padding:5px 8px;text-align:left;min-width:7em}
 .model-markdown th{background:var(--mine)}
-.android-app.fullscreen header .icon{align-items:start;padding-top:0}
-.android-app.fullscreen #reset::after{inset:0 auto auto calc(50% - 10px);width:20px;height:20px}
 .chat-visual{margin:9px 0;padding:9px;border:1px solid var(--line);border-radius:4px;font-size:.86em}
 .chat-visual figcaption{color:var(--lime);font-weight:bold}
 .model-markdown .chat-chart{list-style:none;padding:0}
@@ -307,7 +314,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
 <textarea id="prompt" rows="1" aria-label="Message"></textarea>
-<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files" title="Send · Swipe left to attach files"><span aria-hidden="true">➤</span></button>
+<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files. Swipe right or press Right Arrow to select all message text." title="Send · Left to attach · Right to select text"><i class="send-mark" aria-hidden="true"></i><span aria-hidden="true"></span></button>
 </form>
 </main>
 <dialog id="settings" aria-label="Provider settings">
@@ -373,11 +380,11 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </dialog>
 <dialog id="model-dialog" aria-label="Select model">
+<p id="model-provider-summary" hidden></p>
 <input id="model-search" type="search" aria-label="Search models" placeholder="Search models">
 <div id="model-list"></div>
 </dialog>
-<dialog id="appearance-dialog" aria-labelledby="appearance-title">
-<h2 id="appearance-title">Appearance</h2>
+<dialog id="appearance-dialog" aria-label="Appearance">
 <div class="appearance-options" role="group" aria-label="Color theme">
 <button type="button" data-theme-option="dark" aria-pressed="true">Dark</button>
 <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
@@ -591,7 +598,19 @@ function renderModels() {
   const list = find('model-list');
   clearContents(list);
   const search = modelSearch.value.trim().toLowerCase();
-  const models = savedModels().filter(model =>
+  const available = savedModels();
+  const providers = new Map();
+  for (const model of available) {
+    if (!model.profile) continue;
+    const {id, name} = model.profile;
+    if (!providers.has(id)) providers.set(id, {name, count: 0});
+    providers.get(id).count++;
+  }
+  const summary = find('model-provider-summary');
+  summary.textContent = Array.from(providers.values(), ({name, count}) =>
+    `${name} · ${count} ${count === 1 ? 'model' : 'models'}`).join(' · ');
+  summary.hidden = !providers.size;
+  const models = available.filter(model =>
     (model.name + ' ' + model.id + ' ' + (model.profile?.name ?? '')).toLowerCase().includes(search));
   const active = currentModel();
   const groups = new Map();
@@ -1101,8 +1120,7 @@ function swipeCue(deleting) {
   return cue;
 }
 
-function attachSwipeGesture(row, button, actions) {
-  const threshold = 64;
+function attachSwipeGesture(row, button, actions, thresholds = {}) {
   let start = null;
   let dragging = false;
   let suppressClick = false;
@@ -1138,13 +1156,14 @@ function attachSwipeGesture(row, button, actions) {
   function finish(event, commit) {
     if (start?.id !== event.pointerId) return;
     const dx = event.clientX - start.x;
-    const shouldOpen = commit && dragging && Math.abs(dx) >= threshold;
+    const direction = dx < 0 ? 'left' : 'right';
+    const shouldOpen = commit && dragging && Math.abs(dx) >= (thresholds[direction] ?? 64);
     start = null;
     dragging = false;
     row.classList.remove('dragging');
     delete row.dataset.swipe;
     button.style.removeProperty('--swipe-x');
-    if (shouldOpen) actions[dx < 0 ? 'left' : 'right']?.();
+    if (shouldOpen) actions[direction]?.();
   }
 
   button.onpointerup = event => finish(event, true);
@@ -1405,7 +1424,14 @@ function openAttachmentPicker() {
   if (window.HackGptAndroid) addAttachments(() => androidRequest('pickFiles'));
   else filePicker.click();
 }
-attachSwipeGesture(sendButton, sendButton, {left: openAttachmentPicker});
+attachSwipeGesture(sendButton, sendButton, {
+  left: openAttachmentPicker,
+  right: () => {
+    if (sending || !promptBox.value) return;
+    promptBox.focus();
+    promptBox.select();
+  }
+}, {right: 20});
 sendButton.addEventListener('pointerdown', event => {
   if (event.isPrimary && event.button === 0) sendButton.setPointerCapture(event.pointerId);
 });
@@ -1671,8 +1697,9 @@ function setSending(value) {
   for (const id of ['history-button', 'provider', 'model-button', 'prompt']) find(id).disabled = value;
   reset.disabled = value;
   messages.setAttribute('aria-busy', String(value));
-  sendSymbol.textContent = value ? '■' : '➤';
-  sendButton.title = value ? 'Stop response' : 'Send · Swipe left to attach files';
+  sendSymbol.textContent = value ? '■' : '';
+  sendButton.querySelector('.send-mark').hidden = value;
+  sendButton.title = value ? 'Stop response' : 'Send · Left to attach · Right to select text';
   sendButton.setAttribute('aria-label', value ? 'Stop response' : 'Send');
   updateModelStatus();
   renderAttachments();
@@ -1794,7 +1821,8 @@ find('composer').onsubmit = async event => {
 };
 
 
-const CREDITS_HOLD_MS = 5000;
+const CREDITS_HOLD_MS = 2000;
+const CREDITS_FLASH_MS = 420;
 let holdTimer;
 let heldPointer;
 let heldKey;
@@ -1806,6 +1834,20 @@ function openNewChat(credits = false) {
   if (sending) return;
   showChat(null, credits);
   if (!credits) promptBox.focus();
+}
+
+function revealCredits() {
+  if (window.HackGptAndroid?.playCreditsHaptic) window.HackGptAndroid.playCreditsHaptic();
+  else navigator.vibrate?.(120);
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    openNewChat(true);
+    return;
+  }
+  document.body.classList.add('credits-flash');
+  setTimeout(() => {
+    document.body.classList.remove('credits-flash');
+    openNewChat(true);
+  }, CREDITS_FLASH_MS);
 }
 
 function endNewChatHold() {
@@ -1824,7 +1866,7 @@ function beginNewChatHold() {
   holdTimer = setTimeout(() => {
     skipNewChatClick = true;
     reset.classList.remove('holding');
-    openNewChat(true);
+    revealCredits();
   }, CREDITS_HOLD_MS);
 }
 
