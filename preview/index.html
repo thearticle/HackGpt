@@ -58,11 +58,15 @@ h2{font-size:20px;margin:4px 0}
 p{overflow-wrap:anywhere}
 canvas{max-width:100%;height:auto}
 article{background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:4px}
-article.mine{background:var(--mine)}
+article.mine{background:var(--mine);border-inline-end:2px solid var(--lime);border-bottom-right-radius:0}
+article.mine>p{margin-top:0}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
 #composer .send{display:grid;place-items:center;flex:none;min-height:44px;border-radius:0 3px 3px 0;touch-action:pan-y;user-select:none;-webkit-touch-callout:none}
-#composer .send span:empty{display:none}
+#composer .send[hidden],#stop-response[hidden]{display:none}
+#composer .send:disabled .send-mark::after{animation:none}
+#chat-status{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#stop-response{min-height:32px;padding:0 9px}
 .send-mark{width:12px;height:12px;transform:translateX(clamp(-10px,var(--swipe-x,0px),10px))}
 .send-mark::after{content:"";display:block;width:100%;height:100%;border-radius:50%;background:currentColor;animation:send-pulse 1.8s ease-in-out infinite}
 @keyframes send-pulse{0%,100%{transform:scale(.85);opacity:.7}50%{transform:scale(1.15);opacity:1}}
@@ -212,7 +216,10 @@ article .pending-reply{color:var(--muted)}
   border-radius:50%;
   background:linear-gradient(90deg,currentColor 50%,transparent 50%);
 }
-.appearance-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.appearance-options{display:flex;gap:8px;margin:0 0 16px}
+.appearance-options [data-theme-option]{flex:1;min-width:0;padding-inline:5px}
+.appearance-options .appearance-icon{display:grid;place-items:center;flex:0 0 44px;padding:0;font-size:20px}
+.appearance-options .appearance-icon[hidden]{display:none}
 .appearance-options button[aria-pressed="true"]{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
 .font-size-label{display:flex;justify-content:space-between;align-items:center;color:var(--paper);font-size:13px}
 #chat-font-size{width:100%;margin:12px 0 0;accent-color:var(--lime)}
@@ -231,9 +238,6 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .android-app header{position:relative;z-index:1;margin-left:-6px;margin-right:-6px;transform:none;background:transparent;pointer-events:none}
 .android-app header .icon{height:var(--toolbar-height);pointer-events:auto}
 .android-app #messages{margin-top:calc(-1 * var(--toolbar-height));padding-top:calc(var(--toolbar-height) + 8px)}
-#appearance-dialog .fullscreen-option{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:var(--paper);cursor:pointer}
-#appearance-dialog .fullscreen-option[hidden]{display:none}
-#appearance-dialog .fullscreen-option input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--lime)}
 #reset{position:relative;touch-action:none;user-select:none;-webkit-touch-callout:none;isolation:isolate}
 #reset:not(:disabled)::before{animation:new-chat-glow 2.8s ease-in-out infinite}
 #reset::after{content:"";position:absolute;inset:4px;border:1px solid currentColor;border-radius:50%;opacity:0;pointer-events:none}
@@ -309,12 +313,12 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<small id="demo-status" aria-live="polite"></small>
+<div id="chat-status"><small id="demo-status" aria-live="polite"></small><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
 <textarea id="prompt" rows="1" aria-label="Message"></textarea>
-<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files. Swipe right or press Right Arrow to select all message text." title="Send · Left to attach · Right to select text"><i class="send-mark" aria-hidden="true"></i><span aria-hidden="true"></span></button>
+<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files. Swipe right or press Right Arrow to select all message text." title="Send · Left to attach · Right to select text"><i class="send-mark" aria-hidden="true"></i></button>
 </form>
 </main>
 <dialog id="settings" aria-label="Provider settings">
@@ -385,16 +389,16 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <div id="model-list"></div>
 </dialog>
 <dialog id="appearance-dialog" aria-label="Appearance">
-<div class="appearance-options" role="group" aria-label="Color theme">
+<div class="appearance-options" role="group" aria-label="Appearance controls">
 <button type="button" data-theme-option="dark" aria-pressed="true">Dark</button>
 <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+<button id="enter-to-send" class="appearance-icon" type="button" aria-label="Enter to send" aria-pressed="false" title="Enter to send · Shift+Enter for a new line">↵</button>
+<button id="fullscreen-toggle" class="appearance-icon" type="button" aria-label="Full screen" aria-pressed="false" title="Full screen" hidden>
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 6V2h4m6 0h4v4m0 6v4h-4m-6 0H2v-4"/></svg>
+</button>
 </div>
 <label class="font-size-label" for="chat-font-size">Chat font size <output id="chat-font-size-value" for="chat-font-size">16 px</output></label>
 <input id="chat-font-size" type="range" min="12" max="22" step="1" value="16">
-<label id="fullscreen-option" class="fullscreen-option" hidden>
-<span>Full screen</span>
-<input id="fullscreen-toggle" type="checkbox" role="switch">
-</label>
 </dialog>
 <dialog id="history-dialog" aria-label="Chat history">
 <input id="history-search" type="search" aria-label="Search chats" placeholder="Search chats">
@@ -431,12 +435,17 @@ const empty = find('empty');
 
 function appendMessage(author, content, mine) {
   const message = document.createElement('article');
-  if (mine) message.className = 'mine';
-  const label = document.createElement('small');
-  label.textContent = author;
+  if (mine) {
+    message.className = 'mine';
+    message.setAttribute('aria-label', 'Your message');
+  } else {
+    const label = document.createElement('small');
+    label.textContent = author;
+    message.append(label);
+  }
   const text = document.createElement('p');
   text.textContent = content;
-  message.append(label, text);
+  message.append(text);
   messages.append(message);
   return message;
 }
@@ -458,7 +467,7 @@ const baseInput = find('provider-base');
 const keyInput = find('provider-key');
 const modelSearch = find('model-search');
 const sendButton = find('composer').querySelector('.send');
-const sendSymbol = sendButton.querySelector('span');
+const stopResponse = find('stop-response');
 const filePicker = find('file-picker');
 let attachments = [];
 let readingFiles = false;
@@ -589,7 +598,7 @@ function updateModelStatus() {
   find('demo-status').textContent = model
     ? model.name + ' · ' + (model.profile?.name ?? 'Simulated replies')
     : 'Connect a provider and select models in Settings';
-  sendButton.disabled = !sending && !model;
+  sendButton.disabled = sending || !model;
   updateAttachmentControl(model);
   find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
 }
@@ -608,7 +617,7 @@ function renderModels() {
   }
   const summary = find('model-provider-summary');
   summary.textContent = Array.from(providers.values(), ({name, count}) =>
-    `${name} · ${count} ${count === 1 ? 'model' : 'models'}`).join(' · ');
+    `${name}/${count}`).join(' · ');
   summary.hidden = !providers.size;
   const models = available.filter(model =>
     (model.name + ' ' + model.id + ' ' + (model.profile?.name ?? '')).toLowerCase().includes(search));
@@ -1082,14 +1091,14 @@ function saveChats() {
   }
 }
 
-function showChat(chat, credits = false) {
+function showChat(chat, credits = false, preserveDraft = false) {
   attachments = [];
   attachmentVersion++;
   renderAttachments();
   showChatError('');
   activeId = chat?.id ?? null;
   clearContents(messages);
-  promptBox.value = '';
+  if (!preserveDraft) promptBox.value = '';
   reset.disabled = sending;
   empty.classList.toggle('credits-view', credits);
   empty.setAttribute('aria-hidden', String(!credits));
@@ -1252,13 +1261,13 @@ dismissOnBackdrop(settings);
 
 if (window.HackGptAndroid?.setFullScreen) {
   const toggle = find('fullscreen-toggle');
-  toggle.checked = window.HackGptAndroid.isFullScreen();
-  document.documentElement.classList.toggle('fullscreen', toggle.checked);
-  toggle.onchange = () => {
-    document.documentElement.classList.toggle('fullscreen', toggle.checked);
-    window.HackGptAndroid.setFullScreen(toggle.checked);
+  toggle.setAttribute('aria-pressed', String(window.HackGptAndroid.isFullScreen()));
+  toggle.onclick = () => {
+    const enabled = toggle.getAttribute('aria-pressed') !== 'true';
+    window.HackGptAndroid.setFullScreen(enabled);
+    toggle.setAttribute('aria-pressed', String(enabled));
   };
-  find('fullscreen-option').hidden = false;
+  toggle.hidden = false;
 }
 
 const appearanceDialog = find('appearance-dialog');
@@ -1266,6 +1275,27 @@ const fontSize = find('chat-font-size');
 const themeButtons = [...appearanceDialog.querySelectorAll('[data-theme-option]')];
 const themeKey = 'neural-link.theme';
 const fontSizeKey = 'neural-link.chat-font-size';
+const enterToSend = find('enter-to-send');
+const enterToSendKey = 'neural-link.enter-to-send';
+
+function applyEnterToSend(enabled) {
+  enterToSend.setAttribute('aria-pressed', String(enabled));
+  sendButton.hidden = enabled;
+  promptBox.enterKeyHint = enabled ? 'send' : 'enter';
+}
+
+applyEnterToSend(stored(enterToSendKey) === 'true');
+enterToSend.onclick = () => {
+  const enabled = !sendButton.hidden;
+  applyEnterToSend(enabled);
+  remember(enterToSendKey, String(enabled));
+};
+promptBox.addEventListener('keydown', event => {
+  if (!sendButton.hidden || event.isComposing || event.keyCode === 229 ||
+      event.key !== 'Enter' || event.shiftKey) return;
+  event.preventDefault();
+  if (!event.repeat && !sendButton.disabled) promptBox.form.requestSubmit();
+});
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -1662,7 +1692,7 @@ function renderReplyMarkup(article, reply) {
 
 
 function showTurn(turn) {
-  showFileNames(appendMessage('YOU', turn.question, true), turn.files);
+  showFileNames(appendMessage('', turn.question, true), turn.files);
   const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false);
   renderReplyMarkup(answer, turn.reply);
   if (turn.reasoningSummary) {
@@ -1694,13 +1724,10 @@ function showTurn(turn) {
 
 function setSending(value) {
   sending = value;
-  for (const id of ['history-button', 'provider', 'model-button', 'prompt']) find(id).disabled = value;
+  for (const id of ['history-button', 'provider', 'model-button']) find(id).disabled = value;
   reset.disabled = value;
   messages.setAttribute('aria-busy', String(value));
-  sendSymbol.textContent = value ? '■' : '';
-  sendButton.querySelector('.send-mark').hidden = value;
-  sendButton.title = value ? 'Stop response' : 'Send · Left to attach · Right to select text';
-  sendButton.setAttribute('aria-label', value ? 'Stop response' : 'Send');
+  stopResponse.hidden = !value;
   updateModelStatus();
   renderAttachments();
 }
@@ -1735,13 +1762,11 @@ async function receiveReply(payload, onEvent, signal) {
   return stats;
 }
 
+stopResponse.onclick = () => requestAbort?.abort();
+
 find('composer').onsubmit = async event => {
   event.preventDefault();
-  if (sending) {
-    requestAbort?.abort();
-    return;
-  }
-  if (readingFiles) return;
+  if (sending || readingFiles) return;
   const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
   const model = currentModel();
   if (!text || !model) return;
@@ -1768,10 +1793,11 @@ find('composer').onsubmit = async event => {
     ]);
     const originalChat = chats.find(item => item.id === activeId);
     const originalDraft = promptBox.value;
+    promptBox.value = '';
     if (!chat) clearContents(messages);
     requestAbort = new AbortController();
     setSending(true);
-    showFileNames(appendMessage('YOU', text, true), turn.files);
+    showFileNames(appendMessage('', text, true), turn.files);
     const pending = appendMessage(model.name, 'Waiting for reply…', false);
     const body = pending.lastElementChild;
     body.className = 'pending-reply';
@@ -1798,8 +1824,8 @@ find('composer').onsubmit = async event => {
       if (requestAbort.signal.aborted && turn.reply.trim()) {
         turn.stopped = true;
       } else {
-        showChat(originalChat);
-        promptBox.value = originalDraft;
+        showChat(originalChat, false, true);
+        if (!promptBox.value) promptBox.value = originalDraft;
         attachments.push(...files);
         showChatError(requestAbort.signal.aborted ? 'Response stopped.' : error.message);
         return;
@@ -1807,7 +1833,6 @@ find('composer').onsubmit = async event => {
     } finally {
       setSending(false);
       requestAbort = null;
-      promptBox.focus();
     }
   }
 
@@ -1816,8 +1841,8 @@ find('composer').onsubmit = async event => {
   chat.turns.push(turn);
   chats = [chat, ...chats.filter(item => item.id !== chat.id)];
   saveChats();
-  showChat(chat);
-  promptBox.focus();
+  showChat(chat, false, Boolean(connection));
+  if (!connection) promptBox.focus();
 };
 
 
