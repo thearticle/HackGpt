@@ -22,10 +22,12 @@ import java.util.HashMap;
 public final class MainActivity extends Activity {
     private static final String APP_URL = "https://appassets.androidplatform.net/";
     private static final int PICK_FILES = 144;
+    private static final int PICK_FILES_FALLBACK = 145;
     private FrameLayout root;
     private WebView web;
     private ProviderBridge bridge;
     private String fileRequest;
+    private int fileRequestCode;
     private android.window.OnBackInvokedCallback backCallback;
 
     @Override public void onCreate(Bundle state) {
@@ -131,15 +133,25 @@ public final class MainActivity extends Activity {
             return;
         }
         fileRequest = requestId;
+        fileRequestCode = PICK_FILES;
         var intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
                 .addCategory(Intent.CATEGORY_OPENABLE)
                 .setType("*/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         try {
             startActivityForResult(intent, PICK_FILES);
-        } catch (ActivityNotFoundException error) {
+        } catch (ActivityNotFoundException unavailable) {
+            try {
+                fileRequestCode = PICK_FILES_FALLBACK;
+                startActivityForResult(intent.setAction(Intent.ACTION_GET_CONTENT), fileRequestCode);
+            } catch (ActivityNotFoundException | SecurityException error) {
+                fileRequest = null;
+                bridge.filesFailed(requestId, "No system file picker is available.");
+            }
+        } catch (SecurityException error) {
             fileRequest = null;
-            bridge.filesFailed(requestId, "No system file picker is available.");
+            bridge.filesFailed(requestId, "Android could not open the file picker.");
         }
     }
 
@@ -151,7 +163,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (request != PICK_FILES || fileRequest == null) return;
+        if (request != fileRequestCode || fileRequest == null) return;
         String requestId = fileRequest;
         fileRequest = null;
         if (result != RESULT_OK || data == null) {
@@ -166,10 +178,8 @@ public final class MainActivity extends Activity {
         var uris = new Uri[clip == null ? 1 : clip.getItemCount()];
         for (int index = 0; index < uris.length; index++) {
             Uri uri = clip == null ? data.getData() : clip.getItemAt(index).getUri();
-            if (uri == null || !"content".equals(uri.getScheme())
-                    || checkUriPermission(uri, android.os.Process.myPid(), android.os.Process.myUid(),
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                bridge.filesFailed(requestId, "The file picker did not grant access to the selected file.");
+            if (uri == null || !"content".equals(uri.getScheme())) {
+                bridge.filesFailed(requestId, "The picker did not return a readable Android document.");
                 return;
             }
             uris[index] = uri;

@@ -1263,16 +1263,16 @@ function attachmentCapabilities(model) {
 }
 
 function updateAttachmentControl(model) {
-  fileButton.disabled = sending || readingFiles || !model?.connection;
+  fileButton.disabled = sending || readingFiles;
   const {image, pdf} = attachmentCapabilities(model);
   filePicker.accept = [
     '.txt,.md,.csv,.tsv,.json,.jsonl,.xml,.log',
-    image && '.png,.jpg,.jpeg,.gif,.webp',
-    pdf && '.pdf'
+    (image || !model?.connection) && '.png,.jpg,.jpeg,.gif,.webp',
+    (pdf || !model?.connection) && '.pdf'
   ].filter(Boolean).join(',');
   fileButton.title = model?.connection ? 'Attach ' + [
     'text or data', image && 'images', pdf && 'PDFs'
-  ].filter(Boolean).join(', ') : 'Connect a model to attach files';
+  ].filter(Boolean).join(', ') : 'Choose files to attach';
 }
 
 function showChatError(message) {
@@ -1356,7 +1356,7 @@ async function addAttachments(load) {
       if (!mime && !/\.(txt|md|csv|tsv|json|jsonl|xml|log)$/i.test(file.name)) {
         throw new Error('Use an image, PDF, or UTF-8 file such as TXT, CSV, or JSON.');
       }
-      if (!acceptsFile({kind}, model)) throw new Error('The selected model does not support ' + kind + ' attachments.');
+      if (model?.connection && !acceptsFile({kind}, model)) throw new Error('The selected model does not support ' + kind + ' attachments.');
       if (file.size > (kind === 'text' ? 256_000 : 5_000_000)) {
         throw new Error(kind === 'text' ? 'Text and data files must be under 256 KB.' : 'Images and PDFs must be under 5 MB.');
       }
@@ -1468,6 +1468,10 @@ find('composer').onsubmit = async event => {
   const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
   const model = currentModel();
   if (!text || !model) return;
+  if (attachments.length && !model.connection) {
+    showChatError('Connect a provider to send these attachments.');
+    return;
+  }
   if (!attachments.every(file => acceptsFile(file, model))) {
     showChatError('Remove attachments this model cannot use, or choose a compatible model.');
     return;

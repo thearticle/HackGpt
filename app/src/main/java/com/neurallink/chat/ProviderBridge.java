@@ -119,7 +119,9 @@ final class ProviderBridge {
                 try {
                     emit(id, "result", PickedFiles.read(activity.getContentResolver(), uris));
                 } catch (Exception error) {
-                    emit(id, "error", error instanceof Failure ? error.getMessage() : "Could not read the selected files.");
+                    emit(id, "error", error instanceof Failure ? error.getMessage()
+                            : error instanceof SecurityException ? "Android denied access to this file. Choose it again from the file picker."
+                            : "Could not read the selected files.");
                 }
             });
         } catch (RejectedExecutionException ignored) {
