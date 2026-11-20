@@ -188,7 +188,8 @@ dialog::backdrop{background:var(--scrim)}
 #settings .key-field input[data-saved-key="true"]::placeholder{color:var(--paper);letter-spacing:2px}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 #empty{display:grid;place-items:center;min-height:100%;margin:0;background:none;border:0;padding:14px;pointer-events:none}
-#empty canvas{display:block;width:min(220px,70%);height:auto;opacity:.38}
+#empty>div{display:grid;justify-items:center;max-width:100%}
+#empty canvas{display:block;width:min(220px,70vw);height:auto;opacity:.38}
 #composer .attach{display:grid;place-items:center;flex:none;width:36px;min-height:40px;padding:0;background:transparent;border:0}
 .attach span{width:10px;height:19px;border:1.5px solid currentColor;border-radius:7px;transform:rotate(38deg);position:relative}
 .attach span::after{content:"";position:absolute;inset:2px 2px 4px;border:1px solid currentColor;border-top:0;border-radius:0 0 5px 5px}
@@ -227,6 +228,23 @@ html.android-app,.android-app body{height:100%;min-height:0}
 #appearance-dialog .fullscreen-option{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:4px;color:var(--paper);cursor:pointer}
 #appearance-dialog .fullscreen-option[hidden]{display:none}
 #appearance-dialog .fullscreen-option input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--lime)}
+#reset{position:relative;touch-action:none;user-select:none;-webkit-touch-callout:none;isolation:isolate}
+#reset:not(:disabled)::before{animation:new-chat-glow 2.8s ease-in-out infinite}
+#reset::after{content:"";position:absolute;inset:4px;border:1px solid currentColor;border-radius:50%;opacity:0;pointer-events:none}
+#reset.holding::after{animation:new-chat-ring 1.25s ease-out 4}
+#empty.credits-view{pointer-events:auto}
+#creator-credits{margin-top:-8px;text-align:center;letter-spacing:.08em;color:var(--paper);opacity:.68}
+#creator-credits strong{display:block;font-size:17px}
+#creator-credits small{display:block;margin-top:6px;color:inherit}
+#empty.credits-view>div{display:grid;justify-items:center;animation:credits-reveal .95s ease-out}
+#empty.credits-view canvas{width:min(150px,60vw)}
+@keyframes new-chat-glow{0%,100%{filter:drop-shadow(0 0 2px currentColor)}50%{filter:drop-shadow(0 0 6px currentColor)}}
+@keyframes new-chat-ring{0%{transform:scale(.7);opacity:.85}100%{transform:scale(1.16);opacity:0}}
+@keyframes credits-reveal{0%{opacity:.25}23%{opacity:1}44%{opacity:.57}67%{opacity:1}83%{opacity:.8}100%{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  #reset:not(:disabled)::before,#reset.holding::after,#empty.credits-view>div{animation:none}
+  #reset.holding::after{opacity:.75}
+}
 </style>
 </head>
 <body>
@@ -238,10 +256,14 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="history-button" class="icon" aria-label="Chat history" title="Chat history"></button>
 <button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
 </div>
-<button id="reset" class="icon" aria-label="New chat" title="New chat" disabled></button>
+<button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </header>
 <section id="messages" aria-label="Conversation" aria-live="polite">
-<div id="empty" aria-hidden="true"><canvas id="signal" width="440" height="420"></canvas></div>
+<div id="empty" aria-hidden="true">
+<div><canvas id="signal" width="440" height="420" aria-hidden="true"></canvas>
+<div id="creator-credits" hidden><strong>Fauzan Afianto</strong><small>fauzan@afianto.dev</small></div>
+</div>
+</div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
 <small id="demo-status" aria-live="polite"></small>
@@ -1006,7 +1028,7 @@ function saveChats() {
   }
 }
 
-function showChat(chat) {
+function showChat(chat, credits = false) {
   attachments = [];
   attachmentVersion++;
   renderAttachments();
@@ -1014,7 +1036,10 @@ function showChat(chat) {
   activeId = chat?.id ?? null;
   clearContents(messages);
   promptBox.value = '';
-  reset.disabled = !chat;
+  reset.disabled = sending;
+  empty.classList.toggle('credits-view', credits);
+  empty.setAttribute('aria-hidden', String(!credits));
+  empty.querySelector('#creator-credits').hidden = !credits;
   if (!chat) {
     messages.append(empty);
     return;
@@ -1433,7 +1458,7 @@ function showTurn(turn) {
 function setSending(value) {
   sending = value;
   for (const id of ['history-button', 'provider', 'model-button', 'prompt']) find(id).disabled = value;
-  reset.disabled = value || !activeId;
+  reset.disabled = value;
   messages.setAttribute('aria-busy', String(value));
   sendButton.textContent = value ? '■' : '➤';
   sendButton.title = value ? 'Stop response' : 'Send';
@@ -1558,9 +1583,81 @@ find('composer').onsubmit = async event => {
 };
 
 
+const CREDITS_HOLD_MS = 5000;
+let holdTimer;
+let heldPointer;
+let heldKey;
+let holdOrigin;
+let skipNewChatClick = false;
+
+function openNewChat(credits = false) {
+  if (sending) return;
+  showChat(null, credits);
+  if (!credits) promptBox.focus();
+}
+
+function endNewChatHold() {
+  clearTimeout(holdTimer);
+  holdTimer = undefined;
+  heldPointer = undefined;
+  heldKey = undefined;
+  holdOrigin = undefined;
+  reset.classList.remove('holding');
+}
+
+function beginNewChatHold() {
+  skipNewChatClick = false;
+  reset.classList.add('holding');
+  holdTimer = setTimeout(() => {
+    skipNewChatClick = true;
+    reset.classList.remove('holding');
+    openNewChat(true);
+  }, CREDITS_HOLD_MS);
+}
+
+reset.onpointerdown = event => {
+  if (reset.disabled || !event.isPrimary || event.button !== 0) return;
+  endNewChatHold();
+  heldPointer = event.pointerId;
+  holdOrigin = [event.clientX, event.clientY];
+  reset.setPointerCapture(event.pointerId);
+  beginNewChatHold();
+};
+reset.onpointermove = event => {
+  if (event.pointerId !== heldPointer || !holdOrigin) return;
+  if (Math.hypot(event.clientX - holdOrigin[0], event.clientY - holdOrigin[1]) > 18) {
+    skipNewChatClick = true;
+    endNewChatHold();
+  }
+};
+reset.onpointerup = reset.onpointercancel = reset.onlostpointercapture = event => {
+  if (event.pointerId === heldPointer) endNewChatHold();
+};
+reset.oncontextmenu = event => event.preventDefault();
+reset.onkeydown = event => {
+  if (reset.disabled || !['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  if (event.repeat || heldKey) return;
+  endNewChatHold();
+  heldKey = event.key;
+  beginNewChatHold();
+};
+reset.onkeyup = event => {
+  if (heldKey !== event.key) return;
+  event.preventDefault();
+  const quickTap = !skipNewChatClick;
+  endNewChatHold();
+  skipNewChatClick = false;
+  if (quickTap && !reset.disabled) openNewChat();
+};
+reset.onblur = endNewChatHold;
+window.addEventListener('blur', endNewChatHold);
 reset.onclick = () => {
-  showChat(null);
-  promptBox.focus();
+  if (skipNewChatClick) {
+    skipNewChatClick = false;
+    return;
+  }
+  openNewChat();
 };
 
 const art = find('signal').getContext('2d');
