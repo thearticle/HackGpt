@@ -81,6 +81,8 @@ final class ProviderBridge {
                     Object result = switch (method) {
                         case "providers" -> list();
                         case "connect" -> connect(input, request);
+                        case "provider-details" -> providerDetails(input.getString("connection"), request);
+                        case "kenari-balance" -> kenariBalance(input.getString("connection"), request);
                         case "save" -> save(input.getString("connection"), true);
                         case "disconnect" -> save(input.getString("connection"), false);
                         case "chat", "chat/stream" -> chat(input, id, request, method.endsWith("/stream"));
@@ -173,6 +175,8 @@ final class ProviderBridge {
     private synchronized JSONArray list() throws Exception {
         var profiles = new JSONArray();
         for (var connection : providers.values()) profiles.put(publicProvider(connection));
+        var demo = find(DEMO_ID);
+        if (demo != null) profiles.put(publicProvider(demo).put("builtInDemo", true));
         return profiles;
     }
 
@@ -184,8 +188,100 @@ final class ProviderBridge {
         }
     }
 
+    private static final String DEMO_ID = "builtin-kenari-demo";
+    private static final String KENARI_BASE = "https://kenari.id/v1";
+    private static final String DEMO_BEAM = "beam-1-0:free";
+    private JSONObject demoProvider;
+    private boolean demoLoaded;
+
+    private static JSONObject demoBeamModel() throws Exception {
+        return new JSONObject().put("id", DEMO_BEAM).put("name", "Beam 1.0 Free")
+                .put("input", new JSONObject().put("image", false).put("pdf", false));
+    }
+
     private synchronized JSONObject find(String id) {
+        if (DEMO_ID.equals(id)) {
+            if (!demoLoaded) {
+                demoLoaded = true;
+                try (var reader = new BufferedReader(new InputStreamReader(
+                        activity.getAssets().open("demo-kenari.key"), StandardCharsets.US_ASCII))) {
+                    String key = reader.readLine();
+                    if (key != null && key.matches("kn-[A-Za-z0-9_-]{1,4096}")) {
+                        demoProvider = new JSONObject().put("id", DEMO_ID).put("name", "Demo")
+                                .put("type", "custom").put("base", KENARI_BASE).put("key", key)
+                                .put("models", new JSONArray().put(demoBeamModel()));
+                    }
+                } catch (Exception ignored) {
+                    // Standard builds omit the private demo asset.
+                }
+            }
+            return demoProvider;
+        }
         return providers.get(id);
+    }
+
+    private JSONObject kenariBalance(String id, Request request) throws Exception {
+        if (DEMO_ID.equals(id)) throw new Failure("Demo has no balance display.");
+        var provider = find(id);
+        if (provider == null || !KENARI_BASE.equals(provider.getString("base"))) {
+            throw new Failure("Connect a Kenari provider first.");
+        }
+        var account = readJson(open(provider, "/account/balance", null, request));
+        return new JSONObject().put("balance", account.opt("available_micro_idr"));
+    }
+
+    private JSONObject providerDetails(String id, Request request) throws Exception {
+        if (DEMO_ID.equals(id)) throw new Failure("Billing is unavailable for Demo.");
+        var provider = find(id);
+        if (provider == null) throw new Failure("Connect the provider first.");
+        String base = provider.getString("base");
+        String kind = switch (base) {
+            case "https://api.routr.cloud/v1" -> "routr";
+            case KENARI_BASE -> "kenari";
+            case "https://apimurah.com/v1" -> "apimurah";
+            case "https://openrouter.ai/api/v1" -> "openrouter";
+            default -> "generic";
+        };
+        var result = new JSONObject().put("kind", kind);
+        var routes = switch (kind) {
+            case "routr" -> new String[]{"https://api.routr.cloud", "/api/me/pricing", "/api/me/wallet", "models", "available_credits"};
+            case "kenari" -> new String[]{base, "/models", "/account/balance", "data", "available_micro_idr"};
+            case "openrouter" -> new String[]{base, "/models/user", "/key", "data", "limit_remaining"};
+            default -> new String[]{base, "/models", "", "data", ""};
+        };
+        var connection = new JSONObject().put("base", routes[0]).put("key", provider.getString("key"));
+        try {
+            var catalog = readJson(open(connection, routes[1], null, request)).optJSONArray(routes[3]);
+            if (catalog != null) {
+                var models = new JSONArray();
+                for (int i = 0; i < catalog.length(); i++) {
+                    var model = catalog.optJSONObject(i);
+                    if (model == null || !(model.opt("id") instanceof String)) continue;
+                    var details = new JSONObject();
+                    for (String field : new String[]{"id", "context_length", "context_limit", "input_token_limit",
+                            "pricing", "input_rate", "cache_rate", "output_rate", "min_charge_credits",
+                            "per_request_floor_credits"}) {
+                        if (model.has(field)) details.put(field, model.get(field));
+                    }
+                    models.put(details);
+                }
+                result.put("models", models);
+            }
+        } catch (Exception ignored) {
+            // Account information can still be available when catalog access fails.
+        } finally {
+            request.release();
+        }
+        if (!routes[2].isEmpty() && !request.cancelled) {
+            try {
+                var account = readJson(open(connection, routes[2], null, request));
+                if ("openrouter".equals(kind)) account = account.optJSONObject("data");
+                if (account != null && account.has(routes[4])) result.put("balance", account.get(routes[4]));
+            } catch (Exception ignored) {
+                // Some API keys can read the model catalog but cannot read balances.
+            }
+        }
+        return result;
     }
 
     private synchronized Object save(String id, boolean persist) throws Exception {
@@ -231,7 +327,7 @@ final class ProviderBridge {
         base = base.replaceAll("/+$", "");
         String key = input.optString("key").trim();
         var previous = find(input.optString("connection"));
-        if (key.isEmpty() && previous != null && base.equals(previous.optString("base"))
+        if (key.isEmpty() && previous != null && !DEMO_ID.equals(previous.optString("id")) && base.equals(previous.optString("base"))
                 && type.equals(previous.optString("type"))) key = previous.getString("key");
         if (!key.matches("[!-~]{1,4096}")) throw new Failure("Enter a valid API key.");
         String name = switch (type) {
@@ -251,7 +347,8 @@ final class ProviderBridge {
             if (model == null || !(model.opt("id") instanceof String id) || id.isEmpty() || id.length() > 300) continue;
             var architecture = model.optJSONObject("architecture");
             var outputs = architecture == null ? null : architecture.optJSONArray("output_modalities");
-            if (outputs != null && !contains(outputs, "text")) continue;
+            if (outputs != null && !contains(outputs, "text")
+                    && !("openrouter".equals(type) && contains(outputs, "image"))) continue;
             var modalities = architecture == null ? null : architecture.optJSONArray("input_modalities");
             if (modalities == null) modalities = model.optJSONArray("input_modalities");
             var support = new JSONObject();
@@ -263,7 +360,13 @@ final class ProviderBridge {
                 support.put("image", image).put("pdf", pdf);
             }
             if ("gemini".equals(type)) support.put("pdf", false);
-            models.put(id, new JSONObject().put("id", id).put("name", model.optString("name", id)).put("input", support));
+            var entry = new JSONObject().put("id", id).put("name", model.optString("name", id)).put("input", support);
+            if ("openrouter".equals(type) && outputs != null && contains(outputs, "image")) {
+                var requested = new JSONArray();
+                if (contains(outputs, "text")) requested.put("text");
+                entry.put("modalities", requested.put("image"));
+            }
+            models.put(id, entry);
         }
         if (models.isEmpty()) throw new Failure("No text models were returned.");
         provider.put("models", new JSONArray(models.values()));
@@ -292,11 +395,18 @@ final class ProviderBridge {
                 break;
             }
         }
+        if (model == null && DEMO_BEAM.equals(input.optString("model"))
+                && KENARI_BASE.equals(provider.getString("base"))) {
+            synchronized (this) {
+                if (saved.containsKey(provider.getString("id"))) model = demoBeamModel();
+            }
+        }
         if (model == null) throw new Failure("Select a connected model.");
         String type = provider.getString("type");
         var messages = AttachmentParts.encode(input.optJSONArray("messages"), model.optJSONObject("input"), type);
         var payload = new JSONObject().put("model", model.getString("id"))
                 .put("messages", messages).put("stream", streaming);
+        if (streaming && model.has("modalities")) payload.put("modalities", model.getJSONArray("modalities"));
         if (streaming && "openai".equals(type)) {
             payload.put("stream_options", new JSONObject().put("include_usage", true));
         }
@@ -335,7 +445,7 @@ final class ProviderBridge {
             reader.consume(value, choice == null ? null : choice.optJSONObject("message"));
         }
         if (request.cancelled) return JSONObject.NULL;
-        if (!reader.hasText) throw new Failure("This model did not return text. Try another text-chat model.");
+        if (!reader.hasText && reader.imageCount == 0) throw new Failure("The model returned no supported text or images.");
         return reader.stats(isSse);
     }
 
@@ -352,6 +462,7 @@ final class ProviderBridge {
         private long lastActivity;
         private boolean thinking;
         private boolean hasText;
+        private int imageCount;
         private boolean finished;
         private JSONObject usage;
 
@@ -382,6 +493,8 @@ final class ProviderBridge {
             var reportedUsage = event.optJSONObject("usage");
             if (reportedUsage != null) usage = reportedUsage;
             if (content == null) return;
+            consumeImages(content.optJSONArray("images"));
+            consumeImages(content.optJSONArray("content"));
             Object delta = content.opt("content");
             if (!(delta instanceof String)) delta = content.opt("refusal");
             String text = delta instanceof String string ? string : "";
@@ -405,6 +518,17 @@ final class ProviderBridge {
                 if (firstText < 0) firstText = SystemClock.elapsedRealtime();
                 hasText |= !text.trim().isEmpty();
                 event("delta", text);
+            }
+        }
+
+        private void consumeImages(JSONArray parts) throws Exception {
+            for (int i = 0; parts != null && i < parts.length() && imageCount < 4; i++) {
+                var part = parts.optJSONObject(i);
+                var image = part == null ? null : part.optJSONObject("image_url");
+                String url = image == null ? "" : image.optString("url");
+                if (!url.startsWith("https://") && !url.matches("(?s)^data:image/(png|jpeg|gif|webp);base64,.*")) continue;
+                imageCount++;
+                event("image", url);
             }
         }
 

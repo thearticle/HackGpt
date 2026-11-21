@@ -66,11 +66,25 @@ const server = http.createServer(async (request, response) => {
             candidate.models = Array.from(new Map(result.data
                 .filter(model => typeof model?.id === 'string' && model.id.length <= 300)
                 .filter(model => !Array.isArray(model.architecture?.output_modalities)
-                    || model.architecture.output_modalities.includes('text'))
+                    || model.architecture.output_modalities.includes('text')
+                    || (candidate.type === 'openrouter' && model.architecture.output_modalities.includes('image')))
                 .map(model => [model.id, modelMetadata(model, candidate.type)])).values());
             if (!candidate.models.length) throw problem(422, 'No text models were returned.');
             connections.set(candidate.id, candidate);
             return send(response, 200, publicProvider(candidate));
+        }
+        if (request.url === '/api/kenari-balance') {
+            const {connection: id} = await readBody(request);
+            const connection = connections.get(id);
+            if (connection?.base !== 'https://kenari.id/v1') throw problem(409, 'Connect a Kenari provider first.');
+            const account = await upstream(connection, '/account/balance');
+            return send(response, 200, {balance: account.available_micro_idr});
+        }
+        if (request.url === '/api/provider-details') {
+            const {connection: id} = await readBody(request);
+            const connection = connections.get(id);
+            if (!connection) throw problem(409, 'Connect the provider first.');
+            return send(response, 200, await providerDetails(connection));
         }
         if (request.url === '/api/save') {
             const input = await readBody(request);
@@ -94,7 +108,11 @@ const server = http.createServer(async (request, response) => {
             const input = await readBody(request, 12_000_000);
             const connection = connections.get(input.connection);
             if (!connection) throw problem(409, 'The provider is disconnected. Open Settings to connect it.');
-            const model = connection.models.find(item => item.id === input.model);
+            let model = connection.models.find(item => item.id === input.model);
+            if (!model && input.model === 'beam-1-0:free' && connection.base === 'https://kenari.id/v1'
+                    && savedConnections.has(connection.id)) {
+                model = {id: input.model, input: {image: false, pdf: false}};
+            }
             if (!model) throw problem(400, 'Select a connected model.');
             if (!Array.isArray(input.messages) || !input.messages.length) throw problem(400, 'Enter a message.');
             const payload = {
@@ -103,6 +121,7 @@ const server = http.createServer(async (request, response) => {
                 stream: true
             };
             if (connection.type === 'openai') payload.stream_options = {include_usage: true};
+            if (model.modalities) payload.modalities = model.modalities;
             const controller = new AbortController();
             response.once('close', () => {
                 if (!response.writableEnded) controller.abort();
@@ -189,6 +208,30 @@ function connectionFrom(input, previous) {
 function publicProvider(provider) {
     const {id, type, base, name, models} = provider;
     return {id, type, base, name, models, saved: savedConnections.has(id)};
+}
+
+async function providerDetails(connection) {
+    const {base} = connection;
+    const kind = base === 'https://api.routr.cloud/v1' ? 'routr'
+        : base === 'https://kenari.id/v1' ? 'kenari'
+        : base === 'https://apimurah.com/v1' ? 'apimurah'
+        : base === 'https://openrouter.ai/api/v1' ? 'openrouter' : 'generic';
+    const provider = kind === 'routr' ? {...connection, base: 'https://api.routr.cloud'} : connection;
+    const catalogPath = kind === 'routr' ? '/api/me/pricing' : kind === 'openrouter' ? '/models/user' : '/models';
+    const accountPath = {routr:'/api/me/wallet', kenari:'/account/balance', openrouter:'/key'}[kind];
+    const [catalog, account] = await Promise.allSettled([
+        upstream(provider, catalogPath),
+        accountPath ? upstream(provider, accountPath) : null
+    ]);
+    const data = catalog.value?.[kind === 'routr' ? 'models' : 'data'];
+    const fields = ['id', 'context_length', 'context_limit', 'input_token_limit', 'pricing',
+        'input_rate', 'cache_rate', 'output_rate', 'min_charge_credits', 'per_request_floor_credits'];
+    const models = Array.isArray(data) ? data.filter(model => typeof model?.id === 'string')
+        .map(model => Object.fromEntries(fields.filter(field => Object.hasOwn(model, field))
+            .map(field => [field, model[field]]))) : undefined;
+    const balance = kind === 'routr' ? account.value?.available_credits
+        : kind === 'kenari' ? account.value?.available_micro_idr : account.value?.data?.limit_remaining;
+    return {kind, models, balance};
 }
 
 async function upstream(connection, endpoint, payload) {

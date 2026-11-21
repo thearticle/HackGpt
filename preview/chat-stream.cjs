@@ -14,9 +14,13 @@ const IMAGE_TYPES = {
 function modelMetadata(model, connectionType) {
     const input = model.architecture?.input_modalities ?? model.input_modalities;
     const modalities = Array.isArray(input) ? input.filter(item => typeof item === 'string') : null;
+    const output = model.architecture?.output_modalities;
     return {
         id: model.id,
         name: typeof model.name === 'string' ? model.name : model.id,
+        ...(connectionType === 'openrouter' && Array.isArray(output) && output.includes('image') && {
+            modalities: ['text', 'image'].filter(kind => output.includes(kind))
+        }),
         input: {
             image: modalities ? modalities.includes('image') : null,
             pdf: connectionType === 'gemini' ? false : modalities
@@ -125,12 +129,23 @@ async function streamReply(upstream, response, start, readJson, signal) {
     let lastActivity = null;
     let thinking = false;
     let hasText = false;
+    let imageCount = 0;
     let finished = false;
     try {
         async function consume(value, content) {
             if (value?.error) throw chatError(502, 'The provider reported an error while generating.');
             if (value?.usage) usage = value.usage;
             if (!content) return;
+            for (const parts of [content.images, content.content]) {
+                if (!Array.isArray(parts)) continue;
+                for (const part of parts) {
+                    if (imageCount >= 4) break;
+                    const url = part?.image_url?.url;
+                    if (typeof url !== 'string' || !/^(https:\/\/|data:image\/(png|jpeg|gif|webp);base64,)/.test(url)) continue;
+                    imageCount++;
+                    await emit('image', {text: url});
+                }
+            }
             const text = typeof content.content === 'string' ? content.content
                 : typeof content.refusal === 'string' ? content.refusal : '';
             const details = Array.isArray(content.reasoning_details) ? content.reasoning_details : [];
@@ -170,12 +185,12 @@ async function streamReply(upstream, response, start, readJson, signal) {
             const value = await readJson(upstream);
             await consume(value, value.choices?.[0]?.message);
         }
-        if (!hasText) throw chatError(502, 'This model did not return text. Try another text-chat model.');
+        if (!hasText && !imageCount) throw chatError(502, 'The model returned no supported text or images.');
         const outputTokens = usageCount(usage?.completion_tokens);
         const generationMs = lastActivity - firstActivity;
         await emit('done', {stats: {
             durationMs: Math.round(performance.now() - start),
-            firstTokenMs: streaming ? Math.round(firstText - start) : null,
+            firstTokenMs: streaming && firstText !== null ? Math.round(firstText - start) : null,
             inputTokens: usageCount(usage?.prompt_tokens),
             outputTokens,
             reasoningTokens: usageCount(usage?.completion_tokens_details?.reasoning_tokens),

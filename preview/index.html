@@ -33,6 +33,7 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
 .header-actions{display:flex;align-items:center;gap:2px}
+#chat-credit{border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--lime);white-space:nowrap;font-size:11px}
 .icon{display:grid;place-items:center;height:44px;line-height:1;border:0;background:transparent;font-family:"Segoe UI Symbol","Courier New",monospace}
 button:disabled{cursor:default;color:var(--disabled)}
 .primary{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
@@ -138,6 +139,10 @@ dialog::backdrop{background:var(--scrim)}
 #settings .provider-model-row{display:flex;align-items:center;gap:10px;min-height:42px;margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:4px;color:var(--paper);overflow-wrap:anywhere;cursor:pointer}
 #settings .provider-model-row input{width:16px;height:16px;min-height:0;margin:0;flex:none;accent-color:var(--lime)}
 #provider-model-list p{font-size:13px;color:var(--muted)}
+#provider-details{margin:0 0 10px;color:var(--muted);font-size:12px}
+#provider-details summary{cursor:pointer}
+#provider-details p{margin:6px 0;white-space:pre-line}
+#provider-details-refresh{min-height:34px;margin-top:6px}
 .key-field,.url-field,.name-field,.provider-field{position:relative;min-width:0}
 .provider-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 #provider-type{text-overflow:ellipsis}
@@ -209,6 +214,8 @@ article details summary{cursor:pointer}
 article .pending-reply{color:var(--muted)}
 #messages article.streaming-reply{flex-shrink:0}
 .streaming-reply>p{max-height:min(7em,25vh);overflow-y:auto}
+.reply-image{display:block;max-width:100%;height:auto;margin-top:8px;border-radius:4px}
+.reply-image-link{display:block;margin-top:8px;color:var(--lime)}
 #appearance-button::before{
   content:"";
   width:17px;
@@ -305,7 +312,10 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="history-button" class="icon" aria-label="Chat history" title="Chat history"></button>
 <button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
 </div>
+<div class="header-actions">
+<small id="chat-credit" aria-live="polite" hidden></small>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
+</div>
 </header>
 <section id="messages" aria-label="Conversation" aria-live="polite">
 <div id="empty" aria-hidden="true">
@@ -353,6 +363,13 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <span id="provider-key-hint" class="visually-hidden"></span>
 </div>
 <p id="provider-status" role="status"></p>
+<details id="provider-details" hidden>
+<summary>Model details and billing</summary>
+<button id="provider-details-refresh" type="button">Refresh</button>
+<p id="provider-balance" role="status"></p>
+<select id="provider-detail-model" aria-label="Model to inspect" hidden></select>
+<p id="provider-model-detail"></p>
+</details>
 <fieldset id="provider-models" aria-label="Models shown in the picker" hidden>
 <div class="model-filter-row">
 <button id="toggle-provider-models" class="primary connect-button" type="button" aria-label="Select all or none" title="Select all models"><span aria-hidden="true"></span></button>
@@ -388,7 +405,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <dialog id="model-dialog" aria-label="Select model">
 <p id="model-provider-summary" hidden></p>
 <input id="model-search" type="search" aria-label="Search models" placeholder="Search models">
-<div id="model-list"></div>
+<div id="model-list" tabindex="-1" autofocus></div>
 </dialog>
 <dialog id="appearance-dialog" aria-label="Appearance">
 <div class="appearance-options" role="group" aria-label="Appearance controls">
@@ -457,8 +474,9 @@ const presets = {
   openai: 'https://api.openai.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai'
 };
-const demoModels = ['GPT-4.1 mini', 'Claude Sonnet 4', 'Gemini 2.5 Flash'].map(name => ({id: name, name}));
-const modelKey = 'neural-link.demo-model.v1';
+const kenariBase = 'https://kenari.id/v1';
+const demoBeamId = 'beam-1-0:free';
+const demoProfileId = 'builtin-kenari-demo';
 const liveModelKey = 'neural-link.active-provider-model.v1';
 const modelDialog = find('model-dialog');
 const settings = find('settings');
@@ -474,7 +492,6 @@ const filePicker = find('file-picker');
 let attachments = [];
 let readingFiles = false;
 let attachmentVersion = 0;
-let demoModel = demoModels[0].id;
 let sending = false;
 let configuring = false;
 
@@ -485,8 +502,6 @@ function stored(key) {
 function remember(key, value) {
   try { localStorage.setItem(key, value); } catch { /* Session state is still available. */ }
 }
-
-if (demoModels.some(model => model.id === stored(modelKey))) demoModel = stored(modelKey);
 
 let nativeSequence = 0;
 const nativePending = new Map();
@@ -550,12 +565,21 @@ async function localApi(path, body) {
 
 const profilesKey = 'neural-link.saved-providers.v1';
 let profiles = readArray(profilesKey);
+let builtInDemo = null;
 const connections = new Map();
+let creditConnection = null;
+let creditRevision = 0;
 let editingId = null;
 let settingsInitialized = false;
 let draft = null;
 let liveModel = stored(liveModelKey);
 const modelTests = new Map();
+const providerDetailsPanel = find('provider-details');
+const providerDetailsRefresh = find('provider-details-refresh');
+const providerDetailModel = find('provider-detail-model');
+let detailConnection = null;
+let detailRevision = 0;
+let providerDetails = null;
 
 function readArray(key) {
   try {
@@ -580,8 +604,13 @@ function draftModels() {
 }
 
 function savedModels() {
-  if (!profiles.length) return demoModels;
-  return profiles.flatMap(profile => {
+  const configuredKenari = [...connections.values()].find(connection =>
+    connection.base === kenariBase && connection.saved === true);
+  const demo = builtInDemo ?? {
+    id: demoProfileId, name: 'Demo', connectionId: configuredKenari?.id,
+    models: [{id: demoBeamId, name: 'Beam 1.0 Free'}], hidden: []
+  };
+  return [demo, ...profiles].flatMap(profile => {
     const hidden = new Set(profile.hidden);
     const connection = connections.get(profile.connectionId);
     return profile.models.filter(model => !hidden.has(model.id)).map(model => ({
@@ -591,18 +620,46 @@ function savedModels() {
 }
 
 function currentModel() {
-  const models = savedModels().filter(model => !model.profile || model.connection);
-  return models.find(model => model.profile ? model.selection === liveModel : model.id === demoModel) ?? models[0];
+  const models = savedModels().filter(model => model.connection);
+  return models.find(model => model.selection === liveModel) ?? models[0];
 }
 
 function updateModelStatus() {
   const model = currentModel();
   find('demo-status').textContent = model
-    ? model.name + ' · ' + (model.profile?.name ?? 'Simulated replies')
+    ? model.name + ' · ' + model.profile.name
     : 'Connect a provider and select models in Settings';
   sendButton.disabled = sending || !model;
+  const freeDemo = model?.profile?.id === demoProfileId;
+  updateChatCredit(model?.connection, false, freeDemo);
   updateAttachmentControl(model);
   find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
+}
+
+async function updateChatCredit(connection, refresh = false, freeDemo = false) {
+  const id = freeDemo ? 'free-demo' : connection?.base === kenariBase ? connection.id : null;
+  if (id === creditConnection && !refresh) return;
+  const credit = find('chat-credit');
+  if (id !== creditConnection) credit.hidden = true;
+  creditConnection = id;
+  const revision = ++creditRevision;
+  if (freeDemo) {
+    credit.title = 'Free demo';
+    credit.textContent = 'FREE';
+    credit.hidden = false;
+    return;
+  }
+  if (!id) return;
+  credit.title = 'Available Kenari balance in Indonesian rupiah';
+  try {
+    const result = await localApi('kenari-balance', {connection: id});
+    if (revision !== creditRevision) return;
+    const amount = detailNumber(result.balance);
+    credit.hidden = amount === null;
+    if (amount !== null) credit.textContent = (amount / 1_000_000).toLocaleString('id-ID', {maximumFractionDigits: 0});
+  } catch {
+    if (revision === creditRevision) credit.hidden = true;
+  }
 }
 
 function renderModels() {
@@ -634,7 +691,7 @@ function renderModels() {
       group.setAttribute('role', 'group');
       const heading = document.createElement('h2');
       heading.id = 'model-group-heading-' + groups.size;
-      heading.textContent = model.profile?.name ?? 'Demo models';
+      heading.textContent = model.profile.name;
       group.setAttribute('aria-labelledby', heading.id);
       group.append(heading);
       groups.set(groupId, group);
@@ -646,7 +703,8 @@ function renderModels() {
     option.setAttribute('aria-pressed', String(active
       ? (model.selection ?? model.id) === (active.selection ?? active.id) : false));
     if (model.profile) {
-      const details = [model.name === model.id ? '' : model.id, !model.connection ? 'Key needed' : '']
+      const details = [model.name === model.id ? '' : model.id,
+        !model.connection ? (model.profile.id === demoProfileId ? 'Connect Kenari in Settings' : 'Key needed') : '']
         .filter(Boolean).join(' · ');
       if (details) {
         const subtitle = document.createElement('small');
@@ -656,13 +714,8 @@ function renderModels() {
       option.disabled = !model.connection;
     }
     option.onclick = () => {
-      if (model.profile) {
-        liveModel = model.selection;
-        remember(liveModelKey, liveModel);
-      } else {
-        demoModel = model.id;
-        remember(modelKey, demoModel);
-      }
+      liveModel = model.selection;
+      remember(liveModelKey, liveModel);
       updateModelStatus();
       modelDialog.close();
     };
@@ -674,11 +727,9 @@ function renderModels() {
 
 find('model-button').onclick = () => {
   modelSearch.value = '';
-  modelSearch.hidden = !profiles.length;
+  modelSearch.hidden = !profiles.length && !builtInDemo;
   renderModels();
   modelDialog.showModal();
-  if (profiles.length) modelSearch.focus();
-  else find('model-list').querySelector('[aria-pressed="true"]')?.focus();
 };
 modelSearch.oninput = renderModels;
 
@@ -741,11 +792,116 @@ function matchesDraftFields() {
     && draft.base === baseInput.value.trim().replace(/\/+$/, '');
 }
 
+function detailNumber(value) {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function modelDetailText(model, kind) {
+  const context = detailNumber(model.context_length ?? model.context_limit);
+  const inputLimit = detailNumber(model.input_token_limit);
+  const lines = context !== null ? ['Context ' + context.toLocaleString() + ' tokens']
+    : inputLimit !== null ? ['Input limit ' + inputLimit.toLocaleString() + ' tokens'] : [];
+  const rateIndex = lines.length;
+  const pricing = model.pricing;
+  const formatRates = (values, scale, prefix, unit) => {
+    const rates = values.flatMap(([label, value]) => {
+      const amount = detailNumber(value);
+      return amount === null ? [] : [label + ' ' + prefix + (amount * scale).toLocaleString(undefined, {maximumFractionDigits: 8})];
+    });
+    return rates.length ? rates.join(' · ') + ' ' + unit : '';
+  };
+  let rate = '';
+  if (kind === 'routr') {
+    rate = formatRates([['Input', model.input_rate], ['Output', model.output_rate], ['Cache', model.cache_rate]], 1, '', 'credits/token');
+    const floor = detailNumber(model.per_request_floor_credits ?? model.min_charge_credits);
+    if (floor !== null) lines.push('Minimum ' + floor.toLocaleString() + ' credits/request');
+  } else if (pricing?.free === true && kind === 'kenari') {
+    lines.push('Free tier');
+  } else if (pricing?.unit === 'micro_idr_per_1m_tokens' && (kind === 'kenari' || pricing.currency === 'IDR')) {
+    const kenariRates = item => formatRates([['Input', item.input], ['Output', item.output],
+      ['Cache read', item.cache_read], ['Cache write', item.cache_write]], 1 / 1_000_000, 'Rp ', '/ 1M tokens');
+    rate = kenariRates(pricing);
+    for (const tier of Array.isArray(pricing.tiers) ? pricing.tiers : []) {
+      const threshold = detailNumber(tier?.above_input_tokens);
+      const tierRate = threshold === null ? '' : kenariRates(tier);
+      if (tierRate) lines.push('Above ' + threshold.toLocaleString() + ' input tokens · ' + tierRate);
+    }
+  } else if ((kind === 'openrouter' || kind === 'apimurah') && pricing) {
+    rate = formatRates([['Input', pricing.prompt], ['Output', pricing.completion],
+      ['Cache read', pricing.input_cache_read], ['Cache write', pricing.input_cache_write]], 1_000_000, '$', '/ 1M tokens');
+  }
+  if (rate) lines.splice(rateIndex, 0, rate);
+  else if (!(kind === 'kenari' && pricing?.free === true)) lines.push('Pricing unavailable');
+  return lines.join('\n');
+}
+
+function showProviderModelDetail() {
+  const model = providerDetails?.models?.find(item => item.id === providerDetailModel.value);
+  find('provider-model-detail').textContent = model ? modelDetailText(model, providerDetails.kind) : '';
+}
+
+async function loadProviderDetails() {
+  const connection = detailConnection;
+  if (!connection || providerDetailsRefresh.disabled) return;
+  const revision = detailRevision;
+  providerDetailsRefresh.disabled = true;
+  const balance = find('provider-balance');
+  balance.textContent = 'Loading provider details…';
+  try {
+    const result = await localApi('provider-details', {connection});
+    if (detailRevision !== revision) return;
+    providerDetails = result;
+    const amount = detailNumber(result.balance);
+    const kind = result.kind;
+    balance.textContent = amount !== null && kind === 'routr' ? amount.toLocaleString() + ' credits available'
+      : amount !== null && kind === 'kenari' ? 'Rp ' + (amount / 1_000_000).toLocaleString() + ' available'
+      : amount !== null && kind === 'openrouter' ? '$' + amount.toLocaleString() + ' remaining on key limit'
+      : kind === 'openrouter' && result.balance === null ? 'No spending limit on this key'
+      : kind === 'generic' || kind === 'apimurah' ? 'Balance unavailable through this connection.'
+      : 'Balance unavailable. The provider may restrict access for this key.';
+    const modelIds = new Set(result.models?.map(model => model.id));
+    const previous = providerDetailModel.value;
+    clearContents(providerDetailModel);
+    for (const model of draft.models) {
+      if (modelIds.has(model.id)) providerDetailModel.add(new Option(model.name, model.id));
+    }
+    if (modelIds.has(previous)) providerDetailModel.value = previous;
+    providerDetailModel.hidden = !providerDetailModel.length;
+    showProviderModelDetail();
+    if (!providerDetailModel.length) find('provider-model-detail').textContent = 'No model details returned.';
+  } catch (error) {
+    if (detailRevision === revision) balance.textContent = error.message;
+  } finally {
+    if (detailRevision === revision) providerDetailsRefresh.disabled = false;
+  }
+}
+
+providerDetailsPanel.ontoggle = () => {
+  if (providerDetailsPanel.open && !providerDetails) loadProviderDetails();
+};
+providerDetailsRefresh.onclick = loadProviderDetails;
+providerDetailModel.onchange = showProviderModelDetail;
+
 function refreshSettings() {
   baseInput.readOnly = typeInput.value !== 'custom';
   const matches = matchesDraftFields();
   const deferredKey = keyInput.value.trim() !== '';
   const connected = matches && connections.has(draft.connectionId);
+  const nextDetailConnection = connected ? draft.connectionId : null;
+  if (detailConnection !== nextDetailConnection) {
+    detailConnection = nextDetailConnection;
+    detailRevision++;
+    providerDetails = null;
+    providerDetailsPanel.open = false;
+    providerDetailsRefresh.disabled = false;
+    providerDetailModel.hidden = true;
+    clearContents(providerDetailModel);
+    find('provider-balance').textContent = '';
+    find('provider-model-detail').textContent = '';
+  }
+  providerDetailsPanel.hidden = !connected;
   const savedKey = connected && connections.get(draft.connectionId).saved === true;
   keyInput.dataset.savedKey = String(savedKey);
   keyInput.placeholder = savedKey ? '••••••••••••••••'
@@ -1056,7 +1212,10 @@ async function restoreConnections() {
         }
       }
     }
-    for (const item of liveConnections) connections.set(item.id, item);
+    for (const item of liveConnections) {
+      connections.set(item.id, item);
+      if (item.builtInDemo === true) builtInDemo = {...item, connectionId: item.id, hidden: []};
+    }
   } catch {
     // Saved provider details remain available if the local server is unreachable.
   } finally {
@@ -1693,10 +1852,52 @@ function renderReplyMarkup(article, reply) {
 }
 
 
+const replyImages = new Map();
+
+function rememberReplyImages(turn, images) {
+  replyImages.set(turn, images);
+  let bytes = [...replyImages.values()].flat().reduce((size, source) => size + source.length, 0);
+  for (const [oldTurn, oldImages] of replyImages) {
+    if (bytes <= 16_000_000) break;
+    bytes -= oldImages.reduce((size, source) => size + source.length, 0);
+    replyImages.delete(oldTurn);
+  }
+}
+
+function replyImageSource(value) {
+  if (typeof value !== 'string' || value.length > 8_000_000) return null;
+  if (/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)) return value;
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && !url.username && !url.password && value.length <= 4096) return url.href;
+  } catch { return null; }
+  return null;
+}
+
 function showTurn(turn) {
   showFileNames(appendMessage('', turn.question, true), turn.files);
   const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false);
-  renderReplyMarkup(answer, turn.reply);
+  const images = replyImages.get(turn) ?? [];
+  if (turn.reply) renderReplyMarkup(answer, turn.reply);
+  else if (images.length) answer.lastElementChild.remove();
+  else if (turn.imageCount) answer.lastElementChild.textContent = 'Image reply was available in the original session.';
+  for (const src of images) {
+    if (src.startsWith('data:')) {
+      const image = document.createElement('img');
+      image.className = 'reply-image';
+      image.alt = 'Image from ' + (turn.model || 'the provider');
+      image.src = src;
+      answer.append(image);
+    } else {
+      const link = document.createElement('a');
+      link.className = 'reply-image-link';
+      link.href = src;
+      if (!window.HackGptAndroid) link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Open image · ' + new URL(src).hostname;
+      answer.append(link);
+    }
+  }
   if (turn.reasoningSummary) {
     const detail = document.createElement('details');
     const heading = document.createElement('summary');
@@ -1771,11 +1972,7 @@ find('composer').onsubmit = async event => {
   if (sending || readingFiles) return;
   const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
   const model = currentModel();
-  if (!text || !model) return;
-  if (attachments.length && !model.connection) {
-    showChatError('Connect a provider to send these attachments.');
-    return;
-  }
+  if (!text || !model?.connection) return;
   if (!attachments.every(file => acceptsFile(file, model))) {
     showChatError('Remove attachments this model cannot use, or choose a compatible model.');
     return;
@@ -1785,13 +1982,13 @@ find('composer').onsubmit = async event => {
   let chat = chats.find(item => item.id === activeId && (item.source ?? null) === source);
   const files = [...attachments];
   const turn = {question: text, files: files.map(file => file.name), model: model.name,
-    reply: 'This is a simulated reply. Connect a provider in Settings to use a live model.'};
+    reply: ''};
   showChatError('');
 
-  if (connection) {
+  {
     const previous = (chat?.turns ?? []).flatMap(item => [
       {role: 'user', content: item.question, files: (turnFiles.get(item) ?? []).filter(file => acceptsFile(file, model))},
-      {role: 'assistant', content: item.reply}
+      ...(item.reply ? [{role: 'assistant', content: item.reply}] : [])
     ]);
     const originalChat = chats.find(item => item.id === activeId);
     const originalDraft = promptBox.value;
@@ -1807,14 +2004,19 @@ find('composer').onsubmit = async event => {
     body.tabIndex = 0;
     body.setAttribute('aria-label', 'Reply progress');
     messages.scrollTop = messages.scrollHeight;
-    turn.reply = '';
+    const images = [];
     try {
       turn.stats = await receiveReply({
         connection: connection.id, model: model.id,
         messages: [...previous, {role: 'user', content: promptWithVisualFormats(text), files}]
       }, update => {
         const pinned = messages.scrollHeight - messages.clientHeight - messages.scrollTop < 48;
-        if (update.type === 'thinking' && !turn.reply && !turn.reasoningSummary) {
+        if (update.type === 'image') {
+          const source = replyImageSource(update.text);
+          if (!source || images.length >= 4 || images.includes(source)) return;
+          images.push(source);
+          if (!turn.reply) body.textContent = 'Image received…';
+        } else if (update.type === 'thinking' && !turn.reply && !turn.reasoningSummary && !images.length) {
           body.textContent = 'Reasoning…';
         } else if (update.type === 'summary') {
           const firstSummary = !turn.reasoningSummary;
@@ -1835,8 +2037,9 @@ find('composer').onsubmit = async event => {
         body.scrollTop = body.scrollHeight;
         if (pinned) messages.scrollTop = messages.scrollHeight;
       }, requestAbort.signal);
+      if (!turn.reply.trim() && !images.length) throw new Error('The provider returned no displayable image or text.');
     } catch (error) {
-      if (requestAbort.signal.aborted && turn.reply.trim()) {
+      if (requestAbort.signal.aborted && (turn.reply.trim() || images.length)) {
         turn.stopped = true;
       } else {
         showChat(originalChat, false, true);
@@ -1847,7 +2050,12 @@ find('composer').onsubmit = async event => {
       }
     } finally {
       setSending(false);
+      if (connection.base === kenariBase && model.profile.id !== demoProfileId) updateChatCredit(connection, true);
       requestAbort = null;
+    }
+    if (images.length) {
+      rememberReplyImages(turn, images);
+      turn.imageCount = images.length;
     }
   }
 
@@ -1856,8 +2064,7 @@ find('composer').onsubmit = async event => {
   chat.turns.push(turn);
   chats = [chat, ...chats.filter(item => item.id !== chat.id)];
   saveChats();
-  showChat(chat, false, Boolean(connection));
-  if (!connection) promptBox.focus();
+  showChat(chat, false, true);
 };
 
 

@@ -16,6 +16,7 @@ abstract class BundleChatUi extends DefaultTask {
     void bundle() {
         def directory = outputDirectory.get().asFile.toPath()
         Files.createDirectories(directory)
+        Files.deleteIfExists(directory.resolve('demo-kenari.key'))
         uiFiles.each { file ->
             Files.copy(file.toPath(), directory.resolve(file.name), StandardCopyOption.REPLACE_EXISTING)
         }
@@ -38,8 +39,8 @@ android {
         applicationId 'com.thearticle.hackgpt'
         minSdk 26
         targetSdk 36
-        versionCode 14
-        versionName '1.0.12'
+        versionCode 15
+        versionName '1.0.13'
     }
 
     buildTypes {
@@ -56,6 +57,7 @@ android {
     }
 }
 
+def demoKeyFile = providers.environmentVariable('HACKGPT_PRIVATE_DEMO_KEY_FILE').orNull
 androidComponents {
     onVariants(selector().all()) { variant ->
         def bundle = tasks.register('bundle' + variant.name.capitalize() + 'ChatUi', BundleChatUi) {
@@ -64,6 +66,7 @@ androidComponents {
                 rootProject.file('preview/vendor/markdown-it.min.js'),
                 rootProject.file('preview/vendor/markdown-it.NOTICES.txt')
             )
+            if (demoKeyFile) uiFiles.from(rootProject.file(demoKeyFile))
             outputDirectory.set(layout.buildDirectory.dir('generated/chat-ui/' + variant.name))
         }
         variant.sources.assets.addGeneratedSourceDirectory(bundle, { task -> task.outputDirectory })
