@@ -22,13 +22,18 @@ HackGpt brings several online model providers into one Android app. Connect with
 
 ## Screenshots
 
-| Chat toolbar and quota | Provider settings | Model picker |
-| :---: | :---: | :---: |
-| [<img src="docs/screenshots/chat-toolbar.jpg" width="176" alt="Chat toolbar with Settings, model picker, history, appearance, quota, and New chat">](docs/screenshots/chat-toolbar.jpg) | [<img src="docs/screenshots/provider-settings.jpg" width="176" alt="Provider settings with model details and billing, model checkboxes, connect, and save">](docs/screenshots/provider-settings.jpg) | [<img src="docs/screenshots/model-picker.jpg" width="176" alt="Searchable model picker grouped by provider with Beam 1.0 Free">](docs/screenshots/model-picker.jpg) |
-
-| Floating circle and visual replies | History and bulk actions |
-| :---: | :---: |
-| [<img src="docs/screenshots/composer-and-visual-replies.jpg" width="176" alt="Floating circle above the message field and a reply with a table, chart, and diagrams">](docs/screenshots/composer-and-visual-replies.jpg) | [<img src="docs/screenshots/history-bulk-actions.jpg" width="176" alt="Three chats selected with select all, bulk export, and bulk delete beside history search">](docs/screenshots/history-bulk-actions.jpg) |
+<table>
+  <tr>
+    <td align="center"><a href="docs/screenshots/chat-toolbar.jpg"><img src="docs/screenshots/chat-toolbar.jpg" width="176" alt="Chat toolbar with Settings, model picker, history, appearance, quota, and New chat"></a><br>Chat toolbar and quota</td>
+    <td align="center"><a href="docs/screenshots/provider-settings.jpg"><img src="docs/screenshots/provider-settings.jpg" width="176" alt="Provider settings with model details and billing, model checkboxes, connect, and save"></a><br>Provider settings</td>
+    <td align="center"><a href="docs/screenshots/model-picker.jpg"><img src="docs/screenshots/model-picker.jpg" width="176" alt="Searchable model picker grouped by provider with Beam 1.0 Free"></a><br>Model picker</td>
+  </tr>
+  <tr>
+    <td align="center"><a href="docs/screenshots/composer-and-visual-replies.jpg"><img src="docs/screenshots/composer-and-visual-replies.jpg" width="176" alt="Floating circle above the message field and a reply with a table, chart, and diagrams"></a><br>Circle and visual replies</td>
+    <td align="center"><a href="docs/screenshots/history-bulk-actions.jpg"><img src="docs/screenshots/history-bulk-actions.jpg" width="176" alt="Three chats selected with select all, bulk export, and bulk delete beside history search"></a><br>History and bulk actions</td>
+    <td align="center"><a href="docs/screenshots/appearance-settings.jpg"><img src="docs/screenshots/appearance-settings.jpg" width="176" alt="Appearance dialog with Dark and Light themes, Enter-to-Send, Full screen, and a font-size slider"></a><br>Appearance settings</td>
+  </tr>
+</table>
 
 ## Features
 
