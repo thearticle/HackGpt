@@ -73,11 +73,19 @@ Settings always opens on the provider setup screen. Tap a saved provider in the 
 
 The focused circle also accepts the arrow keys. Its inner dot follows your swipe, then returns to center on release. The circle fades away after two idle seconds.
 
+### Continue with another model
+
+Select another model during a chat to open a handoff card in the conversation. The card identifies the receiving model and provider. Choose **Summary** to review or edit a handoff before sending, **Full history** to share earlier prompts and replies, or **Fresh start** to send the next message alone while keeping earlier turns visible.
+
+In **Summarize with**, choose the previous or new model, then tap **Generate summary** to send all earlier user messages and assistant replies to that model for summarization. **Include latest generated image** appears when the image is still available and the receiving model declares image input support. The collapsed handoff card records which mode you used.
+
 ## Model details and quota
 
 Look beside **+** in the chat header after choosing a model. **Routr** shows the selected model's available credits when reported. Tap the badge to switch between the abbreviated and exact count. **Kenari** shows the available rupiah balance, rounded to whole rupiah. **Demo → Beam 1.0 Free** displays **FREE**.
 
 Hold a model in **Select model** to select and highlight it. A card at the top of the picker shows reported prices, token limits, supported inputs, and image generation capability. Scroll below the card to browse more models. Tap **▶** to send a test request through the selected model and see whether it responds. Provider charges may apply.
+
+If a test fails, the picker strikes through the model name and shows when it failed. Tap the marked row and use **▶** to retest. A successful retest clears the mark so you can select the model again.
 
 ## Export and history
 

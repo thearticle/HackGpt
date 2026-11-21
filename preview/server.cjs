@@ -130,7 +130,7 @@ const server = http.createServer(async (request, response) => {
             }
             if (!model) throw problem(400, 'Select a connected model.');
             if (!Array.isArray(input.messages) || !input.messages.length) throw problem(400, 'Enter a message.');
-            const {endpoint, payload, generated} = replyRequest(connection, model, input.messages, true);
+            const {endpoint, payload, generated} = replyRequest(connection, model, input.messages, true, input.textOnly === true);
             const controller = new AbortController();
             response.once('close', () => {
                 if (!response.writableEnded) controller.abort();
@@ -239,12 +239,8 @@ async function providerDetails(connection, selectedModel) {
         : base === 'https://openrouter.ai/api/v1' ? 'openrouter' : 'generic';
     const provider = kind === 'routr' ? {...connection, base: 'https://api.routr.cloud'} : connection;
     const catalogPath = kind === 'routr' ? '/api/me/pricing' : kind === 'openrouter' ? '/models/user' : '/models';
-    const accountPath = {routr:'/api/me/wallet', kenari:'/account/balance', openrouter:'/key'}[kind];
-    const [catalog, account] = await Promise.allSettled([
-        upstream(provider, catalogPath),
-        accountPath ? upstream(provider, accountPath) : null
-    ]);
-    const data = catalog.value?.[kind === 'routr' ? 'models' : 'data'];
+    const catalog = await upstream(provider, catalogPath).catch(() => null);
+    const data = catalog?.[kind === 'routr' ? 'models' : 'data'];
     const fields = ['context_length', 'context_limit', 'context_window', 'input_token_limit',
         'output_token_limit', 'max_output_tokens', 'top_provider', 'endpoints', 'architecture',
         'input_modalities', 'output_modalities', 'pricing_lines', 'pricing',
@@ -255,18 +251,19 @@ async function providerDetails(connection, selectedModel) {
         return [{id, ...Object.fromEntries(fields.filter(field => Object.hasOwn(model, field))
             .map(field => [field, model[field]]))}];
     }) : undefined;
-    const balance = kind === 'routr' ? account.value?.available_credits
-        : kind === 'kenari' ? account.value?.available_micro_idr : account.value?.data?.limit_remaining;
-    return {kind, models, balance};
+    return {kind, models};
 }
 
 async function upstream(connection, endpoint, payload) {
     return readUpstreamJson(await openUpstream(connection, endpoint, payload));
 }
 
-function replyRequest(connection, model, messages, streaming) {
+function replyRequest(connection, model, messages, streaming, textOnly = false) {
     const endpoint = imageEndpoint(connection.type, connection.base, model.id, model.imageOnly
         || (model.modalities && !model.modalities.includes('text')));
+    if (textOnly && (endpoint || model.imageOnly || (model.modalities && !model.modalities.includes('text')))) {
+        throw problem(422, 'This model does not support text replies.');
+    }
     if (endpoint) {
         const last = messages.at(-1);
         if (last?.role !== 'user' || typeof last.content !== 'string' || !last.content.trim()) {
@@ -277,7 +274,7 @@ function replyRequest(connection, model, messages, streaming) {
     }
     const stream = streaming && !model.modalities;
     const payload = {model: model.id, messages: messageParts(messages, model, connection.type), stream};
-    if (model.modalities) payload.modalities = model.modalities;
+    if (model.modalities) payload.modalities = textOnly ? ['text'] : model.modalities;
     if (stream && connection.type === 'openai') payload.stream_options = {include_usage: true};
     return {endpoint: '/chat/completions', payload, generated: false};
 }

@@ -304,14 +304,13 @@ final class ProviderBridge {
         };
         var result = new JSONObject().put("kind", kind);
         var routes = switch (kind) {
-            case "routr" -> new String[]{ROUTR_ORIGIN, "/api/me/pricing", "/api/me/wallet", "models", "available_credits"};
-            case "kenari" -> new String[]{base, "/models", "/account/balance", "data", "available_micro_idr"};
-            case "openrouter" -> new String[]{base, "/models/user", "/key", "data", "limit_remaining"};
-            default -> new String[]{base, "/models", "", "data", ""};
+            case "routr" -> new String[]{ROUTR_ORIGIN, "/api/me/pricing", "models"};
+            case "openrouter" -> new String[]{base, "/models/user", "data"};
+            default -> new String[]{base, "/models", "data"};
         };
         var connection = new JSONObject().put("base", routes[0]).put("key", provider.getString("key"));
         try {
-            var catalog = readJson(open(connection, routes[1], null, request)).optJSONArray(routes[3]);
+            var catalog = readJson(open(connection, routes[1], null, request)).optJSONArray(routes[2]);
             if (catalog != null) {
                 var models = new JSONArray();
                 for (int i = 0; i < catalog.length(); i++) {
@@ -333,18 +332,7 @@ final class ProviderBridge {
                 result.put("models", models);
             }
         } catch (Exception ignored) {
-            // Account information can still be available when catalog access fails.
-        } finally {
-            request.release();
-        }
-        if (!routes[2].isEmpty() && !request.cancelled) {
-            try {
-                var account = readJson(open(connection, routes[2], null, request));
-                if ("openrouter".equals(kind)) account = account.optJSONObject("data");
-                if (account != null && account.has(routes[4])) result.put("balance", account.get(routes[4]));
-            } catch (Exception ignored) {
-                // Some API keys can read the model catalog but cannot read balances.
-            }
+            // Some API keys provide chat access without catalog access.
         }
         return result;
     }
@@ -491,12 +479,14 @@ final class ProviderBridge {
         var modalities = model.optJSONArray("modalities");
         boolean imageOnly = model.optBoolean("imageOnly") || (modalities != null && !contains(modalities, "text"));
         String imageEndpoint = imageEndpoint(type, provider.getString("base"), model.getString("id"), imageOnly);
+        boolean textOnly = input.optBoolean("textOnly");
+        if (textOnly && (imageOnly || imageEndpoint != null)) throw new Failure("This model does not support text replies.");
         if (imageEndpoint != null) return generateImage(provider, model, input, id, request, start, streaming, imageEndpoint);
         var messages = AttachmentParts.encode(input.optJSONArray("messages"), model.optJSONObject("input"), type);
         boolean streamUpstream = streaming && modalities == null;
         var payload = new JSONObject().put("model", model.getString("id"))
                 .put("messages", messages).put("stream", streamUpstream);
-        if (modalities != null) payload.put("modalities", modalities);
+        if (modalities != null) payload.put("modalities", textOnly ? new JSONArray().put("text") : modalities);
         if (streamUpstream && "openai".equals(type)) {
             payload.put("stream_options", new JSONObject().put("include_usage", true));
         }

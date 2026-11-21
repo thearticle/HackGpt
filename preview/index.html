@@ -113,6 +113,9 @@ dialog::backdrop{background:var(--scrim)}
 #model-dialog.is-inspecting #model-list{max-height:min(55dvh,var(--model-list-limit,55dvh));min-height:0}
 #model-list button{text-align:left}
 #model-list button[aria-pressed="true"]{border-color:var(--lime);background:var(--selection)}
+#model-list .model-failed .model-name{text-decoration:line-through}
+#model-list .model-failed small.model-failure-time{color:var(--danger)}
+#model-list .model-failed.is-retest-target{border-color:var(--danger);box-shadow:inset 0 0 12px color-mix(in srgb,var(--danger) 45%,transparent)}
 #demo-status{overflow-wrap:anywhere}
 #history-button::before{
   content:"";
@@ -283,6 +286,16 @@ article .pending-reply{color:var(--muted)}
 #history-list{max-height:min(68vh,520px);max-height:min(68dvh,520px)}
 #messages article{min-width:0}
 #messages article:not(.mine){align-self:stretch;padding-block:8px}
+.model-handoff{align-self:center;flex:none;width:min(100%,340px);padding:7px 10px;margin:6px 0;border:1px solid var(--line);border-radius:7px;background:var(--panel);font-size:12px;text-align:center;overflow-wrap:anywhere}
+.model-handoff summary{cursor:pointer;color:var(--lime)}
+.model-handoff-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:7px 0}
+.model-handoff button{min-height:36px;padding:4px 7px;font-size:11px}
+.model-handoff button[aria-pressed="true"]{border-color:var(--lime);background:var(--selection)}
+.model-handoff textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);text-align:left}
+.model-handoff p{margin:5px 0;white-space:pre-wrap}
+.model-handoff label{display:flex;align-items:center;justify-content:center;gap:5px}
+.model-handoff .summary-model{flex-wrap:wrap;margin:6px 0}
+.summary-model select{min-width:0;max-width:100%}
 #messages article.mine{align-self:flex-end;max-width:90%;width:fit-content}
 #messages article p,#prompt{font-size:var(--chat-font-size);line-height:1.45}
 :root[data-theme="light"] #empty canvas{filter:brightness(.37) saturate(1.3)}
@@ -650,6 +663,31 @@ let heldModelClick = false;
 let draft = null;
 let liveModel = stored(liveModelKey);
 const modelTests = new Map();
+const failedModelsKey = 'neural-link.failed-models.v1';
+const failedModels = new Map(readArray(failedModelsKey)
+  .filter(item => Array.isArray(item) && typeof item[0] === 'string' && Number.isFinite(Date.parse(item[1]))));
+
+function modelTestKey(connection, modelId) {
+  return JSON.stringify([connection.id, modelId]);
+}
+
+function modelFailure(model) {
+  return model.connection && failedModels.get(modelTestKey(model.connection, model.id));
+}
+
+function recordModelTest(connection, modelId, passed) {
+  const key = modelTestKey(connection, modelId);
+  const active = currentModel();
+  const wasActive = active && modelTestKey(active.connection, active.id) === key;
+  failedModels.delete(key);
+  if (!passed) failedModels.set(key, new Date().toISOString());
+  while (failedModels.size > 400) failedModels.delete(failedModels.keys().next().value);
+  remember(failedModelsKey, JSON.stringify([...failedModels]));
+  if (!passed && wasActive) {
+    liveModel = currentModel()?.selection ?? '';
+    remember(liveModelKey, liveModel);
+  }
+}
 
 function readArray(key) {
   try {
@@ -694,20 +732,21 @@ function savedModels() {
 }
 
 function currentModel() {
-  const models = savedModels().filter(model => model.connection);
+  if (liveModel === '') return undefined;
+  const models = savedModels().filter(model => model.connection && !modelFailure(model));
   return models.find(model => model.selection === liveModel) ?? models[0];
 }
 
 function updateModelStatus() {
   const model = currentModel();
-  if (inspectedModel && inspectedModel.selection !== model?.selection) closeModelInspector();
   find('inspector-test').disabled = sending || !!inspectorProbe;
   find('demo-status').textContent = model
     ? model.name + ' · ' + model.profile.name
-    : 'Connect a provider and select models in Settings';
+    : liveModel === '' ? 'Select or retest a model in the model picker' : 'Connect a provider and select models in Settings';
   updateComposerButton(model);
   updateChatCredit(model);
   updateAttachmentControl(model);
+  syncModelHandoff(model);
   find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
 }
 
@@ -802,7 +841,13 @@ function renderModels() {
     }
     const option = document.createElement('button');
     option.type = 'button';
-    option.textContent = model.name;
+    const name = document.createElement('span');
+    name.className = 'model-name';
+    name.textContent = model.name;
+    option.append(name);
+    const failed = modelFailure(model);
+    option.classList.toggle('model-failed', !!failed);
+    option.classList.toggle('is-retest-target', !!failed && inspectedModel?.selection === model.selection);
     option.setAttribute('aria-pressed', String(active
       ? (model.selection ?? model.id) === (active.selection ?? active.id) : false));
     if (model.profile) {
@@ -817,7 +862,23 @@ function renderModels() {
       }
       option.disabled = !model.connection;
     }
+    if (failed) {
+      const timestamp = document.createElement('small');
+      timestamp.className = 'model-failure-time';
+      const time = document.createElement('time');
+      time.dateTime = failed;
+      time.textContent = new Date(failed).toLocaleString();
+      timestamp.append('Failed · ', time);
+      option.append(timestamp);
+    }
     const select = inspect => {
+      if (modelFailure(model)) {
+        inspectModel(model);
+        for (const row of list.querySelectorAll('.is-retest-target')) row.classList.remove('is-retest-target');
+        option.classList.add('is-retest-target');
+        keepModelRowVisible(option);
+        return;
+      }
       liveModel = model.selection;
       remember(liveModelKey, liveModel);
       updateModelStatus();
@@ -831,7 +892,8 @@ function renderModels() {
       }
     };
     option.onclick = () => select(false);
-    option.setAttribute('aria-description', 'Hold or press Shift+Enter for model details.');
+    option.setAttribute('aria-description', failed ? 'Last test failed. Open details to retest.'
+      : 'Hold or press Shift+Enter for model details.');
     onLongPress(option, () => {
       heldModelClick = true;
       select(true);
@@ -925,7 +987,7 @@ function closeModelInspector() {
 }
 
 function inspectorLines(model, details = {}) {
-  const {kind, balance} = details;
+  const {kind} = details;
   const item = details.models?.find(entry => entry.id === model.id || entry.model === model.id) ?? {};
   const format = value => value.toLocaleString(undefined, {maximumFractionDigits: 8});
   const number = detailNumber;
@@ -967,22 +1029,26 @@ function inspectorLines(model, details = {}) {
     if (number(price.request) > 0) lines.push('$' + format(number(price.request)) + ' / request');
     if (number(price.image) > 0) lines.push('$' + format(number(price.image)) + ' / image input');
   }
-  if (number(balance) !== null) {
-    if (kind === 'kenari') lines.push('Balance Rp ' + format(number(balance) / 1_000_000));
-    if (kind === 'routr') lines.push('Wallet ' + format(number(balance)) + ' credits');
-    if (kind === 'openrouter') lines.push('$' + format(number(balance)) + ' remaining on key limit');
-  }
   return lines;
 }
 
+function updateInspectorTestLabel(model) {
+  const name = modelFailure(model) ? 'Retest model' : 'Test response';
+  const button = find('inspector-test');
+  button.setAttribute('aria-label', name);
+  button.title = name + '. Provider charges may apply.';
+}
+
 async function inspectModel(model) {
+  if (inspectorProbe && inspectedModel?.selection === model.selection) return;
   closeModelInspector();
   inspectedModel = model;
   find('model-inspector').hidden = false;
   modelDialog.classList.add('is-inspecting');
   limitInspectorModelList();
-  find('inspector-result').textContent = '';
+  find('inspector-result').textContent = modelFailure(model) ? 'Last test failed. Tap ▶ to retest before using this model.' : '';
   find('inspector-test').disabled = sending;
+  updateInspectorTestLabel(model);
   const lines = find('inspector-lines');
   const render = (details, status) => {
     const rows = inspectorLines(model, details);
@@ -999,7 +1065,7 @@ async function inspectModel(model) {
     const details = await localApi('provider-details', {connection: model.connection.id, model: model.id});
     if (inspectedModel === model) {
       const rows = inspectorLines(model, details);
-      const billing = rows.some(row => /[$]|\bRp |credits\/token|Free tier/.test(row) && !row.startsWith('Balance'));
+      const billing = rows.some(row => /[$]|\bRp |credits\/token|Free tier/.test(row));
       render(details, billing ? '' : 'Pricing not reported by this provider.');
     }
   } catch {
@@ -1010,6 +1076,7 @@ async function inspectModel(model) {
 find('inspector-test').onclick = async () => {
   const model = inspectedModel;
   if (!model || inspectorProbe || sending) return;
+  const retest = !!modelFailure(model);
   const controller = new AbortController();
   inspectorProbe = controller;
   const result = find('inspector-result');
@@ -1024,14 +1091,28 @@ find('inspector-test').onclick = async () => {
       responded ||= event.type === 'delta' ? !!event.text.trim() : event.type === 'image' && !!replyImageSource(event.text);
     }, controller.signal);
     if (!responded) throw new Error('No usable response.');
-    if (inspectorProbe === controller) result.textContent = 'Responded · ' + (stats.durationMs / 1000).toFixed(2) + ' s';
+    if (inspectorProbe === controller) {
+      recordModelTest(model.connection, model.id, true);
+      result.textContent = 'Responded · ' + (stats.durationMs / 1000).toFixed(2) + ' s'
+        + (retest ? ' · Select the model to use it.' : '');
+    }
   } catch (error) {
-    if (inspectorProbe === controller) result.textContent = 'Test failed · ' + error.message;
+    if (inspectorProbe === controller) {
+      recordModelTest(model.connection, model.id, false);
+      result.textContent = 'Test failed · ' + error.message + ' Tap ▶ to retest.';
+    }
   } finally {
     if (inspectorProbe === controller) {
       inspectorProbe = null;
-      find('inspector-test').disabled = sending;
-      updateChatCredit(model, true);
+      const list = find('model-list');
+      const scroll = list.scrollTop;
+      updateInspectorTestLabel(model);
+      updateModelStatus();
+      renderModels();
+      list.scrollTop = scroll;
+      const row = list.querySelector('.is-retest-target');
+      if (row) keepModelRowVisible(row);
+      updateChatCredit(currentModel(), true);
     }
   }
 };
@@ -1364,8 +1445,10 @@ find('test-model').onclick = () => {
         });
         if (typeof reply !== 'string' || !reply.trim()) throw new Error('No text reply.');
         modelTests.set(model.id, {state: 'passed', label: 'Test passed'});
+        recordModelTest(connection, model.id, true);
       } catch (error) {
         modelTests.set(model.id, {state: 'failed', label: 'Test failed: ' + error.message});
+        recordModelTest(connection, model.id, false);
       }
       updateModelTestDots();
       status.textContent = 'Tested ' + (index + 1) + ' of ' + models.length + ' models…';
@@ -1409,9 +1492,6 @@ async function restoreConnections() {
     updateModelStatus();
   }
 }
-updateModelStatus();
-restoreConnections();
-
 const historyDialog = find('history-dialog');
 const historyList = find('history-list');
 const historySearch = find('history-search');
@@ -1425,6 +1505,7 @@ const titleInput = find('chat-title');
 const storageKey = 'neural-link.history.v1';
 let chats = [];
 let pendingAction;
+let pendingHandoff;
 
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -1456,14 +1537,331 @@ function showChat(chat, credits = false, preserveDraft = false) {
   empty.setAttribute('aria-hidden', String(!credits));
   empty.querySelector('#creator-credits').hidden = !credits;
   if (!chat) {
+    syncModelHandoff(currentModel());
     messages.append(empty);
     return;
   }
   for (const turn of chat.turns) {
+    if (turn.handoff) showCompletedHandoff(turn.handoff);
     showTurn(turn);
   }
+  syncModelHandoff(currentModel());
   messages.scrollTop = messages.scrollHeight;
 }
+
+function handoffModelLabel(model) {
+  return model.name + ' · ' + model.profile.name;
+}
+
+function previousHandoffModel(chat, last, available) {
+  if (last.modelSelection) return available.find(model => model.selection === last.modelSelection);
+  return available.find(model => model.profile.id === chat.source && model.name === last.model);
+}
+
+function syncModelHandoff(model) {
+  if (sending) return;
+  const chat = activeId && chats.find(item => item.id === activeId);
+  const last = chat?.turns.at(-1);
+  const same = last?.modelSelection ? last.modelSelection === model?.selection
+    : last?.model === model?.name && chat?.source === model?.profile.id;
+  if (!model?.connection || !last || same) {
+    pendingHandoff?.summaryRequest?.abort();
+    pendingHandoff?.element?.remove();
+    pendingHandoff = null;
+    return;
+  }
+  if (pendingHandoff?.chat === chat && pendingHandoff.last === last && pendingHandoff.to.selection === model.selection) {
+    if (!pendingHandoff.element.isConnected) messages.append(pendingHandoff.element);
+    return;
+  }
+  pendingHandoff?.summaryRequest?.abort();
+  pendingHandoff?.element?.remove();
+  const from = previousHandoffModel(chat, last, savedModels());
+  const previousProvider = last.providerName ?? from?.profile.name
+    ?? profiles.find(profile => profile.id === chat.source)?.name;
+  const handoff = {chat, last, from, to: model, mode: 'summary', summary: '',
+    fromLabel: [last.model || 'Previous model', previousProvider].filter(Boolean).join(' · '),
+    toLabel: handoffModelLabel(model), image: findHandoffImage(chat, model)};
+  pendingHandoff = handoff;
+  renderPendingHandoff(handoff);
+  messages.scrollTop = messages.scrollHeight;
+  if (model.profile.id === demoProfileId) return;
+  localApi('provider-details', {connection: model.connection.id, model: model.id}).then(details => {
+    if (pendingHandoff !== handoff) return;
+    const item = details.models?.find(entry => entry.id === model.id);
+    handoff.tokenLimit = detailNumber(item?.input_token_limit ?? item?.inputTokenLimit
+      ?? item?.context_length ?? item?.context_limit ?? item?.context_window);
+    if (handoff.mode === 'full') updateHandoffDescription(handoff);
+  }).catch(() => {});
+}
+
+function handoffModeName(mode) {
+  return {summary: 'Summary', full: 'Full history', fresh: 'Fresh start'}[mode];
+}
+
+function showCompletedHandoff(handoff) {
+  const detail = document.createElement('details');
+  detail.className = 'model-handoff';
+  const heading = document.createElement('summary');
+  const mode = handoffModeName(handoff.mode) + (handoff.image ? ' + 1 image' : '');
+  heading.textContent = handoff.fromLabel + ' → ' + handoff.toLabel + ' · ' + mode;
+  const context = document.createElement('p');
+  detail.append(heading);
+  if (handoff.summary) {
+    context.textContent = handoff.summary;
+  } else {
+    context.textContent = handoff.mode === 'full' ? 'Earlier conversation shared' : 'No earlier context shared';
+  }
+  detail.append(context);
+  messages.append(detail);
+}
+
+function findHandoffImage(chat, model) {
+  if (model.imageOnly || model.connection.models.find(item => item.id === model.id)?.input?.image !== true) return null;
+  for (let turn = chat.turns.length - 1; turn >= 0; turn--) {
+    const images = replyImages.get(chat.turns[turn]) ?? [];
+    for (let image = images.length - 1; image >= 0; image--) {
+      const info = replyImageInfo(images[image]);
+      if (info && info.bytes <= 5_000_000) return {turn, image};
+    }
+  }
+  return null;
+}
+
+function handoffImageFile(turns, reference, model) {
+  if (!reference || !acceptsFile({kind: 'image'}, model)) return null;
+  const source = replyImages.get(turns[reference.turn])?.[reference.image];
+  const info = source && replyImageInfo(source);
+  if (!info) return null;
+  return {name: 'Previous generated image.' + (info.format === 'jpeg' ? 'jpg' : info.format),
+    kind: 'image', mime: info.mime, size: info.bytes, data: source.slice(info.offset)};
+}
+
+function historyMessages(turns, model, includeFiles) {
+  return turns.flatMap(turn => [
+    {role: 'user', content: turn.question, ...(includeFiles && {
+      files: (turnFiles.get(turn) ?? []).filter(file => acceptsFile(file, model))
+    })},
+    ...(turn.reply ? [{role: 'assistant', content: turn.reply}] : [])
+  ]);
+}
+
+function handoffPrefix(turns, handoff, model) {
+  const previous = handoff.mode === 'full' ? historyMessages(turns, model, true) : [];
+  if (handoff.mode === 'summary') {
+    previous.push({role: 'user', content: 'Context from the previous conversation:\n\n' + handoff.summary});
+  }
+  const image = handoffImageFile(turns, handoff.image, model);
+  if (image) previous.push({role: 'user', content: 'Reference image from the previous conversation.', files: [image]});
+  return previous;
+}
+
+function effectiveHistory(turns, model) {
+  const boundary = turns.findLastIndex(turn => turn.handoff);
+  if (boundary < 0) return historyMessages(turns, model, true);
+  const handoff = turns[boundary].handoff;
+  const prior = handoff.mode === 'full' ? historyMessages(turns.slice(0, boundary), model, true)
+    : handoffPrefix([], {...handoff, image: null}, model);
+  const image = handoffImageFile(turns, handoff.image, model);
+  if (image) prior.push({role: 'user', content: 'Reference image from the previous conversation.', files: [image]});
+  return [...prior, ...historyMessages(turns.slice(boundary), model, true)];
+}
+
+function estimateHandoffTokens(previous, text = '') {
+  return Math.ceil((previous.reduce((size, message) => size + message.content.length, text.length)) / 3)
+    + (previous.length + 1) * 6;
+}
+
+function updateHandoffDescription(handoff) {
+  const status = handoff.description;
+  if (!status) return;
+  if (handoff.mode === 'fresh') {
+    status.textContent = 'Earlier messages stay visible. No earlier context is sent.';
+    return;
+  }
+  if (handoff.mode === 'summary') {
+    const count = handoff.chat.turns.length;
+    status.textContent = 'Summarizes all ' + count + (count === 1 ? ' earlier turn' : ' earlier turns')
+      + ' (your messages and model replies). Review or edit before sending.';
+    return;
+  }
+  const previous = historyMessages(handoff.chat.turns, handoff.to, true);
+  const estimate = estimateHandoffTokens(previous, promptBox.value);
+  const limit = handoff.tokenLimit > 0 ? ' / ' + handoff.tokenLimit.toLocaleString() + ' reported token limit' : '';
+  const fileCount = previous.reduce((count, message) => count + (message.files?.length ?? 0), 0);
+  status.textContent = handoff.chat.turns.length + ' earlier turns · ~' + estimate.toLocaleString()
+    + ' text tokens' + limit + (fileCount ? ' · ' + fileCount + ' available attachments' : '')
+    + (handoff.tokenLimit > 0 && estimate > handoff.tokenLimit ? ' · Switch to Summary or Fresh start.' : '');
+}
+
+function renderPendingHandoff(handoff) {
+  const card = handoff.element ?? (handoff.element = document.createElement('section'));
+  card.className = 'model-handoff';
+  card.setAttribute('aria-label', 'Model handoff');
+  const heading = document.createElement('strong');
+  heading.textContent = handoff.fromLabel + ' → ' + handoff.toLabel;
+  const controls = document.createElement('div');
+  controls.className = 'model-handoff-controls';
+  for (const mode of ['summary', 'full', 'fresh']) {
+    const button = historyButton(handoffModeName(mode), () => {
+      if (handoff.mode === mode) return;
+      handoff.summaryRequest?.abort();
+      handoff.summaryRequest = null;
+      handoff.mode = mode;
+      renderPendingHandoff(handoff);
+      card.querySelector('[aria-pressed="true"]')?.focus();
+    });
+    button.setAttribute('aria-pressed', String(handoff.mode === mode));
+    controls.append(button);
+  }
+  const status = document.createElement('p');
+  handoff.description = status;
+  card.replaceChildren(heading, controls, status);
+  updateHandoffDescription(handoff);
+  if (handoff.mode === 'summary') {
+    const editor = document.createElement('textarea');
+    editor.setAttribute('aria-label', 'Summary to send');
+    editor.placeholder = 'Generate or write a summary';
+    editor.maxLength = 24_000;
+    editor.rows = 3;
+    editor.value = handoff.summary;
+    editor.oninput = () => { handoff.summary = editor.value; };
+    const chooser = document.createElement('select');
+    const label = document.createElement('label');
+    label.className = 'summary-model';
+    label.append('Summarize with', chooser);
+    for (const [value, model, title] of [
+      ['from', handoff.from, 'Previous · ' + handoff.fromLabel],
+      ['to', handoff.to, 'New · ' + handoff.toLabel]
+    ]) {
+      const option = new Option(title, value);
+      option.disabled = !canSummarize(model);
+      chooser.add(option);
+    }
+    const available = [...chooser.options].filter(option => !option.disabled);
+    const choice = available.find(option => option.value === handoff.summarizer) ?? available[0];
+    chooser.value = choice?.value ?? '';
+    chooser.disabled = !choice || !!handoff.summaryRequest;
+    chooser.onchange = () => { handoff.summarizer = chooser.value; };
+    const generate = historyButton('Generate summary', () => generateHandoffSummary(handoff, chooser, editor, generate, feedback));
+    generate.disabled = !choice || !!handoff.summaryRequest;
+    const feedback = document.createElement('p');
+    feedback.setAttribute('role', 'status');
+    if (!choice) feedback.textContent = 'Neither model is available for text summarization. You can write a summary here.';
+    card.append(label, editor, generate, feedback);
+  }
+  if (handoff.mode !== 'fresh' && handoff.image) {
+    const label = document.createElement('label');
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = !!handoff.includeImage;
+    check.onchange = () => { handoff.includeImage = check.checked; };
+    label.append(check, 'Include latest generated image');
+    card.append(label);
+  }
+  if (!card.isConnected) messages.append(card);
+}
+
+function canSummarize(model) {
+  return !!model?.connection && !model.imageOnly && !modelFailure(model)
+    && (!Array.isArray(model.modalities) || model.modalities.includes('text'));
+}
+
+function summaryTranscript(turns) {
+  return turns.flatMap(turn => {
+    const attachments = turn.files?.length ? '\n\n[Attachments: ' + turn.files.join(', ') + ']' : '';
+    const images = turn.imageCount ? '\n\n[Generated ' + turn.imageCount + (turn.imageCount === 1 ? ' image]' : ' images]') : '';
+    const reply = ((turn.reply ?? '') + images).trim();
+    return [
+      {role: 'user', content: (turn.question ?? '') + attachments},
+      ...(reply ? [{role: 'assistant', content: reply}] : [])
+    ];
+  });
+}
+
+async function generateHandoffSummary(handoff, chooser, editor, button, status) {
+  if (sending || handoff.summaryRequest || pendingHandoff !== handoff) return;
+  const model = chooser.value === 'to' ? handoff.to : handoff.from;
+  if (!canSummarize(model)) return;
+  const messages = summaryTranscript(handoff.chat.turns);
+  messages.push({role: 'user', content: 'Summarize the entire conversation above for the next assistant. Identify the actual '
+    + 'topics and what was explained or concluded, with enough concrete facts to answer a follow-up. Include relevant '
+    + 'constraints, decisions, and open questions. Preserve useful image descriptions already in the text. '
+    + 'Do not answer prior questions, introduce yourself, or describe the environment. '
+    + 'Start with HANDOFF_SUMMARY: on its own line, then write the summary.'});
+  const payload = {connection: model.connection.id, model: model.id, messages, textOnly: true};
+  if (new Blob([JSON.stringify(payload)]).size > 12_000_000) {
+    status.textContent = 'This conversation is too large to summarize in one request. Write a handoff or choose Fresh start.';
+    return;
+  }
+  const controller = new AbortController();
+  handoff.summaryRequest = controller;
+  chooser.disabled = button.disabled = editor.disabled = true;
+  status.textContent = 'Generating with ' + handoffModelLabel(model) + '…';
+  let summary = '';
+  try {
+    await receiveReply(payload, event => { if (event.type === 'delta') summary += event.text; }, controller.signal);
+    const heading = /^\s*(?:#{1,6}\s*)?(?:\*\*)?HANDOFF_SUMMARY\s*:(?:\*\*)?\s*/i;
+    if (!heading.test(summary) || !summary.replace(heading, '').trim()) {
+      throw new Error('The model did not return a usable handoff. Try the other model or write a summary.');
+    }
+    summary = summary.replace(heading, '').trim();
+    if (summary.length > editor.maxLength) throw new Error('The summary was too long. Write a shorter handoff.');
+    if (handoff.summaryRequest !== controller || pendingHandoff !== handoff) return;
+    editor.value = handoff.summary = summary;
+    status.textContent = 'Review the summary, then send your next message.';
+  } catch (error) {
+    if (!controller.signal.aborted) status.textContent = error.message;
+  } finally {
+    if (handoff.summaryRequest === controller) {
+      handoff.summaryRequest = null;
+      chooser.disabled = button.disabled = editor.disabled = false;
+    }
+  }
+}
+
+function prepareModelRequest(chat, model, text, files, handoff) {
+  const turns = chat?.turns ?? [];
+  let boundary;
+  if (handoff) {
+    if (handoff.summaryRequest) throw new Error('Wait for the summary before sending.');
+    const summary = handoff.mode === 'summary' ? handoff.summary.trim() : '';
+    if (handoff.mode === 'summary' && !summary) {
+      throw new Error('Generate or write a summary, or choose Full history or Fresh start.');
+    }
+    boundary = {mode: handoff.mode, fromLabel: handoff.fromLabel, toLabel: handoff.toLabel};
+    if (summary) boundary.summary = summary;
+    if (handoff.mode !== 'fresh' && handoff.includeImage) {
+      if (!handoffImageFile(turns, handoff.image, model)) {
+        throw new Error('The reference image is no longer available. Uncheck Include image to continue.');
+      }
+      boundary.image = handoff.image;
+    }
+  }
+  const previous = boundary ? handoffPrefix(turns, boundary, model) : effectiveHistory(turns, model);
+  const prompt = model.imageOnly
+    ? (previous.length ? 'Use this previous conversation as context for the next image prompt:\n'
+      + JSON.stringify(previous.map(({role, content}) => ({role, content}))) + '\n\nNew image prompt:\n' + text : text)
+    : promptWithVisualFormats(text);
+  const messages = [...(model.imageOnly ? [] : previous), {role: 'user', content: prompt, files}];
+  if (handoff?.tokenLimit > 0 && estimateHandoffTokens(model.imageOnly ? [] : previous, prompt) > handoff.tokenLimit) {
+    throw new Error('This request exceeds the estimated input budget. Use a shorter summary or Fresh start.');
+  }
+  const bytes = messages.reduce((sum, message) =>
+    sum + (message.files ?? []).reduce((size, file) => size + file.size, 0), 0);
+  if (bytes > 6_000_000) {
+    throw new Error('This request includes more than 6 MB of attachments. Remove draft files or use a shorter handoff.');
+  }
+  const payload = {connection: model.connection.id, model: model.id, messages};
+  if (new Blob([JSON.stringify(payload)]).size > 12_000_000) {
+    throw new Error('This request is too large. Use a shorter summary or Fresh start.');
+  }
+  return {payload, boundary};
+}
+
+promptBox.addEventListener('input', () => {
+  if (pendingHandoff?.mode === 'full') updateHandoffDescription(pendingHandoff);
+});
 
 function historyButton(text, action) {
   const button = document.createElement('button');
@@ -2715,6 +3113,12 @@ function markdownExportEntry(chat, exportedAt) {
   const sections = ['# ' + markdownLabel(title),
     (Number.isFinite(createdAt) ? 'Created' : 'Exported') + ' (UTC) · ' + date.toISOString()];
   for (const [index, turn] of chat.turns.entries()) {
+    if (turn.handoff) {
+      const {fromLabel, toLabel, mode, image, summary} = turn.handoff;
+      sections.push('## Model switch · ' + markdownLabel(fromLabel) + ' → ' + markdownLabel(toLabel),
+        handoffModeName(mode) + (image ? ' + 1 image' : ''));
+      if (summary) sections.push(summary);
+    }
     sections.push('## Turn ' + (index + 1) + ' · You', turn.question ?? '');
     if (turn.files?.length) sections.push('Attachments · ' + turn.files.map(markdownLabel).join(', '));
     sections.push('## Turn ' + (index + 1) + ' · ' + markdownLabel(turn.model || 'Assistant'));
@@ -2835,23 +3239,30 @@ find('composer').onsubmit = async event => {
   }
   const connection = model.connection;
   const source = model.profile?.id ?? null;
-  let chat = chats.find(item => item.id === activeId && (item.source ?? null) === source);
+  let chat = chats.find(item => item.id === activeId);
   const files = [...attachments];
+  syncModelHandoff(model);
+  const handoff = pendingHandoff;
+  let request;
+  try {
+    request = prepareModelRequest(chat, model, text, files, handoff);
+  } catch (error) {
+    showChatError(error.message);
+    return;
+  }
   const turn = {question: text, files: files.map(file => file.name), model: model.name,
-    reply: '', provider: connection.type};
+    modelSelection: model.selection, providerName: model.profile.name, reply: '', provider: connection.type};
+  if (request.boundary) turn.handoff = request.boundary;
   showChatError('');
 
   {
-    const previous = (chat?.turns ?? []).flatMap(item => [
-      {role: 'user', content: item.question, files: (turnFiles.get(item) ?? []).filter(file => acceptsFile(file, model))},
-      ...(item.reply ? [{role: 'assistant', content: item.reply}] : [])
-    ]);
-    const originalChat = chats.find(item => item.id === activeId);
+    const originalChat = chat;
     const originalDraft = promptBox.value;
     promptBox.value = '';
     if (!chat) clearContents(messages);
     requestAbort = new AbortController();
     setSending(true);
+    if (handoff) handoff.element.inert = true;
     showFileNames(appendMessage('', text, true), turn.files);
     const pending = appendMessage(model.name, model.imageOnly ? 'Generating image…' : 'Waiting for reply…', false);
     pending.classList.add('streaming-reply');
@@ -2862,10 +3273,7 @@ find('composer').onsubmit = async event => {
     messages.scrollTop = messages.scrollHeight;
     const images = [];
     try {
-      turn.stats = await receiveReply({
-        connection: connection.id, model: model.id,
-        messages: [...previous, {role: 'user', content: model.imageOnly ? text : promptWithVisualFormats(text), files}]
-      }, update => {
+      turn.stats = await receiveReply(request.payload, update => {
         const pinned = messages.scrollHeight - messages.clientHeight - messages.scrollTop < 48;
         if (update.type === 'image') {
           const source = replyImageSource(update.text);
@@ -2905,6 +3313,7 @@ find('composer').onsubmit = async event => {
         return;
       }
     } finally {
+      if (handoff) handoff.element.inert = false;
       setSending(false);
       if (connection.base === routrBase || (connection.base === kenariBase && model.profile.id !== demoProfileId)) {
         updateChatCredit(model, true);
@@ -3089,6 +3498,9 @@ art.globalAlpha = .54;
 trace([[93,145],[110,150],[127,145]], 1);
 trace([[101,36],[119,36]], 1.2);
 trace([[101,171],[119,171]], 1.2);
+
+updateModelStatus();
+restoreConnections();
 </script>
 </body>
 </html>
