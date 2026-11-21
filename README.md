@@ -10,7 +10,7 @@
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-315c16?style=for-the-badge)](#getting-started)
 [![Java 17](https://img.shields.io/badge/Build-Java%2017-273820?style=for-the-badge)](#build-from-source)
 
-[Getting started](#getting-started) · [Chat controls](#chat-controls) · [Credits and quota](#credits-and-quota) · [Export and history](#export-and-history) · [What's new](#whats-new-in-v1014) · [Build](#build-from-source)
+[Screenshots](#screenshots) · [Getting started](#getting-started) · [Chat controls](#chat-controls) · [Credits and quota](#credits-and-quota) · [Export and history](#export-and-history) · [What's new](#whats-new-in-v1014) · [Build](#build-from-source)
 
 </div>
 
@@ -19,6 +19,16 @@
 ## Overview
 
 HackGpt brings several online model providers into one Android app. Connect with your own API keys, choose the models you want in the picker, and chat in a lime-green terminal interface. The APK bundles the interface and uses Android System WebView, keeping the download small.
+
+## Screenshots
+
+| Chat toolbar and quota | Provider settings | Model picker |
+| :---: | :---: | :---: |
+| [<img src="docs/screenshots/chat-toolbar.jpg" width="176" alt="Chat toolbar with Settings, model picker, history, appearance, quota, and New chat">](docs/screenshots/chat-toolbar.jpg) | [<img src="docs/screenshots/provider-settings.jpg" width="176" alt="Provider settings with model details and billing, model checkboxes, connect, and save">](docs/screenshots/provider-settings.jpg) | [<img src="docs/screenshots/model-picker.jpg" width="176" alt="Searchable model picker grouped by provider with Beam 1.0 Free">](docs/screenshots/model-picker.jpg) |
+
+| Floating circle and visual replies | History and bulk actions |
+| :---: | :---: |
+| [<img src="docs/screenshots/composer-and-visual-replies.jpg" width="176" alt="Floating circle above the message field and a reply with a table, chart, and diagrams">](docs/screenshots/composer-and-visual-replies.jpg) | [<img src="docs/screenshots/history-bulk-actions.jpg" width="176" alt="Three chats selected with select all, bulk export, and bulk delete beside history search">](docs/screenshots/history-bulk-actions.jpg) |
 
 ## Features
 
