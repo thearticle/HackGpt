@@ -10,7 +10,7 @@
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-315c16?style=for-the-badge)](#getting-started)
 [![Java 17](https://img.shields.io/badge/Build-Java%2017-273820?style=for-the-badge)](#build-from-source)
 
-[Screenshots](#screenshots) · [Getting started](#getting-started) · [Chat controls](#chat-controls) · [Credits and quota](#credits-and-quota) · [Export and history](#export-and-history) · [Build](#build-from-source)
+[Screenshots](#screenshots) · [Getting started](#getting-started) · [Chat controls](#chat-controls) · [Model details and quota](#model-details-and-quota) · [Export and history](#export-and-history) · [Visual replies](#visual-replies) · [Build](#build-from-source)
 
 </div>
 
@@ -42,51 +42,58 @@ HackGpt brings several online model providers into one Android app. Connect with
 | **Multiple providers** | Use the OpenRouter, OpenAI, or Gemini presets, or connect to a custom OpenAI-compatible HTTPS endpoint. Browse and save models by provider. |
 | **Streaming replies** | Read answers as they arrive and stop a response in progress. See response time, token counts, throughput, and reasoning summaries when the provider reports them. |
 | **Rich formatting** | Read headings, lists, emphasis, code blocks, quotes, and scrollable tables directly in chat. |
+| **Model details and tests** | Hold a model to see its reported pricing, token limits, and capabilities inside the picker. Use **▶** to check that it responds. |
+| **Image generation and preview** | Generate images with supported models, including Kenari Nano Banana. Save the result or open a zoomable, rotatable preview. |
 | **Attachments** | Pick images, PDFs, and UTF-8 files such as TXT, CSV, or JSON. Choose a model that supports the selected file type. |
-| **Searchable history and PDF export** | Find, rename, or delete chats. Save the current conversation as a PDF or download selected conversations as a ZIP of PDF transcripts on Android. |
+| **Searchable history and Markdown export** | Find, rename, or delete chats. Save a conversation as Markdown or export selected conversations as a ZIP of Markdown files on Android. |
 | **Appearance and input** | Switch between Dark and Light, adjust the chat font size, toggle Enter-to-Send, or enable Full screen on Android. |
 
 ## Getting started
 
 1. Install the latest signed APK on Android 8.0 or later and keep Android System WebView up to date. [GitHub Releases](https://github.com/thearticle/HackGpt/releases/latest)
-2. Open **Settings** and choose a provider preset or enter a custom HTTPS API base URL. Add the provider's API key.
+2. For a quick test, choose **Demo → Beam 1.0 Free** in **Select model**. To add your own account, open **Settings**, choose a preset or enter a custom HTTPS API base URL, and add the provider's API key.
 3. Tap the **plug** to load models. Check the ones you want in the picker, then tap the **disk** to save the provider.
 4. Open **Select model** in the top bar. Search for a saved model, pick it, and write a message. Tap **+** to start a new chat.
 
-The **play** icon in Settings sends a test request to each checked model. Your provider may charge for those requests.
+Settings always opens on the provider setup screen. Tap a saved provider in the scrollable three-column grid to edit it. The **▶** icon in Settings tests every checked model, and provider charges may apply.
 
 ## Chat controls
 
 - **Regular mode.** Tap the pulsing marker above the message field to reveal the Send circle. Tap the circle to send. It pulses and gives light haptic feedback on Android.
 - **Enter-to-Send mode.** Turn it on from **Appearance → ↵**. Press **Enter** to send or **Shift+Enter** for a new line. In the conversation area, tap twice quickly and hold the third tap to reveal the action circle. Swipe while holding or from the visible circle. A tap on the circle gives feedback without sending.
 - **Move the circle.** When the pulsing marker is visible, hold it and drag left or right along the top of the message field. Release near the middle to snap to center. Other positions are saved and shared by both modes.
+- **Resize the message field.** Drag either upper-corner grip up to expand the field or down to shrink it.
 
 | Swipe from the circle | Action |
 | --- | --- |
 | ↑ Up | Open the attachment picker |
-| ↓ Down | Export the current chat to PDF |
+| ↓ Down | Export the current chat to Markdown |
 | ← Left | Select all text in the draft |
 | → Right | Open the confirmation to clear the draft |
 
 The focused circle also accepts the arrow keys. Its inner dot follows your swipe, then returns to center on release. The circle fades away after two idle seconds.
 
-## Credits and quota
+## Model details and quota
 
-Look beside **+** in the chat header after choosing a model. **Routr** shows the selected model's available credits when reported. Tap the badge to switch between the abbreviated and exact count. **Kenari** shows the available rupiah balance, rounded to whole rupiah. **Demo → Beam 1.0 Free** displays **FREE** and can use a configured Kenari connection.
+Look beside **+** in the chat header after choosing a model. **Routr** shows the selected model's available credits when reported. Tap the badge to switch between the abbreviated and exact count. **Kenari** shows the available rupiah balance, rounded to whole rupiah. **Demo → Beam 1.0 Free** displays **FREE**.
 
-For more detail, open **Settings**, select the provider, and expand **Model details and billing**. Use **Refresh** and pick a model to see rates, context limits, and any minimum charge the provider reports. OpenRouter can show the amount remaining against the API key's spending limit.
+Hold a model in **Select model** to select and highlight it. A card at the top of the picker shows reported prices, token limits, supported inputs, and image generation capability. Scroll below the card to browse more models. Tap **▶** to send a test request through the selected model and see whether it responds. Provider charges may apply.
 
 ## Export and history
 
-**Single chat.** Open a conversation with a reply and swipe down from the circle. In the Android print sheet, choose **Save as PDF** and pick a destination. This export uses the formatted conversation.
+**Single chat.** Open a conversation with a reply and swipe down from the circle. Pick a destination for the Markdown file. The filename starts with the chat's UTC date and time, followed by its title, for example `2026-11-22T08-30-00Z - Weekend plan.md`.
 
-**Bulk export.** Open **Chat history** from the top bar. Search by title, message, or attachment name, then hold a chat row to enter selection mode. Tap more rows to add them, or tap **☑** to select or deselect all visible search results. Tap **↓** beside the search field and choose where to save `HackGpt-chats.zip`. The ZIP contains one text-transcript PDF per selected chat, with attachment names listed in the transcript.
+**Bulk export.** Open **Chat history** from the top bar. Search by title, message, or attachment name, then hold a chat row to enter selection mode. Tap more rows to add them, or tap **☑** to select or deselect all visible search results. Tap **↓** beside the search field and pick a destination for the timestamped ZIP. It contains one Markdown file per chat, using the same filename format as single export.
+
+Both exports preserve the original Markdown, including headings, tables, code blocks, and diagram source, along with attachment names and available response details.
 
 **Manage history.** Tap a row to reopen it. Outside selection mode, swipe a row right to rename it or left to delete it. In selection mode, use **⌫** to delete the selected chats after confirmation.
 
 ## Visual replies
 
 HackGpt displays images returned by supported models and can render bar charts, mind maps, flowcharts, org charts, and sequence diagrams in chat. Ask in plain language. HackGpt adds format guidance when it recognizes a request for a visual.
+
+Tap the pulsing **↓** under a generated image to save it. Double-tap or hold the image to open a centered preview. Pinch to zoom, twist two fingers to rotate in 90° steps, and tap the background to close. The line below the image shows elapsed time, pixel dimensions, file size, and format, plus provider-reported tokens and cost when available.
 
 | To see a… | Try asking |
 | --- | --- |

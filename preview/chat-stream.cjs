@@ -11,17 +11,31 @@ const IMAGE_TYPES = {
     'image/webp': bytes => bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP'
 };
 
-function modelMetadata(model, connectionType) {
+const KENARI_BASE = 'https://kenari.id/v1';
+
+function imageEndpoint(type, base, id, imageOnly) {
+    if (type === 'openrouter' && imageOnly) return '/images';
+    if (type === 'openai' && id.startsWith('gpt-image-')) return '/images/generations';
+    if (base === KENARI_BASE && (imageOnly || id.startsWith('nano-banana-'))) return '/images/generations';
+    return null;
+}
+
+function modelMetadata(model, connectionType, base) {
     const input = model.architecture?.input_modalities ?? model.input_modalities;
     const modalities = Array.isArray(input) ? input.filter(item => typeof item === 'string') : null;
-    const output = model.architecture?.output_modalities;
+    const output = model.architecture?.output_modalities ?? model.output_modalities;
+    const hasImage = Array.isArray(output) && output.includes('image');
+    const endpoints = model.endpoints;
+    const imageOnly = Boolean(imageEndpoint(connectionType, base, model.id,
+        (hasImage && !output.includes('text'))
+        || (Array.isArray(endpoints) && endpoints.includes('images') && !endpoints.includes('chat'))));
     return {
         id: model.id,
         name: typeof model.name === 'string' ? model.name : model.id,
-        ...(connectionType === 'openrouter' && Array.isArray(output) && output.includes('image') && {
+        ...(imageOnly ? {imageOnly: true} : hasImage && {
             modalities: ['text', 'image'].filter(kind => output.includes(kind))
         }),
-        input: {
+        input: imageOnly ? {image: false, pdf: false, text: false} : {
             image: modalities ? modalities.includes('image') : null,
             pdf: connectionType === 'gemini' ? false : modalities
                 ? modalities.includes('file') || modalities.includes('pdf')
@@ -30,6 +44,13 @@ function modelMetadata(model, connectionType) {
                 : null
         }
     };
+}
+
+function imageSource(part) {
+    const url = typeof part?.b64_json === 'string' && part.b64_json
+        ? 'data:' + (part.media_type ?? 'image/png') + ';base64,' + part.b64_json
+        : part?.image_url?.url ?? part?.image_url ?? part?.url;
+    return typeof url === 'string' && /^(https:\/\/|data:image\/(png|jpeg|gif|webp);base64,)/.test(url) ? url : null;
 }
 
 function messageParts(messages, model, connectionType) {
@@ -114,7 +135,7 @@ function usageCount(value) {
     return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-async function streamReply(upstream, response, start, readJson, signal) {
+async function streamReply(upstream, response, start, readJson, signal, generated = false) {
     response.writeHead(200, {'Content-Type': 'application/x-ndjson; charset=utf-8'});
     const emit = async (type, data = {}) => {
         if (signal.aborted || response.destroyed) return;
@@ -124,6 +145,7 @@ async function streamReply(upstream, response, start, readJson, signal) {
     };
     const streaming = (upstream.headers.get('content-type') ?? '').includes('text/event-stream');
     let usage;
+    let imageQuality;
     let firstActivity = null;
     let firstText = null;
     let lastActivity = null;
@@ -135,13 +157,14 @@ async function streamReply(upstream, response, start, readJson, signal) {
         async function consume(value, content) {
             if (value?.error) throw chatError(502, 'The provider reported an error while generating.');
             if (value?.usage) usage = value.usage;
+            if (typeof value?.quality === 'string' && value.quality.length <= 32) imageQuality = value.quality;
             if (!content) return;
             for (const parts of [content.images, content.content]) {
                 if (!Array.isArray(parts)) continue;
                 for (const part of parts) {
                     if (imageCount >= 4) break;
-                    const url = part?.image_url?.url;
-                    if (typeof url !== 'string' || !/^(https:\/\/|data:image\/(png|jpeg|gif|webp);base64,)/.test(url)) continue;
+                    const url = imageSource(part);
+                    if (!url) continue;
                     imageCount++;
                     await emit('image', {text: url});
                 }
@@ -183,16 +206,20 @@ async function streamReply(upstream, response, start, readJson, signal) {
             if (!finished) throw chatError(502, 'The provider stream ended before completing the reply.');
         } else {
             const value = await readJson(upstream);
-            await consume(value, value.choices?.[0]?.message);
+            await consume(value, generated ? {images: value.data} : value.choices?.[0]?.message);
         }
         if (!hasText && !imageCount) throw chatError(502, 'The model returned no supported text or images.');
-        const outputTokens = usageCount(usage?.completion_tokens);
+        const outputTokens = usageCount(usage?.completion_tokens ?? usage?.output_tokens);
         const generationMs = lastActivity - firstActivity;
         await emit('done', {stats: {
             durationMs: Math.round(performance.now() - start),
             firstTokenMs: streaming && firstText !== null ? Math.round(firstText - start) : null,
-            inputTokens: usageCount(usage?.prompt_tokens),
+            inputTokens: usageCount(usage?.prompt_tokens ?? usage?.input_tokens),
             outputTokens,
+            totalTokens: usageCount(usage?.total_tokens),
+            costMicroIdr: usageCount(usage?.cost_micro_idr),
+            reportedCost: typeof usage?.cost === 'number' && usage.cost >= 0 ? usage.cost : null,
+            imageQuality: imageCount ? imageQuality : undefined,
             reasoningTokens: usageCount(usage?.completion_tokens_details?.reasoning_tokens),
             tokensPerSecond: streaming && outputTokens && generationMs >= 100
                 ? Math.round(outputTokens * 10_000 / generationMs) / 10 : null
@@ -206,4 +233,4 @@ async function streamReply(upstream, response, start, readJson, signal) {
     }
 }
 
-module.exports = {messageParts, modelMetadata, streamReply};
+module.exports = {imageEndpoint, imageSource, KENARI_BASE, messageParts, modelMetadata, streamReply};

@@ -2,10 +2,11 @@ const http = require('node:http');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const vault = require('./provider-vault.cjs');
-const {messageParts, modelMetadata, streamReply} = require('./chat-stream.cjs');
+const {imageEndpoint, imageSource, KENARI_BASE, messageParts, modelMetadata, streamReply} = require('./chat-stream.cjs');
 
 const port = Number(process.env.NEURAL_PREVIEW_PORT || 8082);
 const hosts = new Set(['localhost:' + port, '127.0.0.1:' + port]);
+const GEMINI_METADATA_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const presets = {
     openrouter: {name: 'OpenRouter', base: 'https://openrouter.ai/api/v1', listing: '/models/user'},
     openai: {name: 'OpenAI', base: 'https://api.openai.com/v1', listing: '/models'},
@@ -65,11 +66,17 @@ const server = http.createServer(async (request, response) => {
             if (!Array.isArray(result.data)) throw problem(502, 'The model catalog has an unsupported format.');
             candidate.models = Array.from(new Map(result.data
                 .filter(model => typeof model?.id === 'string' && model.id.length <= 300)
-                .filter(model => !Array.isArray(model.architecture?.output_modalities)
-                    || model.architecture.output_modalities.includes('text')
-                    || (candidate.type === 'openrouter' && model.architecture.output_modalities.includes('image')))
-                .map(model => [model.id, modelMetadata(model, candidate.type)])).values());
-            if (!candidate.models.length) throw problem(422, 'No text models were returned.');
+                .filter(model => {
+                    const endpoints = Array.isArray(model.endpoints) ? model.endpoints : null;
+                    if (candidate.base === KENARI_BASE && endpoints
+                            && !endpoints.includes('chat') && !endpoints.includes('images')) return false;
+                    const output = model.architecture?.output_modalities ?? model.output_modalities;
+                    return !Array.isArray(output) || output.includes('text') || output.includes('image')
+                        || imageEndpoint(candidate.type, candidate.base, model.id,
+                            candidate.base === KENARI_BASE && endpoints?.includes('images') && !endpoints.includes('chat'));
+                })
+                .map(model => [model.id, modelMetadata(model, candidate.type, candidate.base)])).values());
+            if (!candidate.models.length) throw problem(422, 'No supported models were returned.');
             connections.set(candidate.id, candidate);
             return send(response, 200, publicProvider(candidate));
         }
@@ -89,10 +96,10 @@ const server = http.createServer(async (request, response) => {
             return send(response, 200, {balance: quota?.available_credits});
         }
         if (request.url === '/api/provider-details') {
-            const {connection: id} = await readBody(request);
+            const {connection: id, model} = await readBody(request);
             const connection = connections.get(id);
             if (!connection) throw problem(409, 'Connect the provider first.');
-            return send(response, 200, await providerDetails(connection));
+            return send(response, 200, await providerDetails(connection, model));
         }
         if (request.url === '/api/save') {
             const input = await readBody(request);
@@ -123,20 +130,14 @@ const server = http.createServer(async (request, response) => {
             }
             if (!model) throw problem(400, 'Select a connected model.');
             if (!Array.isArray(input.messages) || !input.messages.length) throw problem(400, 'Enter a message.');
-            const payload = {
-                model: model.id,
-                messages: messageParts(input.messages, model, connection.type),
-                stream: true
-            };
-            if (connection.type === 'openai') payload.stream_options = {include_usage: true};
-            if (model.modalities) payload.modalities = model.modalities;
+            const {endpoint, payload, generated} = replyRequest(connection, model, input.messages, true);
             const controller = new AbortController();
             response.once('close', () => {
                 if (!response.writableEnded) controller.abort();
             });
             if (response.destroyed) return;
-            const reply = await openUpstream(connection, '/chat/completions', payload, controller.signal);
-            await streamReply(reply, response, started, readUpstreamJson, controller.signal);
+            const reply = await openUpstream(connection, endpoint, payload, controller.signal);
+            await streamReply(reply, response, started, readUpstreamJson, controller.signal, generated);
             return;
         }
 
@@ -146,13 +147,18 @@ const server = http.createServer(async (request, response) => {
             if (!connection) {
                 throw problem(409, 'The provider is disconnected. Reconnect it in Settings.');
             }
-            if (!connection.models.some(model => model.id === input.model)) throw problem(400, 'Select a connected model.');
+            const model = connection.models.find(model => model.id === input.model);
+            if (!model) throw problem(400, 'Select a connected model.');
             if (!Array.isArray(input.messages) || !input.messages.length
                     || input.messages.some(message => !['user', 'assistant'].includes(message?.role)
                         || typeof message.content !== 'string')) throw problem(400, 'Enter a message.');
-            const result = await upstream(connection, '/chat/completions', {
-                model: input.model, messages: input.messages, stream: false
-            });
+            const {endpoint, payload, generated} = replyRequest(connection, model, input.messages, false);
+            const result = await upstream(connection, endpoint, payload);
+            const message = result.choices?.[0]?.message;
+            const images = generated ? [result.data] : [message?.images, message?.content];
+            if ((generated || model.modalities) && images.some(parts => Array.isArray(parts) && parts.some(imageSource))) {
+                return send(response, 200, {reply: 'Image generation succeeded.'});
+            }
             const reply = result.choices?.[0]?.message?.content;
             if (typeof reply !== 'string' || !reply.trim()) throw problem(502, 'This model did not return text. Try a text-chat model.');
             return send(response, 200, {reply});
@@ -218,8 +224,15 @@ function publicProvider(provider) {
     return {id, type, base, name, models, saved: savedConnections.has(id)};
 }
 
-async function providerDetails(connection) {
+async function providerDetails(connection, selectedModel) {
     const {base} = connection;
+    if (base === GEMINI_METADATA_BASE + '/openai' && typeof selectedModel === 'string'
+            && /^(?:models\/)?[A-Za-z0-9._-]{1,200}$/.test(selectedModel)) {
+        const model = await upstream({...connection, base: GEMINI_METADATA_BASE},
+            '/models/' + selectedModel.replace(/^models\//, ''));
+        return {kind: 'gemini', models: [{id: selectedModel,
+            inputTokenLimit: model.inputTokenLimit, outputTokenLimit: model.outputTokenLimit}]};
+    }
     const kind = base === 'https://api.routr.cloud/v1' ? 'routr'
         : base === 'https://kenari.id/v1' ? 'kenari'
         : base === 'https://apimurah.com/v1' ? 'apimurah'
@@ -232,11 +245,16 @@ async function providerDetails(connection) {
         accountPath ? upstream(provider, accountPath) : null
     ]);
     const data = catalog.value?.[kind === 'routr' ? 'models' : 'data'];
-    const fields = ['id', 'context_length', 'context_limit', 'input_token_limit', 'pricing',
+    const fields = ['context_length', 'context_limit', 'context_window', 'input_token_limit',
+        'output_token_limit', 'max_output_tokens', 'top_provider', 'endpoints', 'architecture',
+        'input_modalities', 'output_modalities', 'pricing_lines', 'pricing',
         'input_rate', 'cache_rate', 'output_rate', 'min_charge_credits', 'per_request_floor_credits'];
-    const models = Array.isArray(data) ? data.filter(model => typeof model?.id === 'string')
-        .map(model => Object.fromEntries(fields.filter(field => Object.hasOwn(model, field))
-            .map(field => [field, model[field]]))) : undefined;
+    const models = Array.isArray(data) ? data.flatMap(model => {
+        const id = model?.id ?? model?.model_sku ?? model?.model;
+        if (typeof id !== 'string' || (selectedModel && id !== selectedModel)) return [];
+        return [{id, ...Object.fromEntries(fields.filter(field => Object.hasOwn(model, field))
+            .map(field => [field, model[field]]))}];
+    }) : undefined;
     const balance = kind === 'routr' ? account.value?.available_credits
         : kind === 'kenari' ? account.value?.available_micro_idr : account.value?.data?.limit_remaining;
     return {kind, models, balance};
@@ -246,15 +264,36 @@ async function upstream(connection, endpoint, payload) {
     return readUpstreamJson(await openUpstream(connection, endpoint, payload));
 }
 
+function replyRequest(connection, model, messages, streaming) {
+    const endpoint = imageEndpoint(connection.type, connection.base, model.id, model.imageOnly
+        || (model.modalities && !model.modalities.includes('text')));
+    if (endpoint) {
+        const last = messages.at(-1);
+        if (last?.role !== 'user' || typeof last.content !== 'string' || !last.content.trim()) {
+            throw problem(400, 'Enter a prompt for the image.');
+        }
+        if (last.files?.length) throw problem(422, 'This image model accepts text prompts only.');
+        return {endpoint, payload: {model: model.id, prompt: last.content}, generated: true};
+    }
+    const stream = streaming && !model.modalities;
+    const payload = {model: model.id, messages: messageParts(messages, model, connection.type), stream};
+    if (model.modalities) payload.modalities = model.modalities;
+    if (stream && connection.type === 'openai') payload.stream_options = {include_usage: true};
+    return {endpoint: '/chat/completions', payload, generated: false};
+}
+
 async function openUpstream(connection, endpoint, payload, cancellation) {
-    const timeout = AbortSignal.timeout(payload ? 90_000 : 20_000);
+    const imageRequest = endpoint.startsWith('/images');
+    const kenariImage = imageRequest && connection.base === KENARI_BASE;
+    const timeout = AbortSignal.timeout(!payload ? 20_000 : kenariImage ? 300_000 : imageRequest ? 180_000 : 90_000);
     const signal = cancellation ? AbortSignal.any([cancellation, timeout]) : timeout;
     let response;
     try {
         response = await fetch(connection.base + endpoint, {
             method: payload ? 'POST' : 'GET',
             headers: {
-                Authorization: 'Bearer ' + connection.key,
+                ...(connection.base === GEMINI_METADATA_BASE ? {'x-goog-api-key': connection.key}
+                    : {Authorization: 'Bearer ' + connection.key}),
                 Accept: payload?.stream ? 'text/event-stream, application/json' : 'application/json',
                 ...(payload && {'Content-Type': 'application/json'})
             },
@@ -269,6 +308,7 @@ async function openUpstream(connection, endpoint, payload, cancellation) {
     if (!response.ok) {
         await response.body?.cancel();
         if (response.status === 401 || response.status === 403) throw problem(502, 'The provider rejected the API key or denied access (HTTP ' + response.status + ').');
+        if (response.status === 402) throw problem(502, 'The provider requires a balance or credits for this request (HTTP 402).');
         if (response.status === 404 && !payload) throw problem(502, 'Model listing unavailable. Check the base URL and confirm the provider supports model listing.');
         if (response.status === 429) throw problem(502, 'Provider rate limit or quota reached (HTTP 429).');
         throw problem(502, 'The provider returned HTTP ' + response.status + '. Check the model, endpoint, and account access.');

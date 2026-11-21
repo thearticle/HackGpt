@@ -81,7 +81,7 @@ final class ProviderBridge {
                     Object result = switch (method) {
                         case "providers" -> list();
                         case "connect" -> connect(input, request);
-                        case "provider-details" -> providerDetails(input.getString("connection"), request);
+                        case "provider-details" -> providerDetails(input.getString("connection"), input.optString("model"), request);
                         case "kenari-balance" -> kenariBalance(input.getString("connection"), request);
                         case "routr-quota" -> routrQuota(input.getString("connection"), input.getString("model"), request);
                         case "save" -> save(input.getString("connection"), true);
@@ -108,17 +108,26 @@ final class ProviderBridge {
         return activity.isFullScreen();
     }
 
-    @JavascriptInterface public void printChat(String title, String html) {
-        if (closed || title == null || title.length() > 140 || html == null || html.length() > 8_000_000) return;
+    @JavascriptInterface public void saveChatExport(String name, String content, boolean archive) {
+        if (closed || content == null || content.length() > 8_000_000
+                || !ChatMarkdownArchive.validName(name, archive ? ".zip" : ".md")) return;
         activity.runOnUiThread(() -> {
-            if (!closed) activity.printChat(title, html);
+            if (!closed) activity.saveExport(name, content, archive ? "application/zip" : "text/markdown");
         });
     }
 
-    @JavascriptInterface public void saveChatArchive(String json) {
-        if (closed || json == null || json.length() > 8_000_000) return;
+    @JavascriptInterface public void saveReplyImage(String name, String mimeType, String base64) {
+        if (closed || mimeType == null || base64 == null || base64.isEmpty() || base64.length() > RESPONSE_LIMIT) return;
+        String extension = switch (mimeType) {
+            case "image/png" -> ".png";
+            case "image/jpeg" -> ".jpg";
+            case "image/gif" -> ".gif";
+            case "image/webp" -> ".webp";
+            default -> null;
+        };
+        if (extension == null || !ChatMarkdownArchive.validName(name, extension)) return;
         activity.runOnUiThread(() -> {
-            if (!closed) activity.saveChatArchive(json);
+            if (!closed) activity.saveExport(name, base64, mimeType);
         });
     }
 
@@ -211,6 +220,7 @@ final class ProviderBridge {
 
     private static final String DEMO_ID = "builtin-kenari-demo";
     private static final String KENARI_BASE = "https://kenari.id/v1";
+    private static final String GEMINI_METADATA_BASE = "https://generativelanguage.googleapis.com/v1beta";
     private static final String ROUTR_ORIGIN = "https://api.routr.cloud";
     private static final String ROUTR_BASE = ROUTR_ORIGIN + "/v1";
     private static final String DEMO_BEAM = "beam-1-0:free";
@@ -270,11 +280,21 @@ final class ProviderBridge {
         return result;
     }
 
-    private JSONObject providerDetails(String id, Request request) throws Exception {
+    private JSONObject providerDetails(String id, String selectedModel, Request request) throws Exception {
         if (DEMO_ID.equals(id)) throw new Failure("Billing is unavailable for Demo.");
         var provider = find(id);
         if (provider == null) throw new Failure("Connect the provider first.");
         String base = provider.getString("base");
+        if ((GEMINI_METADATA_BASE + "/openai").equals(base) && selectedModel.matches("(?:models/)?[A-Za-z0-9._-]{1,200}")) {
+            String modelId = selectedModel.replaceFirst("^models/", "");
+            var connection = new JSONObject().put("base", GEMINI_METADATA_BASE).put("key", provider.getString("key"));
+            var model = readJson(open(connection, "/models/" + modelId, null, request));
+            var details = new JSONObject().put("id", selectedModel);
+            for (String field : new String[]{"inputTokenLimit", "outputTokenLimit"}) {
+                if (model.has(field)) details.put(field, model.get(field));
+            }
+            return new JSONObject().put("kind", "gemini").put("models", new JSONArray().put(details));
+        }
         String kind = switch (base) {
             case ROUTR_BASE -> "routr";
             case KENARI_BASE -> "kenari";
@@ -296,9 +316,14 @@ final class ProviderBridge {
                 var models = new JSONArray();
                 for (int i = 0; i < catalog.length(); i++) {
                     var model = catalog.optJSONObject(i);
-                    if (model == null || !(model.opt("id") instanceof String)) continue;
+                    if (model == null) continue;
+                    String modelId = model.optString("id", model.optString("model_sku", model.optString("model")));
+                    if (modelId.isEmpty() || !selectedModel.isEmpty() && !selectedModel.equals(modelId)) continue;
                     var details = new JSONObject();
-                    for (String field : new String[]{"id", "context_length", "context_limit", "input_token_limit",
+                    details.put("id", modelId);
+                    for (String field : new String[]{"context_length", "context_limit", "context_window", "input_token_limit",
+                            "output_token_limit", "max_output_tokens", "top_provider", "endpoints", "architecture",
+                            "input_modalities", "output_modalities", "pricing_lines",
                             "pricing", "input_rate", "cache_rate", "output_rate", "min_charge_credits",
                             "per_request_floor_credits"}) {
                         if (model.has(field)) details.put(field, model.get(field));
@@ -387,8 +412,17 @@ final class ProviderBridge {
             if (model == null || !(model.opt("id") instanceof String id) || id.isEmpty() || id.length() > 300) continue;
             var architecture = model.optJSONObject("architecture");
             var outputs = architecture == null ? null : architecture.optJSONArray("output_modalities");
+            if (outputs == null) outputs = model.optJSONArray("output_modalities");
+            boolean textOutput = outputs == null || contains(outputs, "text");
+            boolean imageOutput = outputs != null && contains(outputs, "image");
+            var endpoints = model.optJSONArray("endpoints");
+            if (KENARI_BASE.equals(base) && endpoints != null
+                    && !contains(endpoints, "chat") && !contains(endpoints, "images")) continue;
+            boolean imageOnly = imageOutput && !textOutput || (endpoints != null
+                    && contains(endpoints, "images") && !contains(endpoints, "chat"));
+            String imageEndpoint = imageEndpoint(type, base, id, imageOnly);
             if (outputs != null && !contains(outputs, "text")
-                    && !("openrouter".equals(type) && contains(outputs, "image"))) continue;
+                    && !imageOutput && imageEndpoint == null) continue;
             var modalities = architecture == null ? null : architecture.optJSONArray("input_modalities");
             if (modalities == null) modalities = model.optJSONArray("input_modalities");
             var support = new JSONObject();
@@ -401,14 +435,17 @@ final class ProviderBridge {
             }
             if ("gemini".equals(type)) support.put("pdf", false);
             var entry = new JSONObject().put("id", id).put("name", model.optString("name", id)).put("input", support);
-            if ("openrouter".equals(type) && outputs != null && contains(outputs, "image")) {
+            if (imageEndpoint != null) {
+                entry.put("imageOnly", true);
+                entry.put("input", new JSONObject().put("image", false).put("pdf", false).put("text", false));
+            } else if (imageOutput) {
                 var requested = new JSONArray();
-                if (contains(outputs, "text")) requested.put("text");
+                if (textOutput) requested.put("text");
                 entry.put("modalities", requested.put("image"));
             }
             models.put(id, entry);
         }
-        if (models.isEmpty()) throw new Failure("No text models were returned.");
+        if (models.isEmpty()) throw new Failure("No supported models were returned.");
         provider.put("models", new JSONArray(models.values()));
         synchronized (this) {
             if (providers.size() >= 64) throw new Failure("Disconnect an unused provider before adding another.");
@@ -420,6 +457,14 @@ final class ProviderBridge {
     private static boolean contains(JSONArray values, String target) {
         for (int i = 0; i < values.length(); i++) if (target.equals(values.optString(i))) return true;
         return false;
+    }
+
+    private static String imageEndpoint(String type, String base, String id, boolean imageOnly) {
+        if ("openrouter".equals(type) && imageOnly) return "/images";
+        if ("openai".equals(type) && id.startsWith("gpt-image-")) return "/images/generations";
+        // Saved Kenari catalogs from older builds did not retain image endpoint metadata.
+        if (KENARI_BASE.equals(base) && (imageOnly || id.startsWith("nano-banana-"))) return "/images/generations";
+        return null;
     }
 
     private Object chat(JSONObject input, String id, Request request, boolean streaming) throws Exception {
@@ -443,11 +488,16 @@ final class ProviderBridge {
         }
         if (model == null) throw new Failure("Select a connected model.");
         String type = provider.getString("type");
+        var modalities = model.optJSONArray("modalities");
+        boolean imageOnly = model.optBoolean("imageOnly") || (modalities != null && !contains(modalities, "text"));
+        String imageEndpoint = imageEndpoint(type, provider.getString("base"), model.getString("id"), imageOnly);
+        if (imageEndpoint != null) return generateImage(provider, model, input, id, request, start, streaming, imageEndpoint);
         var messages = AttachmentParts.encode(input.optJSONArray("messages"), model.optJSONObject("input"), type);
+        boolean streamUpstream = streaming && modalities == null;
         var payload = new JSONObject().put("model", model.getString("id"))
-                .put("messages", messages).put("stream", streaming);
-        if (streaming && model.has("modalities")) payload.put("modalities", model.getJSONArray("modalities"));
-        if (streaming && "openai".equals(type)) {
+                .put("messages", messages).put("stream", streamUpstream);
+        if (modalities != null) payload.put("modalities", modalities);
+        if (streamUpstream && "openai".equals(type)) {
             payload.put("stream_options", new JSONObject().put("include_usage", true));
         }
         var connection = open(provider, "/chat/completions", payload, request);
@@ -455,6 +505,11 @@ final class ProviderBridge {
             var value = readJson(connection);
             var choice = choice(value);
             var message = choice == null ? null : choice.optJSONObject("message");
+            if (modalities != null) {
+                var reader = new ReplyReader(null, start);
+                reader.consume(value, message);
+                if (reader.imageCount > 0) return new JSONObject().put("reply", "Image generation succeeded.");
+            }
             String reply = message != null && message.opt("content") instanceof String text ? text : "";
             if (reply.trim().isEmpty()) throw new Failure("This model did not return text.");
             return new JSONObject().put("reply", reply);
@@ -489,6 +544,24 @@ final class ProviderBridge {
         return reader.stats(isSse);
     }
 
+    private Object generateImage(JSONObject provider, JSONObject model, JSONObject input, String id, Request request,
+                                 long start, boolean streaming, String endpoint) throws Exception {
+        var messages = input.getJSONArray("messages");
+        var last = messages.optJSONObject(messages.length() - 1);
+        if (last == null || !"user".equals(last.optString("role")) || last.optString("content").trim().isEmpty()) {
+            throw new Failure("Enter a prompt for the image.");
+        }
+        var files = last.optJSONArray("files");
+        if (files != null && files.length() != 0) throw new Failure("This image model accepts text prompts only.");
+        var payload = new JSONObject().put("model", model.getString("id")).put("prompt", last.getString("content"));
+        var reader = new ReplyReader(streaming ? id : null, start);
+        var result = readJson(open(provider, endpoint, payload, request));
+        reader.consume(result, null);
+        reader.consumeImages(result.optJSONArray("data"));
+        if (reader.imageCount == 0) throw new Failure("The model returned no supported images.");
+        return streaming ? reader.stats(false) : new JSONObject().put("reply", "Image generation succeeded.");
+    }
+
     private static JSONObject choice(JSONObject event) {
         JSONArray choices = event.optJSONArray("choices");
         return choices == null ? null : choices.optJSONObject(0);
@@ -505,6 +578,7 @@ final class ProviderBridge {
         private int imageCount;
         private boolean finished;
         private JSONObject usage;
+        private Object imageQuality;
 
         ReplyReader(String id, long start) {
             this.id = id;
@@ -532,6 +606,7 @@ final class ProviderBridge {
             if (hasField(event, "error")) throw new Failure("The provider reported an error while generating.");
             var reportedUsage = event.optJSONObject("usage");
             if (reportedUsage != null) usage = reportedUsage;
+            if (event.opt("quality") instanceof String value && value.length() <= 32) imageQuality = value;
             if (content == null) return;
             consumeImages(content.optJSONArray("images"));
             consumeImages(content.optJSONArray("content"));
@@ -564,15 +639,23 @@ final class ProviderBridge {
         private void consumeImages(JSONArray parts) throws Exception {
             for (int i = 0; parts != null && i < parts.length() && imageCount < 4; i++) {
                 var part = parts.optJSONObject(i);
-                var image = part == null ? null : part.optJSONObject("image_url");
-                String url = image == null ? "" : image.optString("url");
+                if (part == null) continue;
+                var image = part.optJSONObject("image_url");
+                String url = image == null ? part.optString("url", part.optString("image_url")) : image.optString("url");
+                String base64 = part.optString("b64_json");
+                if (!base64.isEmpty()) url = "data:" + part.optString("media_type", "image/png") + ";base64," + base64;
                 if (!url.startsWith("https://") && !url.matches("(?s)^data:image/(png|jpeg|gif|webp);base64,.*")) continue;
                 imageCount++;
-                event("image", url);
+                // WebView bridge calls must stay small even when the provider returns a large image.
+                for (int offset = 0; id != null && offset < url.length(); offset += 65_536) {
+                    int end = Math.min(offset + 65_536, url.length());
+                    event(end == url.length() ? "image" : "image-chunk", url.substring(offset, end));
+                }
             }
         }
 
         private void event(String type, String text) throws Exception {
+            if (id == null) return;
             var event = new JSONObject().put("type", type);
             if (text != null) event.put("text", text);
             emit(id, "event", event);
@@ -580,10 +663,14 @@ final class ProviderBridge {
 
         JSONObject stats(boolean streaming) throws Exception {
             var stats = new JSONObject().put("durationMs", SystemClock.elapsedRealtime() - start);
+            if (imageCount > 0 && imageQuality != null) stats.put("imageQuality", imageQuality);
             if (streaming && firstText >= 0) stats.put("firstTokenMs", firstText - start);
             if (usage != null) {
-                putCount(stats, "inputTokens", usage.opt("prompt_tokens"));
-                putCount(stats, "outputTokens", usage.opt("completion_tokens"));
+                putCount(stats, "inputTokens", usage.opt("prompt_tokens") != null ? usage.opt("prompt_tokens") : usage.opt("input_tokens"));
+                putCount(stats, "outputTokens", usage.opt("completion_tokens") != null ? usage.opt("completion_tokens") : usage.opt("output_tokens"));
+                putCount(stats, "totalTokens", usage.opt("total_tokens"));
+                putCount(stats, "costMicroIdr", usage.opt("cost_micro_idr"));
+                if (usage.opt("cost") instanceof Number cost && cost.doubleValue() >= 0) stats.put("reportedCost", cost);
                 var extra = usage.optJSONObject("completion_tokens_details");
                 if (extra != null) putCount(stats, "reasoningTokens", extra.opt("reasoning_tokens"));
                 long amount = stats.optLong("outputTokens", 0);
@@ -607,8 +694,14 @@ final class ProviderBridge {
         request.assign(connection);
         connection.setInstanceFollowRedirects(false);
         connection.setConnectTimeout(15_000);
-        connection.setReadTimeout(body == null ? 20_000 : 90_000);
-        connection.setRequestProperty("Authorization", "Bearer " + provider.getString("key"));
+        boolean imageRequest = endpoint.startsWith("/images");
+        boolean kenariImage = imageRequest && KENARI_BASE.equals(provider.getString("base"));
+        connection.setReadTimeout(body == null ? 20_000 : kenariImage ? 300_000 : imageRequest ? 180_000 : 90_000);
+        if (GEMINI_METADATA_BASE.equals(provider.getString("base"))) {
+            connection.setRequestProperty("x-goog-api-key", provider.getString("key"));
+        } else {
+            connection.setRequestProperty("Authorization", "Bearer " + provider.getString("key"));
+        }
         connection.setRequestProperty("Accept", body != null && body.optBoolean("stream")
                 ? "text/event-stream, application/json" : "application/json");
         if (body != null) {
@@ -625,6 +718,7 @@ final class ProviderBridge {
         if (status >= 200 && status < 300) return connection;
         throw new Failure(switch (status) {
             case 401, 403 -> "The provider rejected the API key or denied access (HTTP " + status + ").";
+            case 402 -> "The provider requires a balance or credits for this request (HTTP 402).";
             case 429 -> "Provider rate limit or quota reached (HTTP 429).";
             default -> "The provider returned HTTP " + status + ". Check the model, endpoint, and account access.";
         });

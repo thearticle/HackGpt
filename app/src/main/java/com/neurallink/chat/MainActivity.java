@@ -8,8 +8,6 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.print.PrintAttributes;
-import android.print.PrintManager;
 import android.provider.MediaStore;
 import android.view.WindowInsets;
 import android.webkit.WebResourceRequest;
@@ -30,11 +28,10 @@ public final class MainActivity extends Activity {
     private static final String APP_URL = "https://appassets.androidplatform.net/";
     private static final int PICK_FILES = 144;
     private static final int PICK_FILES_FALLBACK = 145;
-    private static final int SAVE_CHAT_ARCHIVE = 146;
+    private static final int SAVE_CHAT_EXPORT = 146;
     private FrameLayout root;
     private WebView web;
-    private WebView pendingPrintView;
-    private String pendingArchive;
+    private ChatExport pendingExport;
     private ProviderBridge bridge;
     private String fileRequest;
     private int fileRequestCode;
@@ -237,11 +234,11 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (request == SAVE_CHAT_ARCHIVE) {
-            String archive = pendingArchive;
-            pendingArchive = null;
-            if (result == RESULT_OK && data != null && data.getData() != null && archive != null) {
-                writeChatArchive(archive, data.getData());
+        if (request == SAVE_CHAT_EXPORT) {
+            var export = pendingExport;
+            pendingExport = null;
+            if (result == RESULT_OK && data != null && data.getData() != null && export != null) {
+                writeChatExport(export, data.getData());
             }
             return;
         }
@@ -270,81 +267,65 @@ public final class MainActivity extends Activity {
     }
 
 
-    void saveChatArchive(String json) {
-        if (isFinishing() || isDestroyed() || pendingArchive != null) return;
-        pendingArchive = json;
+    private record ChatExport(String name, String content, String mimeType) {}
+
+    void saveExport(String name, String content, String mimeType) {
+        if (isFinishing() || isDestroyed() || pendingExport != null) return;
+        var export = new ChatExport(name, content, mimeType);
+        pendingExport = export;
         var intent = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("application/zip").putExtra(Intent.EXTRA_TITLE, "HackGpt-chats.zip");
+                .setType(export.mimeType()).putExtra(Intent.EXTRA_TITLE, export.name());
         try {
-            startActivityForResult(intent, SAVE_CHAT_ARCHIVE);
-        } catch (ActivityNotFoundException ignored) {
-            pendingArchive = null;
-            if (Build.VERSION.SDK_INT >= 29) writeChatArchive(json, null);
+            startActivityForResult(intent, SAVE_CHAT_EXPORT);
+        } catch (ActivityNotFoundException | SecurityException ignored) {
+            pendingExport = null;
+            if (Build.VERSION.SDK_INT >= 29) writeChatExport(export, null);
             else android.widget.Toast.makeText(this, "No file picker is available", android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void writeChatArchive(String json, Uri selectedDestination) {
+    private void writeChatExport(ChatExport export, Uri selectedDestination) {
         new Thread(() -> {
             var resolver = getContentResolver();
             Uri destination = selectedDestination;
-            String message = "Chat PDFs saved";
+            String message = "File saved";
             try {
                 if (destination == null && Build.VERSION.SDK_INT >= 29) {
                     var values = new ContentValues();
-                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, "HackGpt-chats.zip");
-                    values.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
+                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, export.name());
+                    values.put(MediaStore.MediaColumns.MIME_TYPE, export.mimeType());
                     values.put(MediaStore.MediaColumns.IS_PENDING, 1);
                     destination = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                 }
                 if (destination == null) throw new IOException("Unable to create export file");
                 try (var output = resolver.openOutputStream(destination, "wt")) {
                     if (output == null) throw new IOException("Unable to open export file");
-                    ChatPdfArchive.write(json, output);
+                    if ("application/zip".equals(export.mimeType())) {
+                        ChatMarkdownArchive.write(export.content(), output);
+                    } else if (export.mimeType().startsWith("image/")) {
+                        output.write(android.util.Base64.decode(export.content(), android.util.Base64.DEFAULT));
+                    } else {
+                        output.write(export.content().getBytes(StandardCharsets.UTF_8));
+                    }
                 }
                 if (selectedDestination == null && Build.VERSION.SDK_INT >= 29) {
                     var values = new ContentValues();
                     values.put(MediaStore.MediaColumns.IS_PENDING, 0);
                     resolver.update(destination, values, null, null);
-                    message = "Chat PDFs saved to Downloads";
+                    message = "File saved to Downloads";
                 }
             } catch (Exception ignored) {
                 if (selectedDestination == null && destination != null) {
                     try { resolver.delete(destination, null, null); } catch (RuntimeException unused) {}
                 }
-                message = "Could not save the chat archive";
+                message = "Could not save the file";
             }
             String result = message;
             runOnUiThread(() -> android.widget.Toast.makeText(this, result, android.widget.Toast.LENGTH_SHORT).show());
-        }, "chat-pdf-export").start();
-    }
-
-    void printChat(String title, String html) {
-        var manager = getSystemService(PrintManager.class);
-        if (manager == null || isFinishing() || isDestroyed() || pendingPrintView != null) return;
-        var preview = new WebView(this);
-        pendingPrintView = preview;
-        var settings = preview.getSettings();
-        settings.setJavaScriptEnabled(false);
-        settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
-        settings.setBlockNetworkLoads(true);
-        preview.setWebViewClient(new WebViewClient() {
-            @Override public void onPageFinished(WebView view, String url) {
-                if (pendingPrintView != view) return;
-                pendingPrintView = null;
-                if (isFinishing() || isDestroyed()) {
-                    view.destroy();
-                    return;
-                }
-                manager.print(title, view.createPrintDocumentAdapter(title), new PrintAttributes.Builder().build());
-            }
-        });
-        preview.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+        }, "chat-file-export").start();
     }
 
     @Override protected void onDestroy() {
-        if (pendingPrintView != null) pendingPrintView.destroy();
         if (Build.VERSION.SDK_INT >= 33 && backCallback != null) {
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
         }
