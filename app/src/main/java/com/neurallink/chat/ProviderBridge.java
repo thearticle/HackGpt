@@ -83,6 +83,7 @@ final class ProviderBridge {
                         case "connect" -> connect(input, request);
                         case "provider-details" -> providerDetails(input.getString("connection"), request);
                         case "kenari-balance" -> kenariBalance(input.getString("connection"), request);
+                        case "routr-quota" -> routrQuota(input.getString("connection"), input.getString("model"), request);
                         case "save" -> save(input.getString("connection"), true);
                         case "disconnect" -> save(input.getString("connection"), false);
                         case "chat", "chat/stream" -> chat(input, id, request, method.endsWith("/stream"));
@@ -105,6 +106,26 @@ final class ProviderBridge {
 
     @JavascriptInterface public boolean isFullScreen() {
         return activity.isFullScreen();
+    }
+
+    @JavascriptInterface public void printChat(String title, String html) {
+        if (closed || title == null || title.length() > 140 || html == null || html.length() > 8_000_000) return;
+        activity.runOnUiThread(() -> {
+            if (!closed) activity.printChat(title, html);
+        });
+    }
+
+    @JavascriptInterface public void saveChatArchive(String json) {
+        if (closed || json == null || json.length() > 8_000_000) return;
+        activity.runOnUiThread(() -> {
+            if (!closed) activity.saveChatArchive(json);
+        });
+    }
+
+    @JavascriptInterface public void playSendHaptic() {
+        activity.runOnUiThread(() -> {
+            if (!closed) web.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+        });
     }
 
     @JavascriptInterface public void playCreditsHaptic() {
@@ -190,6 +211,8 @@ final class ProviderBridge {
 
     private static final String DEMO_ID = "builtin-kenari-demo";
     private static final String KENARI_BASE = "https://kenari.id/v1";
+    private static final String ROUTR_ORIGIN = "https://api.routr.cloud";
+    private static final String ROUTR_BASE = ROUTR_ORIGIN + "/v1";
     private static final String DEMO_BEAM = "beam-1-0:free";
     private JSONObject demoProvider;
     private boolean demoLoaded;
@@ -230,13 +253,30 @@ final class ProviderBridge {
         return new JSONObject().put("balance", account.opt("available_micro_idr"));
     }
 
+    private JSONObject routrQuota(String id, String model, Request request) throws Exception {
+        var provider = find(id);
+        if (provider == null || !ROUTR_BASE.equals(provider.getString("base"))) {
+            throw new Failure("Connect a Routr provider first.");
+        }
+        var account = new JSONObject().put("base", ROUTR_ORIGIN).put("key", provider.getString("key"));
+        var quotas = readJson(open(account, "/api/me/model-quotas", null, request)).optJSONArray("quotas");
+        var result = new JSONObject();
+        for (int i = 0; quotas != null && i < quotas.length(); i++) {
+            var quota = quotas.optJSONObject(i);
+            if (quota != null && model.equals(quota.optString("model_sku"))) {
+                return result.put("balance", quota.opt("available_credits"));
+            }
+        }
+        return result;
+    }
+
     private JSONObject providerDetails(String id, Request request) throws Exception {
         if (DEMO_ID.equals(id)) throw new Failure("Billing is unavailable for Demo.");
         var provider = find(id);
         if (provider == null) throw new Failure("Connect the provider first.");
         String base = provider.getString("base");
         String kind = switch (base) {
-            case "https://api.routr.cloud/v1" -> "routr";
+            case ROUTR_BASE -> "routr";
             case KENARI_BASE -> "kenari";
             case "https://apimurah.com/v1" -> "apimurah";
             case "https://openrouter.ai/api/v1" -> "openrouter";
@@ -244,7 +284,7 @@ final class ProviderBridge {
         };
         var result = new JSONObject().put("kind", kind);
         var routes = switch (kind) {
-            case "routr" -> new String[]{"https://api.routr.cloud", "/api/me/pricing", "/api/me/wallet", "models", "available_credits"};
+            case "routr" -> new String[]{ROUTR_ORIGIN, "/api/me/pricing", "/api/me/wallet", "models", "available_credits"};
             case "kenari" -> new String[]{base, "/models", "/account/balance", "data", "available_micro_idr"};
             case "openrouter" -> new String[]{base, "/models/user", "/key", "data", "limit_remaining"};
             default -> new String[]{base, "/models", "", "data", ""};

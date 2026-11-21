@@ -33,7 +33,8 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
 .header-actions{display:flex;align-items:center;gap:2px}
-#chat-credit{border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--lime);white-space:nowrap;font-size:11px}
+#chat-credit{min-height:30px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--lime);white-space:nowrap;font-size:11px;font-weight:normal}
+#chat-credit:not(:disabled){pointer-events:auto}
 .icon{display:grid;place-items:center;height:44px;line-height:1;border:0;background:transparent;font-family:"Segoe UI Symbol","Courier New",monospace}
 button:disabled{cursor:default;color:var(--disabled)}
 .primary{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
@@ -62,15 +63,30 @@ article.mine{background:var(--mine);border:1px solid var(--line);border-inline-e
 article.mine>p{margin-top:0}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
-#composer .send{display:grid;place-items:center;flex:none;min-height:44px;border-radius:0 3px 3px 0;touch-action:pan-y;user-select:none;-webkit-touch-callout:none}
-#composer .send[hidden],#stop-response[hidden]{display:none}
+#composer{position:relative}
+#composer .send{position:absolute;left:calc(50% + var(--composer-offset,0px));bottom:calc(100% + 20px);display:grid;place-items:center;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;background:var(--panel);color:var(--lime);border-color:var(--line);touch-action:none;user-select:none;-webkit-touch-callout:none;visibility:hidden;opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity 240ms ease,transform 240ms ease,visibility 0s linear 240ms}
+#composer .send.is-visible{visibility:visible;opacity:1;transform:translateX(-50%);pointer-events:auto;transition-delay:0s}
+#composer .send,#composer-marker{-webkit-tap-highlight-color:transparent}
+#composer .send:focus,#composer-marker:focus{outline:0}
+#composer .send:focus-visible,#composer-marker:focus-visible{outline:1px solid var(--lime);outline-offset:2px}
+#composer-marker[hidden],#composer-gesture[hidden]{display:none}
+#composer-marker{position:absolute;left:calc(50% + var(--composer-offset,0px));top:-9px;transform:translateX(-50%);min-height:0;width:28px;height:18px;padding:0;border:0;background:transparent;touch-action:none;user-select:none;-webkit-touch-callout:none;z-index:1}
+#composer-marker::after{content:"";display:block;width:14px;height:2px;margin:auto;background:currentColor;animation:send-pulse 1.8s ease-in-out infinite}
+#composer-gesture{position:absolute;left:clamp(76px,calc(50% + var(--composer-offset,0px)),calc(100% - 76px));bottom:calc(100% + 88px);transform:translateX(-50%);white-space:nowrap;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);pointer-events:none;animation:composer-hint-pulse 1.8s ease-in-out infinite}
+#composer .send.is-pulsing{animation:composer-tap 300ms ease-out}
+@keyframes composer-tap{50%{box-shadow:0 0 14px var(--lime);transform:translateX(-50%) scale(1.08)}}
+@keyframes composer-hint-pulse{0%,100%{opacity:.72}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){#composer .send{transition:none}#composer .send.is-pulsing,#composer-marker::after,#composer-gesture{animation:none}}
+#stop-response[hidden]{display:none}
 #composer .send:disabled .send-mark::after{animation:none}
 #chat-status{display:flex;align-items:center;justify-content:space-between;gap:8px}
 #stop-response{min-height:32px;padding:0 9px}
-.send-mark{width:12px;height:12px;transform:translateX(clamp(-10px,var(--swipe-x,0px),10px))}
+.send-mark{width:12px;height:12px;transform:translate(var(--send-x,0px),var(--send-y,0px));transition:transform 160ms ease-out}
+.send.is-dragging .send-mark{transition:none}
+#messages.is-composer-gesture,#messages.is-composer-gesture *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .send-mark::after{content:"";display:block;width:100%;height:100%;border-radius:50%;background:currentColor;animation:send-pulse 1.8s ease-in-out infinite}
 @keyframes send-pulse{0%,100%{transform:scale(.85);opacity:.7}50%{transform:scale(1.15);opacity:1}}
-@media(prefers-reduced-motion:reduce){.send-mark::after{animation:none}}
+@media(prefers-reduced-motion:reduce){.send-mark{transition:none}.send-mark::after{animation:none}}
 textarea{resize:vertical;min-width:0;max-height:110px;flex:1;border:0;padding:9px;background:transparent;color:var(--paper);font:inherit}
 dialog{width:min(390px,calc(100% - 24px));background:var(--panel);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px}
 dialog::backdrop{background:var(--scrim)}
@@ -232,6 +248,15 @@ article .pending-reply{color:var(--muted)}
 .font-size-label{display:flex;justify-content:space-between;align-items:center;color:var(--paper);font-size:13px}
 #chat-font-size{width:100%;margin:12px 0 0;accent-color:var(--lime)}
 #history-search{margin:0 0 6px}
+#history-count{display:block;margin-bottom:6px}
+.history-search-row{display:flex;align-items:flex-start;gap:6px}
+#history-search{flex:1;min-width:0}
+.history-search-row button{flex:0 0 40px;min-height:40px;padding:0;font-size:17px}
+#history-list .swipe-button{-webkit-touch-callout:none}
+#history-list .swipe-button[aria-pressed="true"]{background:var(--selection);border-color:var(--lime);box-shadow:inset 0 0 12px var(--glow)}
+#history-list .selection-pulse{animation:history-pulse 380ms ease-out}
+@keyframes history-pulse{45%{box-shadow:inset 0 0 0 2px var(--lime),inset 0 0 18px var(--glow)}}
+@media(prefers-reduced-motion:reduce){#history-list .selection-pulse{animation:none}}
 #history-list{max-height:min(68vh,520px);max-height:min(68dvh,520px)}
 #messages article{min-width:0}
 #messages article:not(.mine){align-self:stretch;padding-block:8px}
@@ -313,7 +338,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
 </div>
 <div class="header-actions">
-<small id="chat-credit" aria-live="polite" hidden></small>
+<button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </div>
 </header>
@@ -330,9 +355,18 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
 <textarea id="prompt" rows="1" aria-label="Message"></textarea>
-<button type="submit" class="primary send" aria-label="Send" aria-description="Swipe left or press Left Arrow to attach files. Swipe right or press Right Arrow to select all message text." title="Send · Left to attach · Right to select text"><i class="send-mark" aria-hidden="true"></i></button>
+<button id="composer-marker" type="button" aria-label="Show send controls. Hold and drag to move." hidden></button>
+<button type="button" class="send" aria-label="Send" aria-hidden="true" tabindex="-1" aria-description="Swipe up to attach, down to export PDF, left to select all, or right to clear the message. Arrow keys also work."><i class="send-mark" aria-hidden="true"></i></button>
+<small id="composer-gesture" role="status" hidden></small>
 </form>
 </main>
+<dialog id="clear-draft" aria-label="Clear message">
+<p>Clear the current message?</p>
+<form method="dialog" class="dialog-actions">
+<button value="cancel" autofocus>Cancel</button>
+<button value="clear" class="primary">Clear</button>
+</form>
+</dialog>
 <dialog id="settings" aria-label="Provider settings">
 <form id="provider-form" autocomplete="off">
 <div class="saved-providers" hidden>
@@ -420,7 +454,13 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <input id="chat-font-size" type="range" min="12" max="22" step="1" value="16">
 </dialog>
 <dialog id="history-dialog" aria-label="Chat history">
+<small id="history-count" aria-live="polite"></small>
+<div class="history-search-row">
 <input id="history-search" type="search" aria-label="Search chats" placeholder="Search chats">
+<button id="history-toggle-all" type="button" aria-label="Select all shown chats" title="Select all shown chats" hidden>☑</button>
+<button id="history-export-selected" type="button" aria-label="Export selected chats as PDF" title="Export selected chats as PDF" hidden>↓</button>
+<button id="history-delete-selected" type="button" class="danger-button" aria-label="Delete selected chats" title="Delete selected chats" hidden>⌫</button>
+</div>
 <div id="history-list" tabindex="-1" autofocus></div>
 <small id="history-status" role="status"></small>
 </dialog>
@@ -452,7 +492,7 @@ const promptBox = find('prompt');
 const reset = find('reset');
 const empty = find('empty');
 
-function appendMessage(author, content, mine) {
+function appendMessage(author, content, mine, target = messages) {
   const message = document.createElement('article');
   if (mine) {
     message.className = 'mine';
@@ -465,7 +505,7 @@ function appendMessage(author, content, mine) {
   const text = document.createElement('p');
   text.textContent = content;
   message.append(text);
-  messages.append(message);
+  target.append(message);
   return message;
 }
 
@@ -475,6 +515,7 @@ const presets = {
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai'
 };
 const kenariBase = 'https://kenari.id/v1';
+const routrBase = 'https://api.routr.cloud/v1';
 const demoBeamId = 'beam-1-0:free';
 const demoProfileId = 'builtin-kenari-demo';
 const liveModelKey = 'neural-link.active-provider-model.v1';
@@ -487,12 +528,22 @@ const baseInput = find('provider-base');
 const keyInput = find('provider-key');
 const modelSearch = find('model-search');
 const sendButton = find('composer').querySelector('.send');
+const composerMarker = find('composer-marker');
+const composerGesture = find('composer-gesture');
+let composerIdle;
+let composerPress;
+let composerTapCount = 0;
+let composerLastTap = 0;
+let composerTapExpiry;
+let composerHold;
+let markerPress;
 const stopResponse = find('stop-response');
 const filePicker = find('file-picker');
 let attachments = [];
 let readingFiles = false;
 let attachmentVersion = 0;
 let sending = false;
+let activeId = null;
 let configuring = false;
 
 function stored(key) {
@@ -629,34 +680,61 @@ function updateModelStatus() {
   find('demo-status').textContent = model
     ? model.name + ' · ' + model.profile.name
     : 'Connect a provider and select models in Settings';
-  sendButton.disabled = sending || !model;
-  const freeDemo = model?.profile?.id === demoProfileId;
-  updateChatCredit(model?.connection, false, freeDemo);
+  updateComposerButton(model);
+  updateChatCredit(model);
   updateAttachmentControl(model);
   find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
 }
 
-async function updateChatCredit(connection, refresh = false, freeDemo = false) {
-  const id = freeDemo ? 'free-demo' : connection?.base === kenariBase ? connection.id : null;
-  if (id === creditConnection && !refresh) return;
+async function updateChatCredit(model, refresh = false) {
+  const connection = model?.connection;
+  const freeDemo = model?.profile?.id === demoProfileId;
+  const routr = connection?.base === routrBase;
+  const key = freeDemo ? 'free-demo' : routr ? JSON.stringify([connection.id, model.id])
+    : connection?.base === kenariBase ? connection.id : null;
+  if (key === creditConnection && !refresh) return;
   const credit = find('chat-credit');
-  if (id !== creditConnection) credit.hidden = true;
-  creditConnection = id;
+  if (key !== creditConnection) {
+    credit.hidden = true;
+    credit.disabled = true;
+    credit.onclick = null;
+    credit.removeAttribute('aria-pressed');
+  }
+  creditConnection = key;
   const revision = ++creditRevision;
   if (freeDemo) {
     credit.title = 'Free demo';
+    credit.setAttribute('aria-label', credit.title);
     credit.textContent = 'FREE';
     credit.hidden = false;
     return;
   }
-  if (!id) return;
-  credit.title = 'Available Kenari balance in Indonesian rupiah';
+  if (!key) return;
   try {
-    const result = await localApi('kenari-balance', {connection: id});
+    const result = await localApi(routr ? 'routr-quota' : 'kenari-balance',
+      {connection: connection.id, ...(routr && {model: model.id})});
     if (revision !== creditRevision) return;
     const amount = detailNumber(result.balance);
     credit.hidden = amount === null;
-    if (amount !== null) credit.textContent = (amount / 1_000_000).toLocaleString('id-ID', {maximumFractionDigits: 0});
+    if (amount !== null) {
+      if (routr) {
+        const exact = amount.toLocaleString('en-US');
+        const compact = amount.toLocaleString('en-US', {notation: 'compact', maximumSignificantDigits: 4});
+        const showAmount = expanded => {
+          credit.setAttribute('aria-pressed', String(expanded));
+          credit.textContent = expanded ? exact : compact;
+        };
+        credit.title = model.id + ' · ' + exact + ' available credits';
+        credit.setAttribute('aria-label', credit.title + ' · Toggle exact amount');
+        credit.disabled = false;
+        showAmount(credit.getAttribute('aria-pressed') === 'true');
+        credit.onclick = () => showAmount(credit.getAttribute('aria-pressed') !== 'true');
+      } else {
+        credit.textContent = (amount / 1_000_000).toLocaleString('id-ID', {maximumFractionDigits: 0});
+        credit.title = 'Available Kenari balance in Indonesian rupiah';
+        credit.setAttribute('aria-label', credit.title + ' · ' + credit.textContent);
+      }
+    }
   } catch {
     if (revision === creditRevision) credit.hidden = true;
   }
@@ -1229,11 +1307,15 @@ restoreConnections();
 const historyDialog = find('history-dialog');
 const historyList = find('history-list');
 const historySearch = find('history-search');
+const historyToggleAll = find('history-toggle-all');
+const historyDeleteSelected = find('history-delete-selected');
+const historyExportSelected = find('history-export-selected');
+const selectedHistory = new Set();
+let selectingHistory = false;
 const actionDialog = find('chat-action');
 const titleInput = find('chat-title');
 const storageKey = 'neural-link.history.v1';
 let chats = [];
-let activeId = null;
 let pendingAction;
 
 try {
@@ -1260,6 +1342,7 @@ function showChat(chat, credits = false, preserveDraft = false) {
   activeId = chat?.id ?? null;
   clearContents(messages);
   if (!preserveDraft) promptBox.value = '';
+  updateComposerButton(currentModel());
   reset.disabled = sending;
   empty.classList.toggle('credits-view', credits);
   empty.setAttribute('aria-hidden', String(!credits));
@@ -1306,28 +1389,31 @@ function attachSwipeGesture(row, button, actions, thresholds = {}) {
     if (start?.id !== event.pointerId) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    const direction = dx < 0 ? 'left' : 'right';
+    const vertical = Math.abs(dy) >= Math.abs(dx);
+    const direction = vertical ? (dy < 0 ? 'up' : 'down') : (dx < 0 ? 'left' : 'right');
     if (!dragging) {
-      if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) {
+      if (vertical && !actions.up && Math.abs(dy) > 8) {
         start = null;
         return;
       }
-      if (Math.abs(dx) < 8) return;
+      if (Math.max(Math.abs(dx), actions.up ? Math.abs(dy) : 0) < 8) return;
       dragging = true;
       suppressClick = true;
       button.setPointerCapture(event.pointerId);
       row.classList.add('dragging');
     }
     row.dataset.swipe = actions[direction] ? direction : '';
-    const offset = actions[direction] ? dx : 0;
+    const offset = actions[direction] && !vertical ? dx : 0;
     button.style.setProperty('--swipe-x', Math.max(-96, Math.min(96, offset)) + 'px');
   };
 
   function finish(event, commit) {
     if (start?.id !== event.pointerId) return;
     const dx = event.clientX - start.x;
-    const direction = dx < 0 ? 'left' : 'right';
-    const shouldOpen = commit && dragging && Math.abs(dx) >= (thresholds[direction] ?? 64);
+    const dy = event.clientY - start.y;
+    const vertical = Math.abs(dy) >= Math.abs(dx);
+    const direction = vertical ? (dy < 0 ? 'up' : 'down') : (dx < 0 ? 'left' : 'right');
+    const shouldOpen = commit && dragging && Math.abs(vertical ? dy : dx) >= (thresholds[direction] ?? 64);
     start = null;
     dragging = false;
     row.classList.remove('dragging');
@@ -1348,44 +1434,160 @@ function attachSwipeGesture(row, button, actions, thresholds = {}) {
   }, true);
 
   button.onkeydown = event => {
-    const action = event.key === 'ArrowLeft' ? actions.left : event.key === 'ArrowRight' ? actions.right : null;
+    const action = event.key === 'ArrowLeft' ? actions.left : event.key === 'ArrowRight' ? actions.right
+      : event.key === 'ArrowUp' ? actions.up : null;
     if (!action) return;
     event.preventDefault();
     action();
   };
 }
 
-function renderHistory() {
+function matchingHistory() {
   const query = historySearch.value.trim().toLowerCase();
-  const matches = !query ? chats : chats.filter(chat =>
+  return !query ? chats : chats.filter(chat =>
     chat.title.toLowerCase().includes(query) || chat.turns.some(turn =>
       [turn.question, turn.reply, ...(turn.files ?? [])].some(value =>
         typeof value === 'string' && value.toLowerCase().includes(query))));
+}
+
+function updateHistorySelection() {
+  const count = chats.length + (chats.length === 1 ? ' chat' : ' chats');
+  find('history-count').textContent = count + (selectingHistory ? ' · ' + selectedHistory.size + ' selected' : '');
+  const shown = [...historyList.querySelectorAll('button[data-chat]')];
+  const all = shown.length > 0 && shown.every(button => selectedHistory.has(button.dataset.chat));
+  historyToggleAll.hidden = historyDeleteSelected.hidden = historyExportSelected.hidden = !selectingHistory;
+  historyToggleAll.disabled = !shown.length;
+  historyToggleAll.setAttribute('aria-label', all ? 'Deselect shown chats' : 'Select all shown chats');
+  historyToggleAll.title = historyToggleAll.getAttribute('aria-label');
+  historyToggleAll.textContent = all ? '☐' : '☑';
+  historyDeleteSelected.disabled = historyExportSelected.disabled = !selectedHistory.size;
+  for (const button of shown) {
+    if (selectingHistory) button.setAttribute('aria-pressed', String(selectedHistory.has(button.dataset.chat)));
+    else button.removeAttribute('aria-pressed');
+  }
+}
+
+function toggleHistoryChat(id) {
+  selectingHistory = true;
+  if (selectedHistory.has(id)) selectedHistory.delete(id);
+  else selectedHistory.add(id);
+  updateHistorySelection();
+}
+
+function renderHistory() {
+  const matches = matchingHistory();
   clearContents(historyList);
   if (!matches.length) {
     const note = document.createElement('p');
-    note.textContent = query ? 'No matching chats.' : 'No saved chats yet. Send a message to start one.';
+    note.textContent = historySearch.value.trim() ? 'No matching chats.' : 'No saved chats yet. Send a message to start one.';
     historyList.append(note);
-    return;
   }
   for (const chat of matches) {
     const row = document.createElement('div');
     row.className = 'swipe-row';
-    const open = historyButton(chat.title, () => {
+    let held = false;
+    const open = historyButton(chat.title, event => {
+      if (held && event.detail) {
+        held = false;
+        return;
+      }
+      if (selectingHistory) {
+        toggleHistoryChat(chat.id);
+        return;
+      }
       showChat(chat);
       historyDialog.close();
       promptBox.focus();
     });
     open.className = 'swipe-button';
+    open.dataset.chat = chat.id;
     open.title = chat.title;
     if (chat.id === activeId) open.setAttribute('aria-current', 'true');
-    open.setAttribute('aria-description', 'Swipe right or press Right Arrow to rename. Swipe left or press Left Arrow to delete.');
-    open.setAttribute('aria-keyshortcuts', 'ArrowRight ArrowLeft');
+    open.setAttribute('aria-description', 'Hold to select. Swipe right to rename or left to delete.');
+    open.setAttribute('aria-keyshortcuts', 'ArrowRight ArrowLeft Shift+Space');
     row.append(swipeCue(false), swipeCue(true), open);
-    attachSwipeGesture(row, open, {left: () => editChat(chat, true), right: () => editChat(chat, false)});
+    attachSwipeGesture(row, open, {
+      left: () => { if (!selectingHistory) editChat(chat, true); },
+      right: () => { if (!selectingHistory) editChat(chat, false); }
+    });
+    let timer;
+    let origin;
+    const cancelHold = () => { clearTimeout(timer); origin = null; };
+    const select = () => {
+      open.classList.remove('selection-pulse');
+      open.classList.add('selection-pulse');
+      toggleHistoryChat(chat.id);
+    };
+    open.addEventListener('animationend', () => open.classList.remove('selection-pulse'));
+    open.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      held = false;
+      if (selectingHistory) return;
+      origin = [event.clientX, event.clientY];
+      timer = setTimeout(() => {
+        held = true;
+        select();
+      }, 500);
+    });
+    open.addEventListener('pointermove', event => {
+      if (origin && Math.hypot(event.clientX - origin[0], event.clientY - origin[1]) >= 8) cancelHold();
+    });
+    for (const event of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture']) {
+      open.addEventListener(event, cancelHold);
+    }
+    open.addEventListener('contextmenu', event => event.preventDefault());
+    open.addEventListener('keydown', event => {
+      if (event.key !== ' ' || !event.shiftKey) return;
+      event.preventDefault();
+      if (!event.repeat) select();
+    });
     historyList.append(row);
   }
+  updateHistorySelection();
 }
+
+historyToggleAll.onclick = () => {
+  const matches = matchingHistory();
+  const all = matches.every(chat => selectedHistory.has(chat.id));
+  for (const chat of matches) {
+    if (all) selectedHistory.delete(chat.id);
+    else selectedHistory.add(chat.id);
+  }
+  updateHistorySelection();
+};
+historyDeleteSelected.onclick = () => {
+  const selected = chats.filter(chat => selectedHistory.has(chat.id));
+  if (selected.length) editChat(selected[0], true, selected);
+};
+historyExportSelected.onclick = () => {
+  const selected = chats.filter(chat => selectedHistory.has(chat.id));
+  const status = find('history-status');
+  if (!selected.length) return;
+  if (!window.HackGptAndroid?.saveChatArchive) {
+    status.textContent = 'ZIP export is available in the Android app.';
+    return;
+  }
+  const entries = selected.map(chat => ({
+    title: chat.title,
+    date: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(chat.createdAt ?? '')
+      ? chat.createdAt.slice(0, 19).replace(/:/g, '-') + 'Z' : 'undated',
+    transcript: chat.turns.map(turn => [
+      'You', turn.question, (turn.files ?? []).length ? 'Attachments: ' + turn.files.join(', ') : '',
+      turn.model || 'Assistant', turn.reply || (turn.imageCount ? '[Image reply]' : '')
+    ].filter(Boolean).join('\n')).join('\n\n')
+  }));
+  const payload = JSON.stringify(entries);
+  if (payload.length > 8_000_000) {
+    status.textContent = 'This export is too large. Select fewer chats and try again.';
+    return;
+  }
+  status.textContent = '';
+  window.HackGptAndroid.saveChatArchive(payload);
+};
+historyDialog.addEventListener('close', () => {
+  selectingHistory = false;
+  selectedHistory.clear();
+});
 
 historySearch.oninput = () => {
   renderHistory();
@@ -1440,22 +1642,24 @@ const enterToSend = find('enter-to-send');
 const enterToSendKey = 'neural-link.enter-to-send';
 
 function applyEnterToSend(enabled) {
+  resetComposerHold();
+  hideComposerControl();
   enterToSend.setAttribute('aria-pressed', String(enabled));
-  sendButton.hidden = enabled;
+  updateComposerButton(currentModel(), enabled);
   promptBox.enterKeyHint = enabled ? 'send' : 'enter';
 }
 
 applyEnterToSend(stored(enterToSendKey) === 'true');
 enterToSend.onclick = () => {
-  const enabled = !sendButton.hidden;
+  const enabled = enterToSend.getAttribute('aria-pressed') !== 'true';
   applyEnterToSend(enabled);
   remember(enterToSendKey, String(enabled));
 };
 promptBox.addEventListener('keydown', event => {
-  if (!sendButton.hidden || event.isComposing || event.keyCode === 229 ||
+  if (enterToSend.getAttribute('aria-pressed') !== 'true' || event.isComposing || event.keyCode === 229 ||
       event.key !== 'Enter' || event.shiftKey) return;
   event.preventDefault();
-  if (!event.repeat && !sendButton.disabled) promptBox.form.requestSubmit();
+  if (!event.repeat && !sending) promptBox.form.requestSubmit();
 });
 
 function applyTheme(theme) {
@@ -1498,13 +1702,15 @@ window.hackGptHandleBack = () => {
 
 
 
-function editChat(chat, deleting) {
-  pendingAction = {chat, deleting};
-  find('chat-action-heading').textContent = deleting ? 'Delete chat?' : 'Rename chat';
+function editChat(chat, deleting, selected = [chat]) {
+  pendingAction = {chat, deleting, ids: new Set(selected.map(item => item.id))};
+  find('chat-action-heading').textContent = deleting ? (selected.length > 1 ? 'Delete chats?' : 'Delete chat?') : 'Rename chat';
   find('rename-field').hidden = deleting;
   const warning = find('delete-message');
   warning.hidden = !deleting;
-  warning.textContent = deleting ? 'Delete "' + chat.title + '" from chat history?' : '';
+  warning.textContent = deleting ? (selected.length > 1
+    ? 'Delete ' + selected.length + ' selected chats from history?'
+    : 'Delete "' + chat.title + '" from chat history?') : '';
   titleInput.required = !deleting;
   titleInput.setCustomValidity('');
   titleInput.value = deleting ? '' : chat.title;
@@ -1518,10 +1724,12 @@ titleInput.oninput = () => titleInput.setCustomValidity('');
 find('cancel-action').onclick = () => actionDialog.close();
 find('chat-action-form').onsubmit = event => {
   event.preventDefault();
-  const {chat, deleting} = pendingAction;
+  const {chat, deleting, ids} = pendingAction;
   if (deleting) {
-    chats = chats.filter(item => item.id !== chat.id);
-    if (activeId === chat.id) showChat(null);
+    chats = chats.filter(item => !ids.has(item.id));
+    if (ids.has(activeId)) showChat(null);
+    for (const id of ids) selectedHistory.delete(id);
+    if (!selectedHistory.size) selectingHistory = false;
   } else {
     const title = titleInput.value.trim();
     if (!title) {
@@ -1615,17 +1823,296 @@ function openAttachmentPicker() {
   if (window.HackGptAndroid) addAttachments(() => androidRequest('pickFiles'));
   else filePicker.click();
 }
-attachSwipeGesture(sendButton, sendButton, {
-  left: openAttachmentPicker,
-  right: () => {
-    if (sending || !promptBox.value) return;
-    promptBox.focus();
-    promptBox.select();
+
+function updateComposerButton(model, enterMode = find('enter-to-send').getAttribute('aria-pressed') === 'true') {
+  sendButton.disabled = sending;
+  sendButton.classList.toggle('is-actions-only', enterMode);
+  sendButton.setAttribute('aria-label', model && !enterMode ? 'Send' : 'Chat actions');
+  composerMarker.setAttribute('aria-label', enterMode ? 'Hold and drag to move chat controls' : 'Show send controls. Hold and drag to move.');
+  if (enterMode) {
+    if (sending) {
+      resetComposerHold();
+      hideComposerControl();
+    }
+  } else if (promptBox.value || attachments.length) {
+    showComposerControl();
+  } else {
+    composerMarker.hidden = sendButton.classList.contains('is-visible') && !markerPress?.dragging;
   }
-}, {right: 20});
-sendButton.addEventListener('pointerdown', event => {
-  if (event.isPrimary && event.button === 0) sendButton.setPointerCapture(event.pointerId);
+}
+
+function hideComposerControl() {
+  clearTimeout(composerIdle);
+  const actionsOnly = sendButton.classList.contains('is-actions-only');
+  sendButton.classList.remove('is-visible');
+  sendButton.tabIndex = -1;
+  sendButton.setAttribute('aria-hidden', 'true');
+  composerMarker.hidden = false;
+  if (actionsOnly && !composerHold) messages.classList.remove('is-composer-gesture');
+}
+
+function scheduleComposerHide() {
+  clearTimeout(composerIdle);
+  if (composerPress || markerPress?.dragging || !sendButton.classList.contains('is-visible')) return;
+  composerIdle = setTimeout(hideComposerControl, 2000);
+}
+
+function showComposerControl(keepMarker = !!markerPress?.dragging) {
+  if (sending) return;
+  sendButton.classList.add('is-visible');
+  sendButton.tabIndex = 0;
+  sendButton.setAttribute('aria-hidden', 'false');
+  composerMarker.hidden = !keepMarker;
+  if (!keepMarker) scheduleComposerHide();
+}
+
+function showRegularComposerControl() {
+  if (!sendButton.classList.contains('is-actions-only')) showComposerControl();
+}
+
+function exportCurrentChat() {
+  exportChatPdf(chats.filter(chat => chat.id === activeId), showChatError);
+}
+
+const clearDraft = find('clear-draft');
+const composerActions = {
+  ArrowUp: ['Add Attachment', openAttachmentPicker],
+  ArrowDown: ['Export to PDF', exportCurrentChat],
+  ArrowLeft: ['Select All', () => { promptBox.focus(); promptBox.select(); }],
+  ArrowRight: ['Clear Message', () => {
+    if (!promptBox.value) return;
+    clearDraft.returnValue = '';
+    clearDraft.showModal();
+  }]
+};
+clearDraft.addEventListener('close', () => {
+  if (clearDraft.returnValue !== 'clear') return;
+  promptBox.value = '';
+  promptBox.focus();
 });
+dismissOnBackdrop(clearDraft);
+const composerForm = promptBox.form;
+const composerOffsetKey = 'neural-link.composer-offset';
+let composerOffset = Number(stored(composerOffsetKey)) || 0;
+let suppressMarkerClick = false;
+function positionComposerControl(offset) {
+  const limit = Math.max(0, composerForm.clientWidth / 2 - 35);
+  composerForm.style.setProperty('--composer-offset', Math.max(-limit, Math.min(limit, offset)) + 'px');
+}
+new ResizeObserver(() => positionComposerControl(composerOffset)).observe(composerForm);
+composerMarker.onpointerdown = event => {
+  if (!event.isPrimary || event.button !== 0 || sending) return;
+  suppressMarkerClick = false;
+  composerMarker.setPointerCapture(event.pointerId);
+  const press = {id: event.pointerId, x: event.clientX, offset: Number.parseFloat(composerForm.style.getPropertyValue('--composer-offset')) || 0};
+  markerPress = press;
+  press.timer = setTimeout(() => {
+    press.dragging = true;
+    suppressMarkerClick = true;
+    clearTimeout(composerIdle);
+    showComposerControl();
+  }, 350);
+};
+composerMarker.onpointermove = event => {
+  if (markerPress?.id !== event.pointerId) return;
+  const delta = event.clientX - markerPress.x;
+  if (!markerPress.dragging) {
+    if (Math.abs(delta) >= 8) {
+      clearTimeout(markerPress.timer);
+      suppressMarkerClick = true;
+    }
+    return;
+  }
+  const offset = markerPress.offset + delta;
+  positionComposerControl(Math.abs(offset) <= 16 ? 0 : offset);
+};
+function finishMarkerPress(event, commit) {
+  if (markerPress?.id !== event.pointerId) return;
+  clearTimeout(markerPress.timer);
+  const dragging = markerPress.dragging;
+  if (dragging) {
+    if (commit) {
+      composerMarker.onpointermove(event);
+      composerOffset = Number.parseFloat(composerForm.style.getPropertyValue('--composer-offset')) || 0;
+      remember(composerOffsetKey, String(composerOffset));
+    } else {
+      positionComposerControl(composerOffset);
+    }
+    composerMarker.hidden = sendButton.classList.contains('is-visible');
+  }
+  markerPress = null;
+  if (dragging) scheduleComposerHide();
+}
+composerMarker.onpointerup = event => finishMarkerPress(event, true);
+composerMarker.onpointercancel = composerMarker.onlostpointercapture = event => finishMarkerPress(event, false);
+composerMarker.oncontextmenu = event => { if (markerPress) event.preventDefault(); };
+composerMarker.onclick = event => {
+  if ((event.detail && suppressMarkerClick) || sending) return;
+  showRegularComposerControl();
+  if (sendButton.classList.contains('is-visible')) sendButton.focus();
+};
+promptBox.addEventListener('input', showRegularComposerControl);
+let screenTouch;
+messages.addEventListener('touchstart', event => {
+  screenTouch = event.touches.length === 1 ? event.touches[0] : null;
+}, {passive: true});
+messages.addEventListener('touchend', event => {
+  const start = screenTouch;
+  screenTouch = null;
+  const end = start && Array.from(event.changedTouches).find(touch => touch.identifier === start.identifier);
+  if (end && Math.abs(end.clientY - start.clientY) > Math.max(25, Math.abs(end.clientX - start.clientX))) showRegularComposerControl();
+}, {passive: true});
+messages.addEventListener('touchcancel', () => { screenTouch = null; });
+messages.addEventListener('wheel', event => { if (event.deltaY) showRegularComposerControl(); }, {passive: true});
+
+function composerDirection(event, threshold) {
+  const x = event.clientX - composerPress.x;
+  const y = event.clientY - composerPress.y;
+  if (Math.max(Math.abs(x), Math.abs(y)) < threshold) return null;
+  return Math.abs(x) > Math.abs(y) ? (x < 0 ? 'ArrowLeft' : 'ArrowRight')
+    : (y < 0 ? 'ArrowUp' : 'ArrowDown');
+}
+
+let suppressComposerClick = false;
+sendButton.onpointerdown = event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  suppressComposerClick = false;
+  composerPress = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
+  sendButton.setPointerCapture(event.pointerId);
+  clearTimeout(composerIdle);
+};
+function moveComposerPress(event) {
+  if (composerPress?.id !== event.pointerId) return;
+  const x = event.clientX - composerPress.x;
+  const y = event.clientY - composerPress.y;
+  const limit = 20;
+  const scale = Math.min(0.65, limit / (Math.hypot(x, y) || 1));
+  sendButton.classList.add('is-dragging');
+  sendButton.style.setProperty('--send-x', x * scale + 'px');
+  sendButton.style.setProperty('--send-y', y * scale + 'px');
+  const direction = composerDirection(event, 12);
+  composerPress.moved = composerPress.moved || !!direction;
+  const message = direction ? composerActions[direction][0] : '';
+  if (composerGesture.textContent !== message) composerGesture.textContent = message;
+  composerGesture.hidden = !message;
+}
+sendButton.onpointermove = moveComposerPress;
+function finishComposerPress(event, commit) {
+  if (composerPress?.id !== event.pointerId) return;
+  const direction = commit ? composerDirection(event, 32) : null;
+  suppressComposerClick = !commit || composerPress.moved || !!direction;
+  composerPress = null;
+  sendButton.classList.remove('is-dragging');
+  sendButton.style.removeProperty('--send-x');
+  sendButton.style.removeProperty('--send-y');
+  composerGesture.hidden = true;
+  scheduleComposerHide();
+  if (direction) composerActions[direction][1]();
+}
+sendButton.onpointerup = event => finishComposerPress(event, true);
+sendButton.onpointercancel = sendButton.onlostpointercapture = event => finishComposerPress(event, false);
+
+function resetComposerHold() {
+  clearTimeout(composerHold?.timer);
+  clearTimeout(composerTapExpiry);
+  composerHold = null;
+  composerTapCount = 0;
+  composerLastTap = 0;
+  if (!sendButton.classList.contains('is-visible') || !sendButton.classList.contains('is-actions-only')) {
+    messages.classList.remove('is-composer-gesture');
+  }
+}
+
+function disableChatSelection() {
+  messages.classList.add('is-composer-gesture');
+  const selection = window.getSelection();
+  if (selection?.anchorNode && messages.contains(selection.anchorNode)) selection.removeAllRanges();
+}
+
+messages.addEventListener('touchstart', event => {
+  if (!sendButton.classList.contains('is-actions-only') || sending) return;
+  if (event.touches.length !== 1) {
+    resetComposerHold();
+    if (composerPress?.fromChat) finishComposerPress({pointerId: composerPress.id}, false);
+    return;
+  }
+  const touch = event.touches[0];
+  const started = performance.now();
+  if (started - composerLastTap > 350 || composerTapCount > 3) resetComposerHold();
+  clearTimeout(composerTapExpiry);
+  if (composerTapCount >= 1) disableChatSelection();
+  const press = {id: touch.identifier, x: touch.clientX, y: touch.clientY, started, timer: null};
+  composerHold = press;
+  if (composerTapCount < 2) return;
+  press.timer = setTimeout(() => {
+    if (composerHold !== press) return;
+    resetComposerHold();
+    composerPress = {id: press.id, x: press.x, y: press.y, moved: false, fromChat: true};
+    disableChatSelection();
+    showComposerControl();
+  }, 350);
+}, {passive: true});
+
+function chatGesturePoint(event, press) {
+  const touch = press && Array.from(event.changedTouches).find(touch => touch.identifier === press.id);
+  return touch && {pointerId: touch.identifier, clientX: touch.clientX, clientY: touch.clientY};
+}
+
+messages.addEventListener('touchmove', event => {
+  const swipe = composerPress?.fromChat && chatGesturePoint(event, composerPress);
+  if (swipe) {
+    if (event.cancelable) event.preventDefault();
+    moveComposerPress(swipe);
+    return;
+  }
+  const point = chatGesturePoint(event, composerHold);
+  if (point && Math.max(Math.abs(point.clientX - composerHold.x), Math.abs(point.clientY - composerHold.y)) >= 12) {
+    resetComposerHold();
+  }
+}, {passive: false});
+messages.addEventListener('touchend', event => {
+  const swipe = composerPress?.fromChat && chatGesturePoint(event, composerPress);
+  if (swipe) {
+    if (event.cancelable) event.preventDefault();
+    finishComposerPress(swipe, true);
+    return;
+  }
+  if (!chatGesturePoint(event, composerHold)) return;
+  const ended = performance.now();
+  if (ended - composerHold.started >= 350) {
+    resetComposerHold();
+    return;
+  }
+  clearTimeout(composerHold.timer);
+  composerHold = null;
+  composerTapCount++;
+  composerLastTap = ended;
+  composerTapExpiry = setTimeout(resetComposerHold, 350);
+}, {passive: false});
+messages.addEventListener('touchcancel', event => {
+  if (chatGesturePoint(event, composerHold)) resetComposerHold();
+  const swipe = composerPress?.fromChat && chatGesturePoint(event, composerPress);
+  if (swipe) finishComposerPress(swipe, false);
+}, {passive: true});
+messages.addEventListener('contextmenu', event => {
+  if (messages.classList.contains('is-composer-gesture')) event.preventDefault();
+});
+
+sendButton.onkeydown = event => {
+  if (!Object.prototype.hasOwnProperty.call(composerActions, event.key)) return;
+  event.preventDefault();
+  if (!event.repeat) composerActions[event.key][1]();
+};
+sendButton.onclick = event => {
+  if (event.detail && suppressComposerClick) return;
+  if (window.HackGptAndroid?.playSendHaptic) window.HackGptAndroid.playSendHaptic();
+  else navigator.vibrate?.(25);
+  sendButton.classList.remove('is-pulsing');
+  void sendButton.offsetWidth;
+  sendButton.classList.add('is-pulsing');
+  scheduleComposerHide();
+  if (!sendButton.classList.contains('is-actions-only')) promptBox.form.requestSubmit();
+};
 filePicker.onchange = () => {
   const files = [...filePicker.files];
   filePicker.value = '';
@@ -1874,9 +2361,9 @@ function replyImageSource(value) {
   return null;
 }
 
-function showTurn(turn) {
-  showFileNames(appendMessage('', turn.question, true), turn.files);
-  const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false);
+function showTurn(turn, target = messages) {
+  showFileNames(appendMessage('', turn.question, true, target), turn.files);
+  const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false, target);
   const images = replyImages.get(turn) ?? [];
   if (turn.reply) renderReplyMarkup(answer, turn.reply);
   else if (images.length) answer.lastElementChild.remove();
@@ -1923,6 +2410,59 @@ function showTurn(turn) {
     meta.textContent = items.join(' · ');
     answer.append(meta);
   }
+}
+
+function exportChatPdf(conversations, report) {
+  if (!conversations.length) {
+    report('Open a conversation with a reply before exporting.');
+    return;
+  }
+  const title = conversations.length === 1 ? conversations[0].title : 'HackGpt chat history';
+  const heading = document.createElement('title');
+  heading.textContent = title;
+  const content = document.createElement('main');
+  for (const chat of conversations) {
+    const section = document.createElement('section');
+    const label = document.createElement('h1');
+    label.textContent = chat.title;
+    section.append(label);
+    for (const turn of chat.turns) showTurn(turn, section);
+    for (const detail of section.querySelectorAll('details')) detail.open = true;
+    content.append(section);
+  }
+  const html = '<!doctype html><html><head><meta charset="utf-8">'
+    + '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:">'
+    + heading.outerHTML + '<style>'
+    + 'body{color:#151515;background:#fff;font:11pt/1.5 sans-serif;overflow-wrap:anywhere}'
+    + 'section+section{break-before:page;page-break-before:always}h1{font-size:18pt;margin:0 0 16px}'
+    + 'article{margin:0 0 14px}article.mine{border-left:3px solid #789760;padding-left:10px}'
+    + 'article.mine:before{content:"You";font-weight:bold}small{font-weight:bold}p{margin:4px 0 8px;white-space:pre-wrap}'
+    + '.model-markdown p{white-space:normal}pre{white-space:pre-wrap;overflow-wrap:anywhere}'
+    + 'table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #aaa;padding:4px}'
+    + 'img{display:block;max-width:100%;max-height:420pt;height:auto;break-inside:avoid}.file-chip{margin-right:8px}'
+    + '</style></head><body>' + content.outerHTML + '</body></html>';
+  if (html.length > 8_000_000) {
+    report('This export is too large. Select fewer chats and try again.');
+    return;
+  }
+  if (window.HackGptAndroid?.printChat) {
+    window.HackGptAndroid.printChat(title.slice(0, 140), html);
+    return;
+  }
+  if (window.HackGptAndroid) {
+    report('Update the Android app to export PDFs.');
+    return;
+  }
+  const output = window.open('', '_blank');
+  if (!output) {
+    report('Allow pop-ups to open the PDF print preview.');
+    return;
+  }
+  output.opener = null;
+  output.document.open();
+  output.addEventListener('load', () => output.print(), {once: true});
+  output.document.write(html);
+  output.document.close();
 }
 
 function setSending(value) {
@@ -2050,7 +2590,9 @@ find('composer').onsubmit = async event => {
       }
     } finally {
       setSending(false);
-      if (connection.base === kenariBase && model.profile.id !== demoProfileId) updateChatCredit(connection, true);
+      if (connection.base === routrBase || (connection.base === kenariBase && model.profile.id !== demoProfileId)) {
+        updateChatCredit(model, true);
+      }
       requestAbort = null;
     }
     if (images.length) {
@@ -2059,7 +2601,7 @@ find('composer').onsubmit = async event => {
     }
   }
 
-  if (!chat) chat = {id: newId(), title: text.replace(/\s+/g, ' ').slice(0, 60), source, turns: []};
+  if (!chat) chat = {id: newId(), title: text.replace(/\s+/g, ' ').slice(0, 60), source, createdAt: new Date().toISOString(), turns: []};
   if (files.length) turnFiles.set(turn, files);
   chat.turns.push(turn);
   chats = [chat, ...chats.filter(item => item.id !== chat.id)];

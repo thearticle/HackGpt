@@ -80,6 +80,14 @@ const server = http.createServer(async (request, response) => {
             const account = await upstream(connection, '/account/balance');
             return send(response, 200, {balance: account.available_micro_idr});
         }
+        if (request.url === '/api/routr-quota') {
+            const {connection: id, model} = await readBody(request);
+            const connection = connections.get(id);
+            if (connection?.base !== 'https://api.routr.cloud/v1') throw problem(409, 'Connect a Routr provider first.');
+            const account = await upstream({...connection, base: 'https://api.routr.cloud'}, '/api/me/model-quotas');
+            const quota = Array.isArray(account.quotas) && account.quotas.find(item => item?.model_sku === model);
+            return send(response, 200, {balance: quota?.available_credits});
+        }
         if (request.url === '/api/provider-details') {
             const {connection: id} = await readBody(request);
             const connection = connections.get(id);
