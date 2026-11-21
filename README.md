@@ -10,7 +10,7 @@
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-315c16?style=for-the-badge)](#getting-started)
 [![Java 17](https://img.shields.io/badge/Build-Java%2017-273820?style=for-the-badge)](#build-from-source)
 
-[Screenshots](#screenshots) · [Getting started](#getting-started) · [Chat controls](#chat-controls) · [Credits and quota](#credits-and-quota) · [Export and history](#export-and-history) · [What's new](#whats-new-in-v1014) · [Build](#build-from-source)
+[Screenshots](#screenshots) · [Getting started](#getting-started) · [Chat controls](#chat-controls) · [Credits and quota](#credits-and-quota) · [Export and history](#export-and-history) · [Build](#build-from-source)
 
 </div>
 
@@ -48,7 +48,7 @@ HackGpt brings several online model providers into one Android app. Connect with
 
 ## Getting started
 
-1. Install a signed APK on Android 8.0 or later and keep Android System WebView up to date. The v1.0.14 controls below describe the current source build. [GitHub Releases](https://github.com/thearticle/HackGpt/releases/latest)
+1. Install the latest signed APK on Android 8.0 or later and keep Android System WebView up to date. [GitHub Releases](https://github.com/thearticle/HackGpt/releases/latest)
 2. Open **Settings** and choose a provider preset or enter a custom HTTPS API base URL. Add the provider's API key.
 3. Tap the **plug** to load models. Check the ones you want in the picker, then tap the **disk** to save the provider.
 4. Open **Select model** in the top bar. Search for a saved model, pick it, and write a message. Tap **+** to start a new chat.
@@ -83,17 +83,6 @@ For more detail, open **Settings**, select the provider, and expand **Model deta
 **Bulk export.** Open **Chat history** from the top bar. Search by title, message, or attachment name, then hold a chat row to enter selection mode. Tap more rows to add them, or tap **☑** to select or deselect all visible search results. Tap **↓** beside the search field and choose where to save `HackGpt-chats.zip`. The ZIP contains one text-transcript PDF per selected chat, with attachment names listed in the transcript.
 
 **Manage history.** Tap a row to reopen it. Outside selection mode, swipe a row right to rename it or left to delete it. In selection mode, use **⌫** to delete the selected chats after confirmation.
-
-## What's new in v1.0.14
-
-Changes since **v1.0.13**:
-
-| Area | Update |
-| --- | --- |
-| **Chat controls** | A shared 62-pixel floating circle replaces the separate layouts. The marker can reposition it horizontally, snaps within 16 pixels of center, and remembers the chosen position. The circle fades and slides down after two idle seconds. |
-| **Touch gestures** | The Enter-to-Send action circle opens from the conversation area on the held third tap. Message selection is suppressed during the gesture. The inner dot tracks swipes in all four directions and eases back on release. Regular Send gives a pulse and light vibration with the blue tap highlight removed. |
-| **PDF export** | Swipe down to print or save the formatted current chat. Long-press in history to select multiple chats, select all visible search matches, export a ZIP of individual transcript PDFs, or delete the selection. |
-| **Provider usage** | The header adds a Routr quota badge for the selected model alongside the existing Kenari balance and Beam demo indicator. Tap the Routr badge to toggle the exact credit count. |
 
 ## Visual replies
 
