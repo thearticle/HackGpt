@@ -34,6 +34,7 @@ public final class MainActivity extends Activity {
     private WebView web;
     private ChatExport pendingExport;
     private ProviderBridge bridge;
+    private CodexBridge codex;
     private String fileRequest;
     private int fileRequestCode;
     private volatile boolean fullScreen;
@@ -74,8 +75,15 @@ public final class MainActivity extends Activity {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
                 if (APP_URL.equals(url.toString())) return false;
-                if (request.isForMainFrame() && request.hasGesture() && "https".equals(url.getScheme())) {
-                    openBrowser(url);
+                if (request.isForMainFrame() && request.hasGesture()) {
+                    Uri normalized = url.normalizeScheme();
+                    String scheme = normalized.getScheme();
+                    if ("https".equals(scheme) || "http".equals(scheme)) {
+                        if (!openBrowser(normalized)) {
+                            android.widget.Toast.makeText(MainActivity.this, "No browser is available to open the link.",
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                    }
                 }
                 return true;
             }
@@ -115,6 +123,8 @@ public final class MainActivity extends Activity {
         });
         bridge = new ProviderBridge(this, web);
         web.addJavascriptInterface(bridge, "HackGptAndroid");
+        codex = new CodexBridge(web);
+        web.addJavascriptInterface(codex, "HackGptCodex");
         setContentView(root);
         applyTheme(false);
         fullScreen = getPreferences(MODE_PRIVATE).getBoolean("full_screen", false);
@@ -367,6 +377,7 @@ public final class MainActivity extends Activity {
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
         }
         if (bridge != null) bridge.close();
+        if (codex != null) codex.disconnect();
         if (web != null) {
             web.removeJavascriptInterface("HackGptAndroid");
             web.destroy();

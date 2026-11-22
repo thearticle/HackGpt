@@ -57,7 +57,7 @@ small{font-size:12px;color:var(--muted)}
   background:linear-gradient(currentColor,currentColor) center/18px 2px no-repeat,
              linear-gradient(currentColor,currentColor) center/2px 18px no-repeat;
 }
-#provider::before{
+#provider::before,#codex-settings::before{
   content:"";
   width:18px;
   height:18px;
@@ -76,6 +76,8 @@ article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{position:relative}
 #composer .send{position:absolute;left:calc(50% + var(--composer-offset,0px));bottom:calc(100% + 32px);display:grid;place-items:center;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;background:var(--panel);color:var(--lime);border-color:var(--line);touch-action:none;user-select:none;-webkit-touch-callout:none;visibility:hidden;opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity 240ms ease,transform 240ms ease,visibility 0s linear 240ms}
 #composer .send.is-visible{visibility:visible;opacity:1;transform:translateX(-50%);pointer-events:auto;transition-delay:0s}
+#composer .send.is-stop{left:50%;z-index:2}
+#composer .send.is-stop .send-mark::after{border-radius:2px;animation:none}
 #composer .send,#composer-marker{-webkit-tap-highlight-color:transparent}
 #composer .send:focus,#composer-marker:focus{outline:0}
 #composer .send:focus-visible,#composer-marker:focus-visible{outline:1px solid var(--lime);outline-offset:2px}
@@ -108,6 +110,38 @@ textarea{resize:vertical;min-width:0;max-height:110px;flex:1;border:0;padding:9p
 #prompt:focus{outline:none}
 dialog{width:min(390px,calc(100% - 24px));background:var(--panel);color:var(--paper);border:1px solid var(--line);border-radius:6px;padding:20px}
 dialog::backdrop{background:var(--scrim)}
+#codex-dialog{width:min(420px,calc(100% - 28px));max-height:calc(100% - 28px);padding:14px}
+#codex-dialog form,#codex-threads{display:grid;gap:8px}
+#codex-settings[hidden]{display:none}
+#codex-connect-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;gap:8px}
+#codex-status{text-align:center;overflow-wrap:anywhere}
+#codex-status[data-connected="true"]{color:var(--lime)}
+#codex-connection-error{margin:0;color:var(--warning);font-size:12px}
+#codex-connection-error:empty{display:none}
+#codex-status,#codex-session-status{margin:0}
+#codex-session{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+#codex-session-status{font-size:11px}
+#codex-session small:empty{display:none}
+#codex-thread-dialog h2{font-size:14px;margin:0 0 10px}
+#codex-threads{max-height:55dvh;overflow:auto}
+#codex-threads button{text-align:start;overflow-wrap:anywhere}
+#codex-threads button[aria-pressed="true"]{background:var(--selection);border-color:var(--lime)}
+#codex-toolbar{display:none}
+.codex-mode #codex-toolbar{display:flex;gap:2px}
+#codex-pick{display:none}
+.codex-mode #codex-pick{display:grid}
+#codex-log,#codex-approvals{display:contents}
+#codex-approvals article{border:1px solid var(--line);border-radius:5px;padding:8px}
+#codex-approvals pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:35dvh;overflow:auto;font:inherit}
+#codex-session[hidden],#codex-exit[hidden]{display:none}
+#codex-exit svg,#codex-exit::before{grid-area:1/1}
+#codex-exit::before{content:"";width:28px;height:28px;border:1px solid currentColor;border-radius:50%;pointer-events:none;animation:update-ring-pulse 1.8s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){#codex-exit::before{animation:none}}
+.codex-mode :is(#provider,#model-button,#history-button,#chat-credit,#reset,#demo-status,#pending-files){display:none}
+.codex-mode{position:relative;isolation:isolate}
+#codex-watermark{display:none;position:absolute;inset:0;width:min(60%,240px);height:auto;margin:auto;opacity:.19;pointer-events:none;z-index:-1}
+.codex-mode #codex-watermark{display:block}
+.android-app .codex-mode #messages{margin-top:0;padding-top:0}
 #model-button::before{
   content:"";
   width:18px;
@@ -160,7 +194,8 @@ dialog::backdrop{background:var(--scrim)}
 #history-status:empty{display:none}
 @media(max-width:440px){main{border-radius:0;border:0}}
 #settings label{display:block;margin-top:12px;color:var(--muted);font-size:13px}
-#settings input,#settings select,#model-search,#history-search{width:100%;min-height:40px;margin:5px 0;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--ink);color:var(--paper);font:inherit}
+#settings input,#settings select,#codex-dialog input,#model-search,#history-search{width:100%;min-height:40px;margin:5px 0;padding:8px;border:1px solid var(--line);border-radius:4px;background:var(--ink);color:var(--paper);font:inherit}
+#codex-dialog input{margin:0;min-width:0;padding-left:37px}
 .provider-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
 .provider-actions>button{min-width:0;min-height:44px;padding:5px;overflow-wrap:anywhere}
 .provider-actions.is-connected{grid-template-columns:repeat(4,minmax(0,1fr))}
@@ -367,7 +402,8 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .model-markdown h1,.model-markdown h2,.model-markdown h3,.model-markdown h4,.model-markdown h5,.model-markdown h6{font-size:1.1em;margin:12px 0 4px;line-height:1.3}
 .model-markdown ul,.model-markdown ol{padding-left:1.35em;margin:6px 0}
 .model-markdown li+li{margin-top:3px}
-.model-markdown a{color:var(--lime)}
+.model-markdown a{color:var(--lime);font-weight:bold;text-decoration:underline;text-underline-offset:.15em}
+.model-markdown a:focus-visible{outline:1px solid currentColor;outline-offset:2px}
 .model-markdown blockquote{margin:8px 0;padding:2px 8px;border-left:2px solid var(--line);color:var(--muted)}
 .model-markdown hr{border:0;border-top:1px solid var(--line);margin:10px 0}
 .model-markdown code{font:inherit;background:var(--ink);padding:1px 3px;border-radius:3px}
@@ -399,17 +435,36 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </head>
 <body>
 <main>
+<canvas id="codex-watermark" width="440" height="420" aria-hidden="true"></canvas>
 <header>
 <div class="header-actions">
 <button id="provider" class="icon" disabled aria-label="Settings" title="Settings"></button>
 <button id="model-button" class="icon" aria-label="Select model" title="Select model"></button>
 <button id="history-button" class="icon" aria-label="Chat history" title="Chat history"></button>
+<button id="codex-pick" class="icon" type="button" aria-label="Choose project thread" title="Choose project thread" aria-haspopup="dialog" aria-controls="codex-thread-dialog">
+  <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M6.8 10h3.6l1.4 1.4h5.4v4.3H6.8z"/></svg>
+</button>
 <button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
+<button id="codex-exit" class="icon" type="button" aria-label="Exit Codex mode" title="Exit Codex mode" hidden>
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m5 5 8 8m0-8-8 8"/></svg>
+</button>
+<button id="codex-settings" class="icon" type="button" aria-label="Codex connection settings" title="Codex connection settings" aria-haspopup="dialog" aria-controls="codex-dialog" hidden></button>
 <button id="app-update" class="icon" type="button" aria-label="Download app update" hidden>
 <svg aria-hidden="true" width="24" height="24" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14V4m-4 4 4-4 4 4"/></svg>
 </button>
 </div>
 <div class="header-actions">
+<div id="codex-toolbar" role="group" aria-label="Codex thread actions">
+  <button id="codex-new" class="icon" type="button" aria-label="New thread" title="New thread">
+    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12h7M12 8.5v7"/></svg>
+  </button>
+  <button id="codex-refresh" class="icon" type="button" aria-label="Refresh threads" title="Refresh threads">
+    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-4L4 9m0-5v5h5m-5 4a8 8 0 0 0 14 4l2-2m0 5v-5h-5"/></svg>
+  </button>
+  <button id="codex-disconnect" class="icon" type="button" aria-label="Disconnect" title="Disconnect">
+    <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v9M7.2 5.8a8 8 0 1 0 9.6 0"/></svg>
+  </button>
+</div>
 <button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </div>
@@ -422,7 +477,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<div id="chat-status"><small id="demo-status" aria-live="polite"></small><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
+<div id="chat-status"><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><small id="codex-thread-name" aria-live="polite"></small><small id="codex-session-status" role="status"></small></div><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
@@ -2436,6 +2491,10 @@ function acceptsFile(file, model) {
 }
 
 function openAttachmentPicker() {
+  if (window.hackGptCodexMode) {
+    showChatError('Codex mode currently accepts text messages.');
+    return;
+  }
   if (sending || readingFiles) return;
   if (window.HackGptAndroid) addAttachments(() => androidRequest('pickFiles'));
   else filePicker.click();
@@ -2444,7 +2503,8 @@ function openAttachmentPicker() {
 function updateComposerButton(model, enterMode = find('enter-to-send').getAttribute('aria-pressed') === 'true') {
   sendButton.disabled = sending;
   sendButton.classList.toggle('is-actions-only', enterMode);
-  sendButton.setAttribute('aria-label', model && !enterMode ? 'Send' : 'Chat actions');
+  sendButton.setAttribute('aria-label', sendButton.classList.contains('is-stop')
+    ? 'Stop response' : (model || window.hackGptCodexMode) && !enterMode ? 'Send' : 'Chat actions');
   composerMarker.setAttribute('aria-label', enterMode ? 'Hold and drag to move chat controls' : 'Show send controls. Hold and drag to move.');
   if (enterMode) {
     if (sending) {
@@ -2460,6 +2520,7 @@ function updateComposerButton(model, enterMode = find('enter-to-send').getAttrib
 
 function hideComposerControl() {
   clearTimeout(composerIdle);
+  if (sendButton.classList.contains('is-stop')) return;
   const actionsOnly = sendButton.classList.contains('is-actions-only');
   sendButton.classList.remove('is-visible');
   sendButton.tabIndex = -1;
@@ -2470,7 +2531,7 @@ function hideComposerControl() {
 
 function scheduleComposerHide() {
   clearTimeout(composerIdle);
-  if (composerPress || markerPress?.dragging || !sendButton.classList.contains('is-visible')) return;
+  if (composerPress || markerPress?.dragging || sendButton.classList.contains('is-stop') || !sendButton.classList.contains('is-visible')) return;
   composerIdle = setTimeout(hideComposerControl, 2000);
 }
 
@@ -2488,6 +2549,7 @@ function showRegularComposerControl() {
 }
 
 function exportCurrentChat() {
+  if (window.hackGptCodexMode) return window.hackGptCodexMode.exportChat();
   exportChatMarkdown(chats.filter(chat => chat.id === activeId), showChatError);
 }
 
@@ -2615,7 +2677,7 @@ function composerDirection(event, threshold) {
 
 let suppressComposerClick = false;
 sendButton.onpointerdown = event => {
-  if (!event.isPrimary || event.button !== 0) return;
+  if (!event.isPrimary || event.button !== 0 || sendButton.classList.contains('is-stop')) return;
   suppressComposerClick = false;
   composerPress = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
   sendButton.setPointerCapture(event.pointerId);
@@ -2670,7 +2732,7 @@ function disableChatSelection() {
 }
 
 messages.addEventListener('touchstart', event => {
-  if (!sendButton.classList.contains('is-actions-only') || sending) return;
+  if (!sendButton.classList.contains('is-actions-only') || sendButton.classList.contains('is-stop') || sending) return;
   if (event.target.closest?.('.model-handoff')) {
     resetComposerHold();
     return;
@@ -2743,11 +2805,16 @@ messages.addEventListener('contextmenu', event => {
 });
 
 sendButton.onkeydown = event => {
+  if (sendButton.classList.contains('is-stop')) return;
   if (!Object.prototype.hasOwnProperty.call(composerActions, event.key)) return;
   event.preventDefault();
   if (!event.repeat) composerActions[event.key][1]();
 };
 sendButton.onclick = event => {
+  if (sendButton.classList.contains('is-stop')) {
+    window.hackGptCodexMode?.stop();
+    return;
+  }
   if (event.detail && suppressComposerClick) return;
   if (window.HackGptAndroid?.playSendHaptic) window.HackGptAndroid.playSendHaptic();
   else navigator.vibrate?.(25);
@@ -2943,7 +3010,7 @@ if (replyMarkdown) {
     return renderInlineVisual(kind, token.content, replyMarkdown.utils.escapeHtml)
       ?? standardFence(tokens, index, options, env, renderer);
   };
-  replyMarkdown.validateLink = url => /^https:\/\//i.test(url);
+  replyMarkdown.validateLink = url => /^https?:\/\//i.test(url);
   replyMarkdown.renderer.rules.image = (tokens, index) =>
     replyMarkdown.utils.escapeHtml(tokens[index].content);
   replyMarkdown.renderer.rules.link_open = (tokens, index, options, env, renderer) => {
@@ -3359,10 +3426,11 @@ async function receiveReply(payload, onEvent, signal) {
   return stats;
 }
 
-stopResponse.onclick = () => requestAbort?.abort();
+stopResponse.onclick = () => window.hackGptCodexMode ? window.hackGptCodexMode.stop() : requestAbort?.abort();
 
 find('composer').onsubmit = async event => {
   event.preventDefault();
+  if (window.hackGptCodexMode) return window.hackGptCodexMode.send();
   if (sending || readingFiles) return;
   const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
   const model = currentModel();
@@ -3597,41 +3665,61 @@ reset.onclick = () => {
   openNewChat();
 };
 
-const art = find('signal').getContext('2d');
-art.scale(2, 2);
-art.strokeStyle = '#baff56';
-art.fillStyle = '#baff56';
-art.lineCap = 'round';
-art.lineJoin = 'round';
+function drawSignal(canvas, codexMode = false) {
+  const art = canvas.getContext('2d');
+  art.scale(2, 2);
+  art.strokeStyle = '#baff56';
+  art.fillStyle = '#baff56';
+  art.lineCap = 'round';
+  art.lineJoin = 'round';
 
-function trace(points, width) {
-  art.lineWidth = width;
-  art.beginPath();
-  art.moveTo(...points[0]);
-  for (const point of points.slice(1)) art.lineTo(...point);
-  art.stroke();
-}
+  function trace(points, width) {
+    art.lineWidth = width;
+    art.beginPath();
+    art.moveTo(...points[0]);
+    for (const point of points.slice(1)) art.lineTo(...point);
+    art.stroke();
+  }
 
-art.globalAlpha = .46;
-trace([[110,17],[169,49],[184,104],[169,160],[110,193],[51,160],[36,104],[51,49],[110,17]], 1);
-trace([[110,28],[159,56],[172,104],[159,152],[110,180],[61,152],[48,104],[61,56],[110,28]], .75);
-for (const [side, y] of [[-1,75],[1,75],[-1,134],[1,134]]) {
-  const x = 110 + side * 60;
-  const end = 110 + side * 91;
-  trace([[x,y],[x + side * 9,y],[end - side * 8,y - 8],[end,y - 8]], 1);
-  art.beginPath();
-  art.arc(end,y - 8,2,0,Math.PI * 2);
-  art.fill();
+  art.globalAlpha = .46;
+  trace([[110,17],[169,49],[184,104],[169,160],[110,193],[51,160],[36,104],[51,49],[110,17]], 1);
+  trace([[110,28],[159,56],[172,104],[159,152],[110,180],[61,152],[48,104],[61,56],[110,28]], .75);
+  for (const [side, y] of [[-1,75],[1,75],[-1,134],[1,134]]) {
+    const x = 110 + side * 60;
+    const end = 110 + side * 91;
+    trace([[x,y],[x + side * 9,y],[end - side * 8,y - 8],[end,y - 8]], 1);
+    art.beginPath();
+    art.arc(end,y - 8,2,0,Math.PI * 2);
+    art.fill();
+  }
+  art.globalAlpha = 1;
+  trace([[67,130],[72,92],[89,66],[110,56],[131,66],[148,92],[153,130],[135,140],[124,153],[96,153],[85,140],[67,130]], 2);
+  trace([[82,107],[90,90],[110,83],[130,90],[138,107],[132,123],[110,132],[88,123],[82,107]], 1.4);
+  if (codexMode) {
+    art.lineWidth = 1.8;
+    art.beginPath();
+    art.moveTo(98, 115);
+    art.bezierCurveTo(87, 115, 88, 101, 96, 100);
+    art.bezierCurveTo(97, 91, 108, 88, 114, 95);
+    art.bezierCurveTo(120, 92, 127, 96, 127, 102);
+    art.bezierCurveTo(135, 106, 131, 119, 123, 119);
+    art.lineTo(100, 119);
+    art.bezierCurveTo(97, 119, 96, 117, 98, 115);
+    art.closePath();
+    art.stroke();
+    trace([[101,102],[106,107],[101,112]], 1.8);
+    trace([[112,112],[120,112]], 1.8);
+  } else {
+    trace([[98,99],[106,106],[98,113]], 2.4);
+    trace([[113,114],[123,114]], 2);
+  }
+  art.globalAlpha = .54;
+  trace([[93,145],[110,150],[127,145]], 1);
+  trace([[101,36],[119,36]], 1.2);
+  trace([[101,171],[119,171]], 1.2);
 }
-art.globalAlpha = 1;
-trace([[67,130],[72,92],[89,66],[110,56],[131,66],[148,92],[153,130],[135,140],[124,153],[96,153],[85,140],[67,130]], 2);
-trace([[82,107],[90,90],[110,83],[130,90],[138,107],[132,123],[110,132],[88,123],[82,107]], 1.4);
-trace([[98,99],[106,106],[98,113]], 2.4);
-trace([[113,114],[123,114]], 2);
-art.globalAlpha = .54;
-trace([[93,145],[110,150],[127,145]], 1);
-trace([[101,36],[119,36]], 1.2);
-trace([[101,171],[119,171]], 1.2);
+drawSignal(find('signal'));
+drawSignal(find('codex-watermark'), true);
 
 updateModelStatus();
 restoreConnections();
@@ -3663,6 +3751,508 @@ if (window.HackGptAndroid?.openAppUpdate) {
   document.addEventListener('visibilitychange', checkForAppUpdate);
   setInterval(checkForAppUpdate, refreshInterval);
 }
+</script>
+<dialog id="codex-dialog" aria-label="Codex connection settings">
+  <form id="codex-connect" autocomplete="off">
+    <div class="url-field"><span class="url-icon" aria-hidden="true"></span><input id="codex-url" aria-label="Private server URL" type="url" placeholder="Private server URL" required autocapitalize="none" spellcheck="false"></div>
+    <div class="key-field"><span class="key-icon" aria-hidden="true"></span><input id="codex-token" aria-label="Connection token" type="password" placeholder="Connection token" autocomplete="new-password"></div>
+    <div class="name-field"><span class="name-icon" aria-hidden="true"></span><input id="codex-project" aria-label="Project folder on PC" placeholder="Project folder on PC" required spellcheck="false"></div>
+    <div id="codex-connect-row">
+      <button id="codex-connect-button" class="primary" type="submit">Connect</button>
+      <small id="codex-status" role="status">Disconnected</small>
+    </div>
+    <p id="codex-connection-error" role="alert"></p>
+  </form>
+</dialog>
+<dialog id="codex-thread-dialog" aria-labelledby="codex-thread-heading">
+  <h2 id="codex-thread-heading">Project threads</h2>
+  <div id="codex-threads"></div>
+</dialog>
+<script>
+(() => {
+  const bridge = window.HackGptCodex;
+  if (!bridge) return;
+  const dialog = find('codex-dialog');
+  const connect = find('codex-connect');
+  const connectButton = find('codex-connect-button');
+  const connectionStatus = find('codex-status');
+  const connectionError = find('codex-connection-error');
+  const endpointInput = find('codex-url');
+  const tokenInput = find('codex-token');
+  const projectInput = find('codex-project');
+  const settingsButton = find('codex-settings');
+  const session = find('codex-session');
+  let status = connectionError;
+  const threads = find('codex-threads');
+  const threadDialog = find('codex-thread-dialog');
+  const pick = find('codex-pick');
+  const threadName = find('codex-thread-name');
+  const threadLabels = new Map();
+  const exit = find('codex-exit');
+  const log = document.createElement('div');
+  log.id = 'codex-log';
+  const approvals = document.createElement('div');
+  approvals.id = 'codex-approvals';
+  const prompt = promptBox;
+  const regularMessages = document.createDocumentFragment();
+  const messageText = new WeakMap();
+  const pending = new Map();
+  const replies = new Map();
+  const fileChanges = new Map();
+  const approvalCards = new Map();
+  const settings = {sandbox: 'workspace-write', approvalPolicy: 'on-request', approvalsReviewer: 'user'};
+  let sequence = 0, project = '', threadId = '', turnId = '', busy = false;
+  let connected = false, regularDraft = '', codexDraft = '', regularScroll = 0;
+  let connecting = false, connectionAttempt = 0, savedEndpoint = '';
+
+  function updateSavedTokenHint() {
+    tokenInput.placeholder = savedEndpoint && endpointInput.value.trim() === savedEndpoint
+      ? 'Saved connection token' : 'Connection token';
+  }
+
+  function updateConnectionStatus() {
+    connectionStatus.textContent = connecting ? 'Connecting…' : connected ? 'Connected' : 'Disconnected';
+    connectionStatus.dataset.connected = String(connected);
+    connectButton.disabled = connecting || (connected && busy);
+    connectButton.textContent = connected ? 'Reconnect' : 'Connect';
+  }
+
+  try {
+    const storedConnection = bridge.loadConnection();
+    if (!storedConnection) throw new Error('Could not load the saved connection.');
+    const saved = JSON.parse(storedConnection);
+    endpointInput.value = saved.endpoint || '';
+    projectInput.value = saved.project || '';
+    if (saved.hasToken) savedEndpoint = saved.endpoint;
+    updateSavedTokenHint();
+  } catch (error) {
+    connectionError.textContent = error.message;
+  }
+  endpointInput.addEventListener('input', updateSavedTokenHint);
+  settingsButton.hidden = false;
+  settingsButton.onclick = () => dialog.showModal();
+
+  function setDraft(value) {
+    prompt.value = value;
+    prompt.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+
+  function enterMode() {
+    if (window.hackGptCodexMode) return;
+    if (sending || readingFiles) {
+      showChatError('Finish the current chat operation before opening Codex.');
+      return;
+    }
+    dialog.close();
+    regularScroll = messages.scrollTop;
+    regularDraft = prompt.value;
+    regularMessages.append(...messages.childNodes);
+    messages.append(log, approvals);
+    window.hackGptCodexMode = {send, stop, exportChat};
+    messages.closest('main').classList.add('codex-mode');
+    status = find('codex-session-status');
+    session.hidden = exit.hidden = false;
+    prompt.setAttribute('aria-label', 'Message Codex');
+    showChatError('');
+    setDraft(codexDraft);
+    if (log.isConnected) messages.scrollTop = messages.scrollHeight;
+    sync();
+  }
+
+  function leaveMode() {
+    if (!window.hackGptCodexMode) return;
+    codexDraft = prompt.value;
+    log.remove();
+    approvals.remove();
+    messages.append(regularMessages);
+    messages.scrollTop = regularScroll;
+    window.hackGptCodexMode = null;
+    messages.closest('main').classList.remove('codex-mode');
+    session.hidden = exit.hidden = true;
+    status = connectionError;
+    prompt.setAttribute('aria-label', 'Message');
+    stopResponse.hidden = true;
+    sync();
+    showChatError('');
+    setDraft(regularDraft);
+  }
+
+  function sync() {
+    const showStop = Boolean(window.hackGptCodexMode && turnId);
+    if (sendButton.classList.contains('is-stop') !== showStop) {
+      sendButton.classList.toggle('is-stop', showStop);
+      if (showStop) {
+        resetComposerHold();
+        showComposerControl(false);
+      } else {
+        hideComposerControl();
+      }
+      updateComposerButton(currentModel());
+      if (showStop) composerMarker.hidden = true;
+    }
+    find('codex-new').disabled = pick.disabled = busy;
+    updateConnectionStatus();
+  }
+
+  function rpc(method, params) {
+    return new Promise((resolve, reject) => {
+      const id = ++sequence;
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reject(new Error('PC did not respond to ' + method + '.'));
+      }, 30000);
+      pending.set(id, {resolve, reject, timer});
+      if (!bridge.send(JSON.stringify({id, method, params}))) {
+        clearTimeout(timer);
+        pending.delete(id);
+        reject(new Error('Connection is closed.'));
+      }
+    });
+  }
+
+  function disconnected(message) {
+    connectionAttempt++;
+    connecting = false;
+    connected = false;
+    leaveMode();
+    for (const request of pending.values()) {
+      clearTimeout(request.timer);
+      request.reject(new Error(message));
+    }
+    pending.clear();
+    threadId = turnId = '';
+    threadLabels.clear();
+    threadName.textContent = '';
+    threadDialog.close();
+    busy = false;
+    log.replaceChildren();
+    approvals.replaceChildren();
+    approvalCards.clear();
+    replies.clear();
+    fileChanges.clear();
+    session.hidden = true;
+    connectionError.textContent = message;
+    sync();
+  }
+
+  function append(label, value) {
+    const row = appendMessage(label, value, label === 'You', log);
+    messageText.set(row, {label, value});
+    if (label === 'Codex' && value) renderReplyMarkup(row, value);
+    messages.scrollTop = messages.scrollHeight;
+    return row;
+  }
+
+  function exportChat() {
+    const turns = [];
+    for (const row of log.children) {
+      const {label, value} = messageText.get(row);
+      if (label === 'You') turns.push({question: value, model: 'Codex', reply: ''});
+      else {
+        if (!turns.length) turns.push({question: '', model: 'Codex', reply: ''});
+        const turn = turns.at(-1);
+        const content = label === 'Codex' ? value : '### ' + label + '\n\n' + value;
+        turn.reply = [turn.reply, content].filter(Boolean).join('\n\n');
+      }
+    }
+    exportChatMarkdown(turns.length ? [{title: threadLabels.get(threadId) || 'Codex', turns}] : [], showChatError);
+  }
+
+  async function refresh() {
+    const result = await rpc('thread/list', {cwd: project, limit: 40});
+    const currentLabel = threadLabels.get(threadId);
+    threadLabels.clear();
+    for (const thread of result.data) {
+      threadLabels.set(thread.id, thread.name || thread.preview || thread.id);
+    }
+    if (threadId && !threadLabels.has(threadId)) threadLabels.set(threadId, currentLabel || threadId);
+    threadName.textContent = threadLabels.get(threadId) || '';
+    if (threadDialog.open) renderThreadPicker();
+  }
+
+  function renderThreadPicker() {
+    threads.replaceChildren();
+    if (!threadLabels.size) {
+      const emptyList = document.createElement('small');
+      emptyList.textContent = 'No threads in this project yet.';
+      threads.append(emptyList);
+      return;
+    }
+    for (const [id, label] of threadLabels) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.setAttribute('aria-pressed', String(id === threadId));
+      button.onclick = () => {
+        threadDialog.close();
+        if (id !== threadId) openThread(id).catch(onError);
+      };
+      threads.append(button);
+    }
+  }
+
+  async function openThread(id) {
+    if (busy) return;
+    busy = true;
+    sync();
+    try {
+      const result = id
+        ? await rpc('thread/resume', {...settings, cwd: project, threadId: id})
+        : await rpc('thread/start', {...settings, cwd: project});
+      threadId = result.thread.id;
+      log.replaceChildren();
+      replies.clear();
+      fileChanges.clear();
+      approvals.replaceChildren();
+      approvalCards.clear();
+      for (const turn of result.thread.turns ?? []) {
+        for (const item of turn.items) {
+          if (item.type === 'userMessage') {
+            append('You', item.content.filter(part => part.type === 'text').map(part => part.text).join('\n'));
+          } else if (item.type === 'agentMessage') {
+            append('Codex', item.text);
+          }
+        }
+        if (turn.status === 'inProgress') turnId = turn.id;
+      }
+      status.textContent = '';
+      const label = result.thread.name || threadLabels.get(threadId) || result.thread.preview || 'New thread';
+      threadLabels.set(threadId, label);
+      threadName.textContent = label;
+    } finally {
+      busy = Boolean(turnId);
+      sync();
+    }
+  }
+
+  function approval(message) {
+    const {id, method, params} = message;
+    const command = method === 'item/commandExecution/requestApproval';
+    const file = method === 'item/fileChange/requestApproval';
+    const respond = result => bridge.send(JSON.stringify({id, result}));
+    if (!command && !file) {
+      bridge.send(JSON.stringify({id, error: {code: -32601, message: 'Request type unavailable in HackGpt'}}));
+      return;
+    }
+    if (params.threadId !== threadId) {
+      respond({decision: 'decline'});
+      return;
+    }
+    const card = document.createElement('article');
+    const detail = document.createElement('pre');
+    const changes = fileChanges.get(params.itemId);
+    const target = command ? params.command : changes?.map(change => change.path + '\n' + change.diff).join('\n\n');
+    detail.textContent = [command ? 'Command approval' : 'File change approval',
+      target, params.cwd, params.grantRoot, params.reason, params.networkApprovalContext?.host].filter(Boolean).join('\n');
+    card.append(detail);
+    for (const [label, decision] of [['Approve once', 'accept'], ['Decline', 'decline']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.disabled = decision === 'accept' && !target && !params.networkApprovalContext?.host;
+      button.onclick = () => {
+        if (respond({decision})) {
+          card.remove();
+          approvalCards.delete(id);
+        }
+        else status.textContent = 'Approval could not be sent.';
+      };
+      card.append(button);
+    }
+    approvalCards.set(id, card);
+    approvals.append(card);
+  }
+
+  function onError(error) { status.textContent = error.message; }
+
+  window.hackGptCodexEvent = async (kind, data) => {
+    if (kind === 'closed') {
+      disconnected(data);
+      return;
+    }
+    if (kind === 'open') {
+      const attempt = connectionAttempt;
+      try {
+        await rpc('initialize', {clientInfo: {name: 'hackgpt', title: 'HackGpt', version: '0.1.0'}});
+        bridge.send(JSON.stringify({method: 'initialized'}));
+        await refresh();
+        if (attempt !== connectionAttempt) return;
+        connecting = false;
+        connected = true;
+        find('codex-session-status').textContent = 'Choose a thread or start a new one.';
+        dialog.close();
+        enterMode();
+        sync();
+      } catch (error) {
+        if (attempt !== connectionAttempt) return;
+        bridge.disconnect();
+        disconnected(error.message);
+      }
+      return;
+    }
+    let message;
+    try { message = JSON.parse(data); } catch { return; }
+    if ('id' in message) {
+      if (message.method) {
+        approval(message);
+      } else {
+        const request = pending.get(message.id);
+        if (!request) return;
+        pending.delete(message.id);
+        clearTimeout(request.timer);
+        if (message.error) request.reject(new Error(message.error.message));
+        else request.resolve(message.result);
+      }
+      return;
+    }
+    const params = message.params;
+    if (params?.threadId !== threadId) return;
+    const item = params.item;
+    switch (message.method) {
+      case 'serverRequest/resolved':
+        approvalCards.get(params.requestId)?.remove();
+        approvalCards.delete(params.requestId);
+        break;
+      case 'turn/started':
+        turnId = params.turn.id;
+        busy = true;
+        sync();
+        break;
+      case 'item/agentMessage/delta': {
+        const row = replies.get(params.itemId) ?? append('Codex', '');
+        replies.set(params.itemId, row);
+        const message = messageText.get(row);
+        message.value += params.delta;
+        row.lastElementChild.textContent = message.value;
+        if (log.isConnected) messages.scrollTop = messages.scrollHeight;
+        break;
+      }
+      case 'item/started':
+        if (item.type === 'fileChange') fileChanges.set(item.id, item.changes);
+        break;
+      case 'item/completed':
+        if (item.type === 'agentMessage') {
+          const row = replies.get(item.id);
+          if (row) {
+            messageText.get(row).value = item.text;
+            row.lastElementChild.textContent = item.text;
+            renderReplyMarkup(row, item.text);
+            replies.delete(item.id);
+          } else append('Codex', item.text);
+        } else if (item.type === 'fileChange') {
+          append('File changes', item.changes.map(change => change.path + '\n' + change.diff).join('\n\n'));
+        } else if (item.type === 'commandExecution') {
+          append('Command · ' + item.status, item.command);
+        }
+        break;
+      case 'turn/completed':
+        turnId = '';
+        busy = false;
+        approvals.replaceChildren();
+        approvalCards.clear();
+        replies.clear();
+        fileChanges.clear();
+        status.textContent = params.turn.error?.message || 'Turn ' + params.turn.status;
+        sync();
+        break;
+    }
+  };
+
+  dismissOnBackdrop(dialog);
+  dismissOnBackdrop(threadDialog);
+  pick.onclick = () => {
+    renderThreadPicker();
+    threadDialog.showModal();
+  };
+  let tapCount = 0, lastTap = null, press = null;
+  function resetTaps() {
+    tapCount = 0;
+    lastTap = press = null;
+  }
+  document.addEventListener('pointerdown', event => {
+    if (!event.isPrimary || event.button !== 0 || !messages.contains(event.target)
+        || event.target.closest('button, a, input, textarea, select, label, img, .model-handoff')
+        || document.querySelector('dialog[open]')) {
+      resetTaps();
+      return;
+    }
+    press = {id: event.pointerId, x: event.clientX, y: event.clientY, time: performance.now()};
+  });
+  const distance = (point, event) => Math.hypot(point.x - event.clientX, point.y - event.clientY);
+  document.addEventListener('pointermove', event => {
+    if (press?.id === event.pointerId && distance(press, event) >= 12) resetTaps();
+  }, {passive: true});
+  document.addEventListener('pointercancel', resetTaps);
+  messages.addEventListener('scroll', resetTaps, {passive: true});
+  messages.addEventListener('pointerup', event => {
+    const now = performance.now();
+    if (press?.id !== event.pointerId || now - press.time >= 350 || distance(press, event) >= 12) {
+      resetTaps();
+      return;
+    }
+    if (lastTap && (now - lastTap.time > 450 || distance(lastTap, event) > 44)) tapCount = 0;
+    lastTap = {x: event.clientX, y: event.clientY, time: now};
+    press = null;
+    if (++tapCount !== 7) return;
+    resetTaps();
+    resetComposerHold();
+    window.getSelection()?.removeAllRanges();
+    if (connected) enterMode();
+    else dialog.showModal();
+  });
+  exit.onclick = leaveMode;
+  find('codex-disconnect').onclick = () => {
+    bridge.disconnect();
+    disconnected('');
+  };
+  connect.onsubmit = event => {
+    event.preventDefault();
+    if (connecting || (connected && busy)) return;
+    const endpoint = endpointInput.value.trim();
+    const nextProject = projectInput.value.trim();
+    const error = bridge.connect(endpoint, tokenInput.value.trim(), nextProject);
+    if (error) {
+      connectionError.textContent = error;
+      return;
+    }
+    disconnected('');
+    project = nextProject;
+    connecting = true;
+    savedEndpoint = endpoint;
+    tokenInput.value = '';
+    updateSavedTokenHint();
+    updateConnectionStatus();
+  };
+  find('codex-new').onclick = () => openThread('').catch(onError);
+  find('codex-refresh').onclick = () => refresh().catch(onError);
+  async function send() {
+    const message = prompt.value.trim();
+    if (!message || busy) return;
+    if (!threadId) {
+      status.textContent = 'Choose a project thread or start a new one.';
+      return;
+    }
+    busy = true;
+    sync();
+    status.textContent = 'Codex is working…';
+    const row = append('You', message);
+    setDraft('');
+    try {
+      await rpc('turn/start', {threadId, input: [{type: 'text', text: message, text_elements: []}]});
+    } catch (error) {
+      row.remove();
+      if (log.isConnected && !prompt.value) setDraft(message);
+      else if (!log.isConnected && !codexDraft) codexDraft = message;
+      busy = Boolean(turnId);
+      sync();
+      onError(error);
+    }
+  }
+  function stop() {
+    if (turnId) return rpc('turn/interrupt', {threadId, turnId}).catch(onError);
+  }
+  sync();
+})();
 </script>
 </body>
 </html>

@@ -115,6 +115,12 @@ Tap the pulsing **↓** under a generated image to save it. Double-tap or hold t
 | Org chart | “Create an org chart for a small product team.” |
 | Sequence diagram | “Show a sequence diagram for a checkout request between the customer, shop, and payment provider.” |
 
+## Codex on PC
+
+On Android, tap the chat area seven times or use the Codex settings gear to connect to a Codex App Server on your PC. Choose a project thread from the circled folder. Prompts and replies use the main chat. Tap the pulsing **X** to return to regular chat, or the power icon to disconnect.
+
+[Set up the private connection](CODEX-REMOTE.md)
+
 ## Storage and connectivity
 
 The Android app saves credentials using Android Keystore-backed encryption. Chat history and appearance preferences are stored on your device. Attachment names stay in history, and file contents remain available for the current app session.

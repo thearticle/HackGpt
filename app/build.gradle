@@ -39,8 +39,8 @@ android {
         applicationId 'com.thearticle.hackgpt'
         minSdk 26
         targetSdk 36
-        versionCode 21
-        versionName '1.0.19'
+        versionCode 22
+        versionName '1.0.20'
     }
 
     buildTypes {
@@ -58,6 +58,10 @@ android {
 }
 
 def demoKeyFile = providers.environmentVariable('HACKGPT_PRIVATE_DEMO_KEY_FILE').orNull
+dependencies {
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}
+
 androidComponents {
     onVariants(selector().all()) { variant ->
         def bundle = tasks.register('bundle' + variant.name.capitalize() + 'ChatUi', BundleChatUi) {

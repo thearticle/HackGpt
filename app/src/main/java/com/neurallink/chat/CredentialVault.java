@@ -19,21 +19,26 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 final class CredentialVault {
-    private static final String ALIAS = "hackgpt-provider-vault";
+    private final String alias;
     private final SharedPreferences preferences;
 
     CredentialVault(Context context) {
-        preferences = context.getSharedPreferences("provider-vault", Context.MODE_PRIVATE);
+        this(context, "provider-vault");
+    }
+
+    CredentialVault(Context context, String name) {
+        alias = "hackgpt-" + name;
+        preferences = context.getSharedPreferences(name, Context.MODE_PRIVATE);
     }
 
     private SecretKey key(boolean create) throws Exception {
         var store = KeyStore.getInstance("AndroidKeyStore");
         store.load(null);
-        var existing = (SecretKey) store.getKey(ALIAS, null);
+        var existing = (SecretKey) store.getKey(alias, null);
         if (existing != null) return existing;
         if (!create) throw new IOException("Provider vault key is unavailable.");
         var generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
-        generator.init(new KeyGenParameterSpec.Builder(ALIAS,
+        generator.init(new KeyGenParameterSpec.Builder(alias,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
