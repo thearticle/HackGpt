@@ -74,7 +74,7 @@ article.mine>p{margin-top:0}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
 #composer{position:relative}
-#composer .send{position:absolute;left:calc(50% + var(--composer-offset,0px));bottom:calc(100% + 20px);display:grid;place-items:center;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;background:var(--panel);color:var(--lime);border-color:var(--line);touch-action:none;user-select:none;-webkit-touch-callout:none;visibility:hidden;opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity 240ms ease,transform 240ms ease,visibility 0s linear 240ms}
+#composer .send{position:absolute;left:calc(50% + var(--composer-offset,0px));bottom:calc(100% + 32px);display:grid;place-items:center;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;background:var(--panel);color:var(--lime);border-color:var(--line);touch-action:none;user-select:none;-webkit-touch-callout:none;visibility:hidden;opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity 240ms ease,transform 240ms ease,visibility 0s linear 240ms}
 #composer .send.is-visible{visibility:visible;opacity:1;transform:translateX(-50%);pointer-events:auto;transition-delay:0s}
 #composer .send,#composer-marker{-webkit-tap-highlight-color:transparent}
 #composer .send:focus,#composer-marker:focus{outline:0}
@@ -88,7 +88,7 @@ article p{margin:6px 0 0;white-space:pre-wrap}
 #composer .resize-grip.right{right:0}
 #composer .resize-grip.right::before{transform:scaleX(-1)}
 #composer .resize-grip:active,#composer .resize-grip:focus-visible{color:var(--lime)}
-#composer-gesture{position:absolute;left:clamp(76px,calc(50% + var(--composer-offset,0px)),calc(100% - 76px));bottom:calc(100% + 88px);transform:translateX(-50%);white-space:nowrap;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);pointer-events:none;animation:composer-hint-pulse 1.8s ease-in-out infinite}
+#composer-gesture{position:absolute;left:clamp(76px,calc(50% + var(--composer-offset,0px)),calc(100% - 76px));bottom:calc(100% + 100px);transform:translateX(-50%);white-space:nowrap;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);pointer-events:none;animation:composer-hint-pulse 1.8s ease-in-out infinite}
 #composer .send.is-pulsing{animation:composer-tap 300ms ease-out}
 @keyframes composer-tap{50%{box-shadow:0 0 14px var(--lime);transform:translateX(-50%) scale(1.08)}}
 @keyframes composer-hint-pulse{0%,100%{opacity:.72}50%{opacity:1}}
@@ -288,6 +288,7 @@ article .pending-reply{color:var(--muted)}
 .history-search-row{display:flex;align-items:flex-start;gap:6px}
 #history-search{flex:1;min-width:0}
 .history-search-row button{flex:0 0 40px;min-height:40px;padding:0;font-size:17px}
+#history-export-selected:not([hidden]){display:grid;place-items:center}
 #history-list .swipe-button{-webkit-touch-callout:none}
 #history-list .swipe-button[aria-pressed="true"]{background:var(--selection);border-color:var(--lime);box-shadow:inset 0 0 12px var(--glow)}
 #history-list .selection-pulse{animation:history-pulse 380ms ease-out}
@@ -531,7 +532,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <div class="history-search-row">
 <input id="history-search" type="search" aria-label="Search chats" placeholder="Search chats">
 <button id="history-toggle-all" type="button" aria-label="Select all shown chats" title="Select all shown chats" hidden>☑</button>
-<button id="history-export-selected" type="button" aria-label="Export selected chats as Markdown" title="Export selected chats as Markdown" hidden>↓</button>
+<button id="history-export-selected" type="button" aria-label="Export selected chats as Markdown" title="Export selected chats as Markdown" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18m-6-6 6 6 6-6"/></svg></button>
 <button id="history-delete-selected" type="button" class="danger-button" aria-label="Delete selected chats" title="Delete selected chats" hidden>⌫</button>
 </div>
 <div id="history-list" tabindex="-1" autofocus></div>
