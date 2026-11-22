@@ -57,6 +57,8 @@ HackGpt brings several online model providers into one Android app. Connect with
 
 Settings always opens on the provider setup screen. Tap a saved provider in the scrollable three-column grid to edit it. The **▶** icon in Settings tests every checked model, and provider charges may apply.
 
+When a newer APK is available on GitHub, Android shows an **↑** update icon beside **Appearance**. Tap it to download the APK, then open the downloaded file and confirm the update in Android.
+
 ## Chat controls
 
 - **Regular mode.** Tap the pulsing marker above the message field to reveal the Send circle. Tap the circle to send. It pulses and gives light haptic feedback on Android.
@@ -77,7 +79,9 @@ The focused circle also accepts the arrow keys. Its inner dot follows your swipe
 
 Select another model during a chat to open a handoff card in the conversation. The card identifies the receiving model and provider. Choose **Summary** to review or edit a handoff before sending, **Full history** to share earlier prompts and replies, or **Fresh start** to send the next message alone while keeping earlier turns visible.
 
-In **Summarize with**, choose the previous or new model, then tap **Generate summary** to send all earlier user messages and assistant replies to that model for summarization. **Include latest generated image** appears when the image is still available and the receiving model declares image input support. The collapsed handoff card records which mode you used.
+Slide from **Full history** on the left through **¾**, **½**, and **¼** summaries to **Fresh start** on the right. The fractions are approximate targets for how much of the original conversation to keep. The model buttons stay visible at every stop and are enabled at the summary levels. Tap either one to choose who summarizes. The new model is selected by default when it supports text replies. Tap the pulsing **▶** to open the summary field and generate a draft. Triple-tap the field to edit it.
+
+**Include latest generated image** appears when the image is still available and the receiving model declares image input support. The collapsed handoff card records which mode you used.
 
 ## Model details and quota
 

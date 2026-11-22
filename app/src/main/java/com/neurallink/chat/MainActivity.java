@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -36,6 +37,7 @@ public final class MainActivity extends Activity {
     private String fileRequest;
     private int fileRequestCode;
     private volatile boolean fullScreen;
+    private volatile float fullScreenTopInset;
     private android.window.OnBackInvokedCallback backCallback;
 
     @Override public void onCreate(Bundle state) {
@@ -52,8 +54,12 @@ public final class MainActivity extends Activity {
                 int bars = fullScreen
                         ? WindowInsets.Type.navigationBars() | WindowInsets.Type.captionBar()
                         : WindowInsets.Type.systemBars();
-                var bounds = insets.getInsets(bars | WindowInsets.Type.ime() | WindowInsets.Type.displayCutout());
-                view.setPadding(bounds.left, bounds.top, bounds.right, bounds.bottom);
+                var system = insets.getInsets(bars | WindowInsets.Type.ime());
+                var cutout = insets.getInsets(WindowInsets.Type.displayCutout());
+                int top = fullScreen ? system.top : Math.max(system.top, cutout.top);
+                view.setPadding(Math.max(system.left, cutout.left), top,
+                        Math.max(system.right, cutout.right), Math.max(system.bottom, cutout.bottom));
+                updateFullScreenTopInset(fullScreen ? Math.max(0, cutout.top - top) : 0);
                 return insets;
             });
         }
@@ -69,11 +75,7 @@ public final class MainActivity extends Activity {
                 Uri url = request.getUrl();
                 if (APP_URL.equals(url.toString())) return false;
                 if (request.isForMainFrame() && request.hasGesture() && "https".equals(url.getScheme())) {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, url).addCategory(Intent.CATEGORY_BROWSABLE));
-                    } catch (ActivityNotFoundException ignored) {
-                        // Keep the chat open if no browser can handle the link.
-                    }
+                    openBrowser(url);
                 }
                 return true;
             }
@@ -133,6 +135,33 @@ public final class MainActivity extends Activity {
         return fullScreen;
     }
 
+    private boolean openBrowser(Uri url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, url).addCategory(Intent.CATEGORY_BROWSABLE));
+            return true;
+        } catch (ActivityNotFoundException ignored) {
+            return false;
+        }
+    }
+
+    void openUpdateDownload(String url) {
+        if (!isFinishing() && !isDestroyed() && !openBrowser(Uri.parse(url))) {
+            android.widget.Toast.makeText(this, "No browser is available to download the update.",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    float fullScreenTopInset() {
+        return fullScreenTopInset;
+    }
+
+    private void updateFullScreenTopInset(int pixels) {
+        float cssPixels = pixels / getResources().getDisplayMetrics().density;
+        if (fullScreenTopInset == cssPixels) return;
+        fullScreenTopInset = cssPixels;
+        web.evaluateJavascript("window.hackGptApplyTopInset && window.hackGptApplyTopInset(" + cssPixels + ")", null);
+    }
+
     void setFullScreen(boolean enabled) {
         fullScreen = enabled;
         getPreferences(MODE_PRIVATE).edit().putBoolean("full_screen", enabled).apply();
@@ -146,6 +175,14 @@ public final class MainActivity extends Activity {
 
     private void applyStatusBarVisibility() {
         if (Build.VERSION.SDK_INT >= 30) {
+            var window = getWindow();
+            var attributes = window.getAttributes();
+            int cutoutMode = fullScreen ? WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                    : WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+            if (attributes.layoutInDisplayCutoutMode != cutoutMode) {
+                attributes.layoutInDisplayCutoutMode = cutoutMode;
+                window.setAttributes(attributes);
+            }
             var controller = root.getWindowInsetsController();
             if (controller == null) return;
             int status = WindowInsets.Type.statusBars();

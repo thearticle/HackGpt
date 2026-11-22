@@ -33,6 +33,12 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
 .header-actions{display:flex;align-items:center;gap:2px}
+#app-update[hidden]{display:none}
+#app-update{color:var(--lime);filter:drop-shadow(0 0 4px var(--glow))}
+header.has-app-update .header-actions:first-child,header.has-app-update #reset{flex-shrink:0}
+header.has-app-update .header-actions:last-child,header.has-app-update #chat-credit{min-width:0}
+header.has-app-update #chat-credit{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:380px){header.has-app-update .icon{width:36px}}
 #chat-credit{min-height:30px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--lime);white-space:nowrap;font-size:11px;font-weight:normal}
 #chat-credit:not(:disabled){pointer-events:auto}
 .icon{display:grid;place-items:center;height:44px;line-height:1;border:0;background:transparent;font-family:"Segoe UI Symbol","Courier New",monospace}
@@ -171,7 +177,7 @@ dialog::backdrop{background:var(--scrim)}
 #provider-model-list p{font-size:13px;color:var(--muted)}
 .key-field,.url-field,.name-field,.provider-field{position:relative;min-width:0}
 .provider-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
-#provider-type{text-overflow:ellipsis}
+#provider-type{appearance:none;-webkit-appearance:none;text-overflow:ellipsis}
 #settings .key-field input,#settings .url-field input,#settings .name-field input,#settings .provider-field select{padding-left:37px}
 .key-icon{position:absolute;left:12px;top:50%;width:16px;height:14px;transform:translateY(-50%);color:var(--lime);pointer-events:none}
 .key-icon::before{content:"";position:absolute;left:0;top:3px;width:8px;height:8px;border:2px solid currentColor;border-radius:50%;box-sizing:border-box}
@@ -210,8 +216,8 @@ dialog::backdrop{background:var(--scrim)}
 .saved-providers{display:grid;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 #saved-provider-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:54px;gap:5px;max-height:57px;overflow:auto;overscroll-behavior:contain}
 #saved-provider-list:empty{display:none}
-.saved-provider{display:grid;align-content:center;justify-items:start;gap:3px;height:100%;padding:5px 8px;text-align:left}
-.saved-provider>span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.saved-provider{display:flex;align-items:center;justify-content:flex-start;gap:4px;height:100%;padding:5px 8px;text-align:left;white-space:nowrap}
+.saved-provider>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .saved-provider small{flex:none;font-weight:normal}
 .saved-provider[aria-pressed="true"]{border-color:var(--lime)}
 .save-icon{position:relative;width:17px;height:17px;background:currentColor;clip-path:polygon(0 0,72% 0,100% 28%,100% 100%,0 100%);border-radius:2px}
@@ -287,15 +293,33 @@ article .pending-reply{color:var(--muted)}
 #messages article{min-width:0}
 #messages article:not(.mine){align-self:stretch;padding-block:8px}
 .model-handoff{align-self:center;flex:none;width:min(100%,340px);padding:7px 10px;margin:6px 0;border:1px solid var(--line);border-radius:7px;background:var(--panel);font-size:12px;text-align:center;overflow-wrap:anywhere}
-.model-handoff summary{cursor:pointer;color:var(--lime)}
-.model-handoff-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:7px 0}
+.model-handoff summary{display:block;list-style:none;cursor:pointer;color:var(--lime)}
+.model-handoff summary::-webkit-details-marker{display:none}
+.model-handoff-models,.model-handoff-controls{display:grid;align-items:center;gap:6px}
+.model-handoff-models{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
+.model-handoff-controls{grid-template-columns:minmax(0,1fr) 40px;margin-bottom:6px}
+.model-handoff-scale{position:relative;height:40px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center}
+.model-handoff-scale::before{content:"";position:absolute;left:10%;right:10%;top:50%;height:1px;background:var(--line)}
+.model-handoff-stop{position:relative;width:17px;height:17px;border:1px solid var(--lime);border-radius:50%;background:conic-gradient(var(--lime) var(--dot-fill),var(--panel) 0)}
+.model-handoff-stop.is-current{box-shadow:0 0 0 3px var(--panel),0 0 0 4px var(--lime),0 0 11px var(--glow)}
+.model-handoff-scale:focus-within .is-current{outline:1px solid var(--lime);outline-offset:5px}
+.model-handoff-scale input{position:absolute;top:0;left:calc(10% - 12px);width:calc(80% + 24px);height:100%;margin:0;opacity:0;cursor:pointer;touch-action:none;appearance:none;-webkit-appearance:none}
+.model-handoff-scale input::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:36px}
+.model-handoff-scale input::-moz-range-thumb{width:24px;height:36px;border:0}
 .model-handoff button{min-height:36px;padding:4px 7px;font-size:11px}
+.model-handoff-models button{min-width:0;height:100%;overflow-wrap:anywhere}
+.model-handoff-controls .model-handoff-generate{position:relative;display:grid;place-items:center;width:40px;height:40px;min-height:40px;padding:0;border:0;border-radius:50%;background:transparent}
+.model-handoff-generate::before{content:"";position:absolute;top:6px;right:6px;bottom:6px;left:6px;border:1px solid var(--line);border-radius:50%;pointer-events:none}
+.model-handoff-generate span{width:8px;height:10px;margin-left:2px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%)}
+.model-handoff-generate:not(:disabled) span{animation:send-pulse 1.8s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.model-handoff-generate span{animation:none!important}}
 .model-handoff button[aria-pressed="true"]{border-color:var(--lime);background:var(--selection)}
-.model-handoff textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);text-align:left}
+.model-handoff textarea{display:block;width:100%;margin-top:5px;border:1px solid var(--line);text-align:left;resize:none;touch-action:manipulation}
+.model-handoff textarea[readonly]{user-select:none;-webkit-user-select:none}
 .model-handoff p{margin:5px 0;white-space:pre-wrap}
+.model-handoff p:empty{display:none}
 .model-handoff label{display:flex;align-items:center;justify-content:center;gap:5px}
-.model-handoff .summary-model{flex-wrap:wrap;margin:6px 0}
-.summary-model select{min-width:0;max-width:100%}
+.model-handoff [hidden]{display:none}
 #messages article.mine{align-self:flex-end;max-width:90%;width:fit-content}
 #messages article p,#prompt{font-size:var(--chat-font-size);line-height:1.45}
 :root[data-theme="light"] #empty canvas{filter:brightness(.37) saturate(1.3)}
@@ -308,6 +332,10 @@ html.android-app,.android-app body{height:100%;min-height:0}
 .android-app header{position:relative;z-index:1;margin-left:-6px;margin-right:-6px;transform:none;background:transparent;pointer-events:none}
 .android-app header .icon{height:var(--toolbar-height);pointer-events:auto}
 .android-app #messages{margin-top:calc(-1 * var(--toolbar-height));padding-top:calc(var(--toolbar-height) + 8px)}
+.android-app.full-screen{--chat-top:calc(8px + var(--full-screen-top,0px))}
+.android-app.full-screen main{padding-top:var(--chat-top)}
+.android-app.full-screen #messages{margin-top:calc(-1 * (var(--toolbar-height) + var(--chat-top)));padding-top:calc(var(--toolbar-height) + var(--chat-top) + 8px)}
+.android-app.full-screen dialog:not(#image-viewer){top:var(--full-screen-top,0px);max-height:calc(100dvh - 24px - var(--full-screen-top,0px))}
 #reset{position:relative;touch-action:none;user-select:none;-webkit-touch-callout:none;isolation:isolate}
 #reset:not(:disabled)::before{animation:new-chat-glow 2.8s ease-in-out infinite}
 #reset::after{content:"";position:absolute;inset:4px;border:1px solid currentColor;border-radius:50%;opacity:0;pointer-events:none}
@@ -372,6 +400,9 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="model-button" class="icon" aria-label="Select model" title="Select model"></button>
 <button id="history-button" class="icon" aria-label="Chat history" title="Chat history"></button>
 <button id="appearance-button" class="icon" aria-label="Appearance" title="Appearance"></button>
+<button id="app-update" class="icon" type="button" aria-label="Download app update" hidden>
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14V4m-4 4 4-4 4 4"/></svg>
+</button>
 </div>
 <div class="header-actions">
 <button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
@@ -481,7 +512,9 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <div class="appearance-options" role="group" aria-label="Appearance controls">
 <button type="button" data-theme-option="dark" aria-pressed="true">Dark</button>
 <button type="button" data-theme-option="light" aria-pressed="false">Light</button>
-<button id="enter-to-send" class="appearance-icon" type="button" aria-label="Enter to send" aria-pressed="false" title="Enter to send · Shift+Enter for a new line">↵</button>
+<button id="enter-to-send" class="appearance-icon" type="button" aria-label="Enter to send" aria-pressed="false" title="Enter to send · Shift+Enter for a new line">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5v5H4m3-3-3 3 3 3"/></svg>
+</button>
 <button id="fullscreen-toggle" class="appearance-icon" type="button" aria-label="Full screen" aria-pressed="false" title="Full screen" hidden>
 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 6V2h4m6 0h4v4m0 6v4h-4m-6 0H2v-4"/></svg>
 </button>
@@ -1053,7 +1086,8 @@ async function inspectModel(model) {
   const render = (details, status) => {
     const rows = inspectorLines(model, details);
     if (status) rows.push(status);
-    lines.replaceChildren(...rows.map(row => {
+    clearContents(lines);
+    lines.append(...rows.map(row => {
       const item = document.createElement('span');
       item.textContent = row;
       return item;
@@ -1088,7 +1122,8 @@ find('inspector-test').onclick = async () => {
     const stats = await receiveReply({connection: model.connection.id, model: model.id,
       messages: [{role: 'user', content: image ? 'Generate a simple blue circle on a white background.' : 'Reply with OK.'}]
     }, event => {
-      responded ||= event.type === 'delta' ? !!event.text.trim() : event.type === 'image' && !!replyImageSource(event.text);
+      if (!responded) responded = event.type === 'delta' ? !!event.text.trim()
+        : event.type === 'image' && !!replyImageSource(event.text);
     }, controller.signal);
     if (!responded) throw new Error('No usable response.');
     if (inspectorProbe === controller) {
@@ -1134,7 +1169,8 @@ function renderSavedProviders() {
     const details = document.createElement('small');
     const hidden = new Set(profile.hidden);
     const count = profile.models.filter(model => !hidden.has(model.id)).length;
-    details.textContent = count + (count === 1 ? ' model' : ' models');
+    details.textContent = '• ' + count;
+    button.setAttribute('aria-label', profile.name + ' • ' + count + (count === 1 ? ' model' : ' models'));
     button.append(name, details);
     button.onclick = () => editProvider(profile);
     const row = document.createElement('div');
@@ -1506,6 +1542,13 @@ const storageKey = 'neural-link.history.v1';
 let chats = [];
 let pendingAction;
 let pendingHandoff;
+const handoffLevels = [
+  {mode: 'full', retain: 100, label: 'Full history'},
+  {mode: 'summary', retain: 75, label: 'Light summary · ¾'},
+  {mode: 'summary', retain: 50, label: 'Medium summary · ½'},
+  {mode: 'summary', retain: 25, label: 'Strong summary · ¼'},
+  {mode: 'fresh', retain: 0, label: 'Fresh start'}
+];
 
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey));
@@ -1561,7 +1604,7 @@ function previousHandoffModel(chat, last, available) {
 function syncModelHandoff(model) {
   if (sending) return;
   const chat = activeId && chats.find(item => item.id === activeId);
-  const last = chat?.turns.at(-1);
+  const last = chat?.turns[chat.turns.length - 1];
   const same = last?.modelSelection ? last.modelSelection === model?.selection
     : last?.model === model?.name && chat?.source === model?.profile.id;
   if (!model?.connection || !last || same) {
@@ -1579,7 +1622,8 @@ function syncModelHandoff(model) {
   const from = previousHandoffModel(chat, last, savedModels());
   const previousProvider = last.providerName ?? from?.profile.name
     ?? profiles.find(profile => profile.id === chat.source)?.name;
-  const handoff = {chat, last, from, to: model, mode: 'summary', summary: '',
+  const handoff = {chat, last, from, to: model, mode: 'summary', level: 2, summaries: new Map(),
+    summarizer: canSummarize(model) ? 'to' : 'from',
     fromLabel: [last.model || 'Previous model', previousProvider].filter(Boolean).join(' · '),
     toLabel: handoffModelLabel(model), image: findHandoffImage(chat, model)};
   pendingHandoff = handoff;
@@ -1595,7 +1639,10 @@ function syncModelHandoff(model) {
   }).catch(() => {});
 }
 
-function handoffModeName(mode) {
+function handoffModeName(mode, retain) {
+  if (mode === 'summary' && retain != null) {
+    return handoffLevels.find(level => level.retain === retain)?.label ?? 'Summary';
+  }
   return {summary: 'Summary', full: 'Full history', fresh: 'Fresh start'}[mode];
 }
 
@@ -1603,7 +1650,7 @@ function showCompletedHandoff(handoff) {
   const detail = document.createElement('details');
   detail.className = 'model-handoff';
   const heading = document.createElement('summary');
-  const mode = handoffModeName(handoff.mode) + (handoff.image ? ' + 1 image' : '');
+  const mode = handoffModeName(handoff.mode, handoff.retain) + (handoff.image ? ' + 1 image' : '');
   heading.textContent = handoff.fromLabel + ' → ' + handoff.toLabel + ' · ' + mode;
   const context = document.createElement('p');
   detail.append(heading);
@@ -1657,7 +1704,8 @@ function handoffPrefix(turns, handoff, model) {
 }
 
 function effectiveHistory(turns, model) {
-  const boundary = turns.findLastIndex(turn => turn.handoff);
+  let boundary = turns.length - 1;
+  while (boundary >= 0 && !turns[boundary].handoff) boundary--;
   if (boundary < 0) return historyMessages(turns, model, true);
   const handoff = turns[boundary].handoff;
   const prior = handoff.mode === 'full' ? historyMessages(turns.slice(0, boundary), model, true)
@@ -1675,90 +1723,150 @@ function estimateHandoffTokens(previous, text = '') {
 function updateHandoffDescription(handoff) {
   const status = handoff.description;
   if (!status) return;
-  if (handoff.mode === 'fresh') {
-    status.textContent = 'Earlier messages stay visible. No earlier context is sent.';
+  if (handoff.mode !== 'full' || !(handoff.tokenLimit > 0)) {
+    status.textContent = '';
     return;
   }
-  if (handoff.mode === 'summary') {
-    const count = handoff.chat.turns.length;
-    status.textContent = 'Summarizes all ' + count + (count === 1 ? ' earlier turn' : ' earlier turns')
-      + ' (your messages and model replies). Review or edit before sending.';
-    return;
-  }
-  const previous = historyMessages(handoff.chat.turns, handoff.to, true);
+  const previous = historyMessages(handoff.chat.turns, handoff.to, false);
   const estimate = estimateHandoffTokens(previous, promptBox.value);
-  const limit = handoff.tokenLimit > 0 ? ' / ' + handoff.tokenLimit.toLocaleString() + ' reported token limit' : '';
-  const fileCount = previous.reduce((count, message) => count + (message.files?.length ?? 0), 0);
-  status.textContent = handoff.chat.turns.length + ' earlier turns · ~' + estimate.toLocaleString()
-    + ' text tokens' + limit + (fileCount ? ' · ' + fileCount + ' available attachments' : '')
-    + (handoff.tokenLimit > 0 && estimate > handoff.tokenLimit ? ' · Switch to Summary or Fresh start.' : '');
+  status.textContent = estimate > handoff.tokenLimit
+    ? 'Full history exceeds the estimated input budget. Choose Summary or Fresh start.' : '';
+}
+
+function lockSummaryEditor(editor) {
+  let taps = 0;
+  let lastTap = -Infinity;
+  const lock = () => {
+    editor.readOnly = true;
+    editor.inputMode = 'none';
+    taps = 0;
+    lastTap = -Infinity;
+  };
+  const unlock = () => {
+    editor.readOnly = false;
+    editor.inputMode = 'text';
+    editor.focus();
+  };
+  editor.onpointerdown = event => { if (editor.readOnly) event.preventDefault(); };
+  editor.onclick = () => {
+    if (!editor.readOnly) return;
+    const now = performance.now();
+    taps = now - lastTap <= 650 ? taps + 1 : 1;
+    lastTap = now;
+    if (taps === 3) unlock();
+  };
+  editor.onkeydown = event => {
+    if (!editor.readOnly || event.key !== 'Enter') return;
+    event.preventDefault();
+    unlock();
+  };
+  editor.onblur = lock;
+  lock();
 }
 
 function renderPendingHandoff(handoff) {
   const card = handoff.element ?? (handoff.element = document.createElement('section'));
   card.className = 'model-handoff';
   card.setAttribute('aria-label', 'Model handoff');
-  const heading = document.createElement('strong');
-  heading.textContent = handoff.fromLabel + ' → ' + handoff.toLabel;
+  const models = document.createElement('div');
+  models.className = 'model-handoff-models';
+  const arrow = document.createElement('span');
+  arrow.textContent = '→';
+  arrow.setAttribute('aria-hidden', 'true');
+  if (!canSummarize(handoff[handoff.summarizer]) && canSummarize(handoff.to)) handoff.summarizer = 'to';
+  if (!canSummarize(handoff[handoff.summarizer]) && canSummarize(handoff.from)) handoff.summarizer = 'from';
+  const modelButtons = [['from', handoff.fromLabel, 'Previous'], ['to', handoff.toLabel, 'New']]
+    .map(([side, name, position]) => {
+      const button = historyButton(name, () => {
+        handoff.summarizer = side;
+        feedback.textContent = '';
+        refreshButtons();
+      });
+      button.setAttribute('aria-label', position + ' model for summary · ' + name);
+      button.title = position + ' model for summary';
+      return [side, button];
+    });
+  models.append(modelButtons[0][1], arrow, modelButtons[1][1]);
   const controls = document.createElement('div');
   controls.className = 'model-handoff-controls';
-  for (const mode of ['summary', 'full', 'fresh']) {
-    const button = historyButton(handoffModeName(mode), () => {
-      if (handoff.mode === mode) return;
-      handoff.summaryRequest?.abort();
-      handoff.summaryRequest = null;
-      handoff.mode = mode;
-      renderPendingHandoff(handoff);
-      card.querySelector('[aria-pressed="true"]')?.focus();
-    });
-    button.setAttribute('aria-pressed', String(handoff.mode === mode));
-    controls.append(button);
+  const scale = document.createElement('div');
+  scale.className = 'model-handoff-scale';
+  const stops = handoffLevels.map(level => {
+    const dot = document.createElement('span');
+    dot.className = 'model-handoff-stop';
+    dot.style.setProperty('--dot-fill', level.retain + '%');
+    dot.setAttribute('aria-hidden', 'true');
+    return dot;
+  });
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = String(handoffLevels.length - 1);
+  slider.step = '1';
+  slider.value = String(handoff.level);
+  slider.setAttribute('aria-label', 'Conversation context level');
+  scale.append(...stops, slider);
+  const editor = document.createElement('textarea');
+  editor.setAttribute('aria-label', 'Summary to send');
+  editor.setAttribute('aria-description', 'Tap three times or press Enter to edit.');
+  editor.title = 'Tap three times to edit';
+  editor.maxLength = 24_000;
+  editor.rows = 3;
+  editor.oninput = () => { handoff.summaries.set(handoff.level, editor.value); };
+  lockSummaryEditor(editor);
+  const feedback = document.createElement('p');
+  feedback.setAttribute('role', 'status');
+  const generate = historyButton('', () => {
+    if (!handoff.summaries.has(handoff.level)) handoff.summaries.set(handoff.level, '');
+    refreshLevel();
+    messages.scrollTop = messages.scrollHeight;
+    generateHandoffSummary(handoff, editor, feedback, refreshButtons);
+  });
+  generate.className = 'model-handoff-generate';
+  const generateIcon = document.createElement('span');
+  generateIcon.setAttribute('aria-hidden', 'true');
+  generate.append(generateIcon);
+  generate.setAttribute('aria-label', 'Generate summary');
+  generate.title = 'Generate summary with the selected model';
+  controls.append(scale, generate);
+  function refreshButtons() {
+    for (const [side, button] of modelButtons) {
+      const available = canSummarize(handoff[side]);
+      button.setAttribute('aria-pressed', String(handoff.mode === 'summary' && available && handoff.summarizer === side));
+      button.disabled = handoff.mode !== 'summary' || !available || !!handoff.summaryRequest;
+    }
+    generate.disabled = handoff.mode !== 'summary' || !canSummarize(handoff[handoff.summarizer]) || !!handoff.summaryRequest;
+    editor.disabled = !!handoff.summaryRequest;
   }
   const status = document.createElement('p');
   handoff.description = status;
-  card.replaceChildren(heading, controls, status);
-  updateHandoffDescription(handoff);
-  if (handoff.mode === 'summary') {
-    const editor = document.createElement('textarea');
-    editor.setAttribute('aria-label', 'Summary to send');
-    editor.placeholder = 'Generate or write a summary';
-    editor.maxLength = 24_000;
-    editor.rows = 3;
-    editor.value = handoff.summary;
-    editor.oninput = () => { handoff.summary = editor.value; };
-    const chooser = document.createElement('select');
-    const label = document.createElement('label');
-    label.className = 'summary-model';
-    label.append('Summarize with', chooser);
-    for (const [value, model, title] of [
-      ['from', handoff.from, 'Previous · ' + handoff.fromLabel],
-      ['to', handoff.to, 'New · ' + handoff.toLabel]
-    ]) {
-      const option = new Option(title, value);
-      option.disabled = !canSummarize(model);
-      chooser.add(option);
-    }
-    const available = [...chooser.options].filter(option => !option.disabled);
-    const choice = available.find(option => option.value === handoff.summarizer) ?? available[0];
-    chooser.value = choice?.value ?? '';
-    chooser.disabled = !choice || !!handoff.summaryRequest;
-    chooser.onchange = () => { handoff.summarizer = chooser.value; };
-    const generate = historyButton('Generate summary', () => generateHandoffSummary(handoff, chooser, editor, generate, feedback));
-    generate.disabled = !choice || !!handoff.summaryRequest;
-    const feedback = document.createElement('p');
-    feedback.setAttribute('role', 'status');
-    if (!choice) feedback.textContent = 'Neither model is available for text summarization. You can write a summary here.';
-    card.append(label, editor, generate, feedback);
+  const imageLabel = document.createElement('label');
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.checked = !!handoff.includeImage;
+  check.onchange = () => { handoff.includeImage = check.checked; };
+  imageLabel.append(check, 'Include latest generated image');
+  function refreshLevel() {
+    const level = handoffLevels[handoff.level];
+    slider.setAttribute('aria-valuetext', level.label);
+    for (const [index, dot] of stops.entries()) dot.classList.toggle('is-current', index === handoff.level);
+    editor.hidden = level.mode !== 'summary' || !handoff.summaries.has(handoff.level);
+    editor.value = handoff.summaries.get(handoff.level) ?? '';
+    imageLabel.hidden = level.mode === 'fresh' || !handoff.image;
+    updateHandoffDescription(handoff);
+    refreshButtons();
   }
-  if (handoff.mode !== 'fresh' && handoff.image) {
-    const label = document.createElement('label');
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.checked = !!handoff.includeImage;
-    check.onchange = () => { handoff.includeImage = check.checked; };
-    label.append(check, 'Include latest generated image');
-    card.append(label);
-  }
+  slider.oninput = () => {
+    handoff.summaryRequest?.abort();
+    handoff.summaryRequest = null;
+    handoff.level = Number(slider.value);
+    handoff.mode = handoffLevels[handoff.level].mode;
+    feedback.textContent = '';
+    refreshLevel();
+  };
+  clearContents(card);
+  card.append(controls, models, status, editor, feedback, imageLabel);
+  refreshLevel();
   if (!card.isConnected) messages.append(card);
 }
 
@@ -1779,14 +1887,18 @@ function summaryTranscript(turns) {
   });
 }
 
-async function generateHandoffSummary(handoff, chooser, editor, button, status) {
+async function generateHandoffSummary(handoff, editor, status, refreshButtons) {
   if (sending || handoff.summaryRequest || pendingHandoff !== handoff) return;
-  const model = chooser.value === 'to' ? handoff.to : handoff.from;
+  const model = handoff[handoff.summarizer];
   if (!canSummarize(model)) return;
+  const level = handoffLevels[handoff.level];
   const messages = summaryTranscript(handoff.chat.turns);
+  const words = messages.reduce((total, message) => total + (message.content.match(/\S+/g)?.length ?? 0), 0);
+  const targetWords = Math.min(4_000, Math.max(8, Math.round(words * level.retain / 100)));
   messages.push({role: 'user', content: 'Summarize the entire conversation above for the next assistant. Identify the actual '
     + 'topics and what was explained or concluded, with enough concrete facts to answer a follow-up. Include relevant '
     + 'constraints, decisions, and open questions. Preserve useful image descriptions already in the text. '
+    + 'Aim for about ' + targetWords + ' words, roughly ' + level.retain + '% of the original conversation length. '
     + 'Do not answer prior questions, introduce yourself, or describe the environment. '
     + 'Start with HANDOFF_SUMMARY: on its own line, then write the summary.'});
   const payload = {connection: model.connection.id, model: model.id, messages, textOnly: true};
@@ -1796,7 +1908,7 @@ async function generateHandoffSummary(handoff, chooser, editor, button, status) 
   }
   const controller = new AbortController();
   handoff.summaryRequest = controller;
-  chooser.disabled = button.disabled = editor.disabled = true;
+  refreshButtons();
   status.textContent = 'Generating with ' + handoffModelLabel(model) + '…';
   let summary = '';
   try {
@@ -1808,14 +1920,15 @@ async function generateHandoffSummary(handoff, chooser, editor, button, status) 
     summary = summary.replace(heading, '').trim();
     if (summary.length > editor.maxLength) throw new Error('The summary was too long. Write a shorter handoff.');
     if (handoff.summaryRequest !== controller || pendingHandoff !== handoff) return;
-    editor.value = handoff.summary = summary;
-    status.textContent = 'Review the summary, then send your next message.';
+    handoff.summaries.set(handoff.level, summary);
+    editor.value = summary;
+    status.textContent = '';
   } catch (error) {
     if (!controller.signal.aborted) status.textContent = error.message;
   } finally {
     if (handoff.summaryRequest === controller) {
       handoff.summaryRequest = null;
-      chooser.disabled = button.disabled = editor.disabled = false;
+      refreshButtons();
     }
   }
 }
@@ -1825,12 +1938,15 @@ function prepareModelRequest(chat, model, text, files, handoff) {
   let boundary;
   if (handoff) {
     if (handoff.summaryRequest) throw new Error('Wait for the summary before sending.');
-    const summary = handoff.mode === 'summary' ? handoff.summary.trim() : '';
+    const summary = handoff.mode === 'summary' ? (handoff.summaries.get(handoff.level) ?? '').trim() : '';
     if (handoff.mode === 'summary' && !summary) {
       throw new Error('Generate or write a summary, or choose Full history or Fresh start.');
     }
     boundary = {mode: handoff.mode, fromLabel: handoff.fromLabel, toLabel: handoff.toLabel};
-    if (summary) boundary.summary = summary;
+    if (summary) {
+      boundary.summary = summary;
+      boundary.retain = handoffLevels[handoff.level].retain;
+    }
     if (handoff.mode !== 'fresh' && handoff.includeImage) {
       if (!handoffImageFile(turns, handoff.image, model)) {
         throw new Error('The reference image is no longer available. Uncheck Include image to continue.');
@@ -2111,11 +2227,20 @@ dismissOnBackdrop(settings);
 
 if (window.HackGptAndroid?.setFullScreen) {
   const toggle = find('fullscreen-toggle');
-  toggle.setAttribute('aria-pressed', String(window.HackGptAndroid.isFullScreen()));
+  const root = document.documentElement;
+  window.hackGptApplyTopInset = inset => {
+    root.style.setProperty('--full-screen-top', Math.max(0, Number(inset) || 0) + 'px');
+  };
+  const showFullScreen = enabled => {
+    toggle.setAttribute('aria-pressed', String(enabled));
+    root.classList.toggle('full-screen', enabled);
+  };
+  window.hackGptApplyTopInset(window.HackGptAndroid.fullScreenTopInset?.());
+  showFullScreen(window.HackGptAndroid.isFullScreen());
   toggle.onclick = () => {
     const enabled = toggle.getAttribute('aria-pressed') !== 'true';
     window.HackGptAndroid.setFullScreen(enabled);
-    toggle.setAttribute('aria-pressed', String(enabled));
+    showFullScreen(enabled);
   };
   toggle.hidden = false;
 }
@@ -2464,7 +2589,7 @@ composerMarker.onclick = event => {
 promptBox.addEventListener('input', showRegularComposerControl);
 let screenTouch;
 messages.addEventListener('touchstart', event => {
-  screenTouch = event.touches.length === 1 ? event.touches[0] : null;
+  screenTouch = !event.target.closest?.('.model-handoff') && event.touches.length === 1 ? event.touches[0] : null;
 }, {passive: true});
 messages.addEventListener('touchend', event => {
   const start = screenTouch;
@@ -2541,6 +2666,10 @@ function disableChatSelection() {
 
 messages.addEventListener('touchstart', event => {
   if (!sendButton.classList.contains('is-actions-only') || sending) return;
+  if (event.target.closest?.('.model-handoff')) {
+    resetComposerHold();
+    return;
+  }
   if (event.touches.length !== 1) {
     resetComposerHold();
     if (composerPress?.fromChat) finishComposerPress({pointerId: composerPress.id}, false);
@@ -3114,9 +3243,9 @@ function markdownExportEntry(chat, exportedAt) {
     (Number.isFinite(createdAt) ? 'Created' : 'Exported') + ' (UTC) · ' + date.toISOString()];
   for (const [index, turn] of chat.turns.entries()) {
     if (turn.handoff) {
-      const {fromLabel, toLabel, mode, image, summary} = turn.handoff;
+      const {fromLabel, toLabel, mode, retain, image, summary} = turn.handoff;
       sections.push('## Model switch · ' + markdownLabel(fromLabel) + ' → ' + markdownLabel(toLabel),
-        handoffModeName(mode) + (image ? ' + 1 image' : ''));
+        handoffModeName(mode, retain) + (image ? ' + 1 image' : ''));
       if (summary) sections.push(summary);
     }
     sections.push('## Turn ' + (index + 1) + ' · You', turn.question ?? '');
@@ -3501,6 +3630,34 @@ trace([[101,171],[119,171]], 1.2);
 
 updateModelStatus();
 restoreConnections();
+
+if (window.HackGptAndroid?.openAppUpdate) {
+  const button = find('app-update');
+  const toolbar = button.closest('header');
+  const refreshInterval = 30 * 60_000;
+  let nextCheck = 0;
+  async function checkForAppUpdate() {
+    const now = Date.now();
+    if (document.visibilityState !== 'visible' || now < nextCheck) return;
+    nextCheck = now + refreshInterval;
+    try {
+      const update = await androidRequest('app-update');
+      const tag = update?.tag;
+      button.hidden = !tag;
+      toolbar.classList.toggle('has-app-update', !!tag);
+      if (tag) {
+        button.title = 'Download HackGpt ' + tag;
+        button.setAttribute('aria-label', button.title);
+        button.onclick = () => window.HackGptAndroid.openAppUpdate(tag);
+      }
+    } catch {
+      // Retry the public release check later if GitHub is temporarily unreachable.
+    }
+  }
+  checkForAppUpdate();
+  document.addEventListener('visibilitychange', checkForAppUpdate);
+  setInterval(checkForAppUpdate, refreshInterval);
+}
 </script>
 </body>
 </html>

@@ -27,6 +27,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 final class ProviderBridge {
     private static final int RESPONSE_LIMIT = 8_000_000;
+    private static final String LATEST_RELEASE = "https://api.github.com/repos/thearticle/HackGpt/releases/latest";
+    private static final String RELEASE_DOWNLOADS = "https://github.com/thearticle/HackGpt/releases/download/";
     private final MainActivity activity;
     private final WebView web;
     private final CredentialVault vault;
@@ -37,6 +39,7 @@ final class ProviderBridge {
     private boolean vaultReady;
     private boolean vaultLoaded;
     private volatile boolean closed;
+    private volatile String availableUpdate;
 
     ProviderBridge(MainActivity activity, WebView web) {
         this.activity = activity;
@@ -76,10 +79,11 @@ final class ProviderBridge {
             workers.execute(() -> {
                 try {
                     if (request.cancelled) return;
-                    readVault();
+                    if (!"app-update".equals(method)) readVault();
                     var input = new JSONObject(data);
                     Object result = switch (method) {
                         case "providers" -> list();
+                        case "app-update" -> checkAppUpdate(request);
                         case "connect" -> connect(input, request);
                         case "provider-details" -> providerDetails(input.getString("connection"), input.optString("model"), request);
                         case "kenari-balance" -> kenariBalance(input.getString("connection"), request);
@@ -106,6 +110,63 @@ final class ProviderBridge {
 
     @JavascriptInterface public boolean isFullScreen() {
         return activity.isFullScreen();
+    }
+
+    @JavascriptInterface public void openAppUpdate(String tag) {
+        if (closed || tag == null || !tag.equals(availableUpdate)) return;
+        web.post(() -> {
+            if (!closed && tag.equals(availableUpdate)) activity.openUpdateDownload(downloadUrl(tag));
+        });
+    }
+
+    private Object checkAppUpdate(Request request) throws Exception {
+        String installed = activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionName;
+        var connection = (HttpsURLConnection) URI.create(LATEST_RELEASE).toURL().openConnection();
+        request.assign(connection);
+        connection.setInstanceFollowRedirects(false);
+        connection.setConnectTimeout(8_000);
+        connection.setReadTimeout(8_000);
+        connection.setRequestProperty("Accept", "application/vnd.github+json");
+        connection.setRequestProperty("User-Agent", "HackGpt-Android");
+        if (connection.getResponseCode() != 200) return JSONObject.NULL;
+        var release = readJson(connection);
+        availableUpdate = updateTag(release, installed);
+        return availableUpdate == null ? JSONObject.NULL : new JSONObject().put("tag", availableUpdate);
+    }
+
+    private static String updateTag(JSONObject release, String installed) {
+        String tag = release.optString("tag_name");
+        if (release.optBoolean("draft") || release.optBoolean("prerelease") || !tag.startsWith("v")
+                || !isNewerVersion(tag.substring(1), installed)) return null;
+        var assets = release.optJSONArray("assets");
+        String expectedName = "HackGpt-" + tag + ".apk";
+        for (int i = 0; assets != null && i < assets.length(); i++) {
+            var asset = assets.optJSONObject(i);
+            if (asset != null && expectedName.equals(asset.optString("name"))
+                    && "uploaded".equals(asset.optString("state")) && asset.optLong("size") > 0
+                    && downloadUrl(tag).equals(asset.optString("browser_download_url"))) return tag;
+        }
+        return null;
+    }
+
+    private static boolean isNewerVersion(String candidate, String installed) {
+        String versionPattern = "(?:0|[1-9][0-9]{0,8})(?:\\.(?:0|[1-9][0-9]{0,8})){2}";
+        if (installed == null || !candidate.matches(versionPattern) || !installed.matches(versionPattern)) return false;
+        String[] next = candidate.split("\\.");
+        String[] current = installed.split("\\.");
+        for (int i = 0; i < next.length; i++) {
+            int comparison = Integer.compare(Integer.parseInt(next[i]), Integer.parseInt(current[i]));
+            if (comparison != 0) return comparison > 0;
+        }
+        return false;
+    }
+
+    private static String downloadUrl(String tag) {
+        return RELEASE_DOWNLOADS + tag + "/HackGpt-" + tag + ".apk";
+    }
+
+    @JavascriptInterface public float fullScreenTopInset() {
+        return activity.fullScreenTopInset();
     }
 
     @JavascriptInterface public void saveChatExport(String name, String content, boolean archive) {
