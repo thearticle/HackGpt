@@ -7,6 +7,7 @@ const {imageEndpoint, imageSource, KENARI_BASE, messageParts, modelMetadata, str
 const port = Number(process.env.NEURAL_PREVIEW_PORT || 8082);
 const hosts = new Set(['localhost:' + port, '127.0.0.1:' + port]);
 const GEMINI_METADATA_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const NARA_ORIGIN = 'https://router.bynara.id';
 const presets = {
     openrouter: {name: 'OpenRouter', base: 'https://openrouter.ai/api/v1', listing: '/models/user'},
     openai: {name: 'OpenAI', base: 'https://api.openai.com/v1', listing: '/models'},
@@ -86,6 +87,17 @@ const server = http.createServer(async (request, response) => {
             if (connection?.base !== 'https://kenari.id/v1') throw problem(409, 'Connect a Kenari provider first.');
             const account = await upstream(connection, '/account/balance');
             return send(response, 200, {balance: account.available_micro_idr});
+        }
+        if (request.url === '/api/nara-balance') {
+            const {connection: id} = await readBody(request);
+            const connection = connections.get(id);
+            if (connection?.base !== NARA_ORIGIN + '/v1') throw problem(409, 'Connect a NaraRouter provider first.');
+            const {result} = await upstream({...connection, base: NARA_ORIGIN}, '/mcp', {
+                jsonrpc: '2.0', id: 1, method: 'tools/call',
+                params: {name: 'get_balance', arguments: {}}
+            });
+            if (!result || result.isError) throw problem(502, 'NaraRouter balance is unavailable.');
+            return send(response, 200, {balance: naraAvailable(result)});
         }
         if (request.url === '/api/routr-quota') {
             const {connection: id, model} = await readBody(request);
@@ -258,6 +270,22 @@ async function upstream(connection, endpoint, payload) {
     return readUpstreamJson(await openUpstream(connection, endpoint, payload));
 }
 
+function naraAvailable(result) {
+    const amount = data => [data?.available, data?.availableCredits, data?.available_credits]
+        .find(value => typeof value === 'number' || typeof value === 'string');
+    const available = amount(result.structuredContent);
+    if (available !== undefined) return available;
+    for (const part of Array.isArray(result.content) ? result.content : []) {
+        if (part?.type !== 'text') continue;
+        try {
+            const value = amount(JSON.parse(part.text));
+            if (value !== undefined) return value;
+        } catch {
+            // Only structured balance values are displayed.
+        }
+    }
+}
+
 function replyRequest(connection, model, messages, streaming, textOnly = false) {
     const endpoint = imageEndpoint(connection.type, connection.base, model.id, model.imageOnly
         || (model.modalities && !model.modalities.includes('text')));
@@ -291,7 +319,7 @@ async function openUpstream(connection, endpoint, payload, cancellation) {
             headers: {
                 ...(connection.base === GEMINI_METADATA_BASE ? {'x-goog-api-key': connection.key}
                     : {Authorization: 'Bearer ' + connection.key}),
-                Accept: payload?.stream ? 'text/event-stream, application/json' : 'application/json',
+                Accept: endpoint === '/mcp' || payload?.stream ? 'text/event-stream, application/json' : 'application/json',
                 ...(payload && {'Content-Type': 'application/json'})
             },
             body: payload && JSON.stringify(payload),

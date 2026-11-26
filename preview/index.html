@@ -17,6 +17,10 @@
   --chat-font-size:16px;
   font-family:"Courier New",monospace;
 }
+:root[data-theme="amoled"]{
+  --ink:#000;--panel:#000;--scene-top:#000;--scene-bottom:#000;--glow:transparent;
+  --mine:#080c06;--selection:#19270f;
+}
 :root[data-theme="light"]{
   color-scheme:light;
   --ink:#fff;--panel:#f6f9f3;--line:#a5b79a;--lime:#315c16;--muted:#4d6245;--paper:#152411;
@@ -25,6 +29,13 @@
   --primary-bg:#bde98d;--primary-text:#182b0c;
   --danger:#ad3028;--warning:#8b342a;--danger-panel:#fae8e4;--danger-line:#b95d52;
 }
+
+:root[data-theme="nord"]{--ink:#2e3440;--panel:#3b4252;--line:#4c566a;--lime:#88c0d0;--muted:#b9c8d8;--paper:#eceff4}
+:root[data-theme="dracula"]{--ink:#282a36;--panel:#343746;--line:#605977;--lime:#bd93f9;--muted:#d4c5e9;--paper:#f8f8f2}
+:root[data-theme="solarized"]{--ink:#002b36;--panel:#073642;--line:#42717b;--lime:#2aa198;--muted:#a5b9bd;--paper:#eee8d5}
+:root[data-theme="gruvbox"]{--ink:#282828;--panel:#3c3836;--line:#665c54;--lime:#fabd2f;--muted:#d5c4a1;--paper:#fbf1c7}
+:root[data-theme="catppuccin"]{--ink:#1e1e2e;--panel:#313244;--line:#585b70;--lime:#cba6f7;--muted:#bac2de;--paper:#cdd6f4}
+:root:is([data-theme="nord"],[data-theme="dracula"],[data-theme="solarized"],[data-theme="gruvbox"],[data-theme="catppuccin"]){--scene-top:var(--panel);--scene-bottom:var(--ink);--glow:transparent;--mine:var(--panel);--selection:var(--line);--primary-bg:var(--lime);--primary-text:var(--ink)}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse at top,var(--scene-top),var(--scene-bottom) 65%);color:var(--paper)}
 main{width:min(100%,414px);height:min(820px,100vh);height:min(820px,100dvh);min-height:380px;background:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 0 42px var(--glow);padding:20px;display:flex;flex-direction:column}
@@ -32,6 +43,13 @@ main{width:min(100%,414px);height:min(820px,100vh);height:min(820px,100dvh);min-
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--lime);border-radius:4px;min-height:44px;padding:7px 12px;font:inherit;font-size:13px;font-weight:bold}
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
+#immersive-toolbar-handle[hidden]{display:none}
+#immersive-toolbar-handle{position:absolute;inset:0 8px 0 auto;width:54px;min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--lime);pointer-events:auto}
+#immersive-toolbar-handle::before{content:"";width:30px;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 8px currentColor;animation:send-pulse 1.8s ease-in-out infinite}
+header.immersive-toolbar{min-height:44px}
+header.immersive-toolbar .header-actions{transition:opacity 220ms ease,transform 220ms ease}
+header.toolbar-tucked .header-actions{opacity:0;transform:translateY(-5px);pointer-events:none}
+@media(prefers-reduced-motion:reduce){#immersive-toolbar-handle::before{animation:none}header.immersive-toolbar .header-actions{transition:none}}
 .header-actions{display:flex;align-items:center;gap:2px}
 #app-update[hidden]{display:none}
 #app-update{color:var(--lime)}
@@ -40,11 +58,19 @@ header{display:flex;justify-content:space-between;align-items:center;margin-left
 @keyframes update-ring-pulse{0%,100%{transform:scale(.94);opacity:.65}50%{transform:scale(1.15);opacity:1;box-shadow:0 0 6px var(--glow)}}
 @media(prefers-reduced-motion:reduce){#app-update::before{animation:none}}
 header.has-app-update .header-actions:first-child,header.has-app-update #reset{flex-shrink:0}
-header.has-app-update .header-actions:last-child,header.has-app-update #chat-credit{min-width:0}
+header.has-app-update .header-actions:nth-child(2),header.has-app-update #chat-credit{min-width:0}
 header.has-app-update #chat-credit{overflow:hidden;text-overflow:ellipsis}
 @media(max-width:380px){header.has-app-update .icon{width:36px}}
 #chat-credit{min-height:30px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;color:var(--lime);white-space:nowrap;font-size:11px;font-weight:normal}
 #chat-credit:not(:disabled){pointer-events:auto}
+#chat-top-up[hidden]{display:none}
+#chat-top-up{display:grid;place-items:center;flex:none;width:32px;height:44px;color:var(--lime);text-decoration:none;pointer-events:auto}
+#chat-top-up svg,#chat-top-up::before{grid-area:1/1}
+#chat-top-up::before{content:"";width:25px;height:25px;border:1px solid currentColor;border-radius:50%;animation:update-ring-pulse 1.8s ease-in-out infinite;pointer-events:none}
+header.has-top-up #chat-credit{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:390px){header.has-top-up .icon{width:36px}}
+@media(max-width:340px){header.has-top-up .icon{width:32px}}
+@media(prefers-reduced-motion:reduce){#chat-top-up::before{animation:none}}
 .icon{display:grid;place-items:center;height:44px;line-height:1;border:0;background:transparent;font-family:"Segoe UI Symbol","Courier New",monospace}
 button:disabled{cursor:default;color:var(--disabled)}
 .primary{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
@@ -57,7 +83,7 @@ small{font-size:12px;color:var(--muted)}
   background:linear-gradient(currentColor,currentColor) center/18px 2px no-repeat,
              linear-gradient(currentColor,currentColor) center/2px 18px no-repeat;
 }
-#provider::before,#codex-settings::before{
+#provider::before{
   content:"";
   width:18px;
   height:18px;
@@ -74,6 +100,14 @@ article.mine>p{margin-top:0}
 article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
 #composer{position:relative}
+#composer[hidden],#immersive-handle[hidden]{display:none}
+.codex-mode #chat-status #stop-response{display:none}
+main:has(#composer[hidden]).codex-mode #chat-status #stop-response:not([hidden]){display:block}
+#immersive-handle{display:grid;place-items:center;align-self:stretch;min-height:28px;padding:0;border:0;background:transparent;color:var(--lime);touch-action:none}
+#immersive-handle::before{content:"";width:42px;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 8px currentColor;animation:send-pulse 1.8s ease-in-out infinite}
+#composer.immersive-reveal{animation:composer-reveal 170ms ease-out}
+@keyframes composer-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#immersive-handle::before,#composer.immersive-reveal{animation:none}}
 #composer .send{position:absolute;left:calc(50% + var(--composer-offset,0px));bottom:calc(100% + 32px);display:grid;place-items:center;width:62px;height:62px;min-height:0;padding:0;border-radius:50%;background:var(--panel);color:var(--lime);border-color:var(--line);touch-action:none;user-select:none;-webkit-touch-callout:none;visibility:hidden;opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity 240ms ease,transform 240ms ease,visibility 0s linear 240ms}
 #composer .send.is-visible{visibility:visible;opacity:1;transform:translateX(-50%);pointer-events:auto;transition-delay:0s}
 #composer .send.is-stop{left:50%;z-index:2}
@@ -137,7 +171,7 @@ dialog::backdrop{background:var(--scrim)}
 #codex-exit svg,#codex-exit::before{grid-area:1/1}
 #codex-exit::before{content:"";width:28px;height:28px;border:1px solid currentColor;border-radius:50%;pointer-events:none;animation:update-ring-pulse 1.8s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){#codex-exit::before{animation:none}}
-.codex-mode :is(#provider,#model-button,#history-button,#chat-credit,#reset,#demo-status,#pending-files){display:none}
+.codex-mode :is(#provider,#model-button,#history-button,#chat-top-up,#chat-credit,#reset,#demo-status,#pending-files){display:none}
 .codex-mode{position:relative;isolation:isolate}
 #codex-watermark{display:none;position:absolute;inset:0;width:min(60%,240px);height:auto;margin:auto;opacity:.19;pointer-events:none;z-index:-1}
 .codex-mode #codex-watermark{display:block}
@@ -181,6 +215,18 @@ dialog::backdrop{background:var(--scrim)}
 .swipe-row{position:relative;overflow:hidden;margin:6px 0;border-radius:4px}
 .swipe-button{position:relative;display:block;width:100%;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;touch-action:pan-y;user-select:none;transform:translateX(var(--swipe-x,0px));transition:transform 140ms ease}
 .swipe-row.dragging .swipe-button{transition:none}
+#messages .message-swipe{align-self:flex-end;flex:none;width:fit-content;max-width:90%;margin:0}
+#messages .message-swipe article.mine{position:relative;width:100%;max-width:none;white-space:normal}
+.message-swipe .message-cue{display:none;position:absolute;inset-block:0;align-items:center;padding:0 8px;color:var(--lime);font-size:12px;pointer-events:none;opacity:var(--swipe-progress,0)}
+.message-swipe[data-swipe="right"] .branch-cue{display:flex;left:0}
+.message-swipe[data-swipe="left"] .edit-cue{display:flex;right:0}
+#messages .branch-notice{align-self:center;flex:none;margin:0 0 4px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--lime);overflow-wrap:anywhere}
+.copyable-message{-webkit-touch-callout:none;user-select:none}.copyable-message textarea{user-select:text}
+#messages .message-swipe:has(.inline-message-edit){width:min(90%,440px)}
+.inline-message-edit textarea{display:block;width:100%;min-height:72px;margin-bottom:8px;border:1px solid var(--line);border-radius:4px}
+.inline-message-edit small{display:block;margin-bottom:6px;color:var(--muted)}
+.inline-message-edit .dialog-actions{margin-top:4px}
+#message-toast{position:absolute;z-index:5;inset:auto 16px 14px;margin:auto;width:fit-content;max-width:calc(100% - 32px);padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);pointer-events:none}
 .swipe-button:focus-visible{outline-offset:-3px}
 .swipe-cue{position:absolute;inset:0;display:none;align-items:center;padding:0 14px;font:20px "Segoe UI Symbol",sans-serif}
 .rename-cue{background:var(--selection);color:var(--lime)}
@@ -217,6 +263,7 @@ dialog::backdrop{background:var(--scrim)}
 .key-field,.url-field,.name-field,.provider-field{position:relative;min-width:0}
 .provider-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 #provider-type{appearance:none;-webkit-appearance:none;text-overflow:ellipsis}
+#factory-fields[hidden]{display:none}
 #settings .key-field input,#settings .url-field input,#settings .name-field input,#settings .provider-field select{padding-left:37px}
 .key-icon{position:absolute;left:12px;top:50%;width:16px;height:14px;transform:translateY(-50%);color:var(--lime);pointer-events:none}
 .key-icon::before{content:"";position:absolute;left:0;top:3px;width:8px;height:8px;border:2px solid currentColor;border-radius:50%;box-sizing:border-box}
@@ -253,7 +300,7 @@ dialog::backdrop{background:var(--scrim)}
 .model-failed-icon::after{width:8px;height:1px;background:currentColor;transform:translate(-50%,-50%) rotate(-45deg)}
 #provider-status:empty{display:none}
 .saved-providers{display:grid;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
-#saved-provider-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:54px;gap:5px;max-height:57px;overflow:auto;overscroll-behavior:contain}
+#saved-provider-list{--provider-row-height:54px;--provider-row-gap:5px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:var(--provider-row-height);gap:var(--provider-row-gap);max-height:calc(3 * var(--provider-row-height) + 2 * var(--provider-row-gap));overflow-y:auto;overscroll-behavior:contain}
 #saved-provider-list:empty{display:none}
 .saved-provider{display:flex;align-items:center;justify-content:flex-start;gap:4px;height:100%;padding:5px 8px;text-align:left;white-space:nowrap}
 .saved-provider>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
@@ -311,11 +358,15 @@ article .pending-reply{color:var(--muted)}
   border-radius:50%;
   background:linear-gradient(90deg,currentColor 50%,transparent 50%);
 }
-.appearance-options{display:flex;gap:8px;margin:0 0 16px}
-.appearance-options [data-theme-option]{flex:1;min-width:0;padding-inline:5px}
-.appearance-options .appearance-icon{display:grid;place-items:center;flex:0 0 44px;padding:0;font-size:20px}
-.appearance-options .appearance-icon[hidden]{display:none}
+.theme-swatches{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin:0 0 12px}
+.theme-swatches button{width:100%;aspect-ratio:1;min-height:0;padding:0;border:1px solid var(--line);background:linear-gradient(135deg,var(--swatch-bg) 54%,var(--swatch-accent) 55%);border-radius:4px}
+.theme-swatches button[aria-pressed="true"]{outline:2px solid var(--lime);outline-offset:2px}
+.appearance-options{display:flex;gap:6px;margin:0 0 12px}
+.appearance-options .appearance-icon{display:grid;place-items:center;flex:1;min-width:0;padding:0}
+.appearance-options .appearance-icon[hidden],#appearance-update-status:empty{display:none}
 .appearance-options button[aria-pressed="true"]{background:var(--primary-bg);color:var(--primary-text);border-color:var(--primary-bg)}
+#appearance-update-status{display:block;margin:0 0 8px}
+@media(max-width:360px){.theme-swatches{grid-template-columns:repeat(4,minmax(0,1fr))}.theme-swatches button{max-width:48px;justify-self:center}}
 .font-size-label{display:flex;justify-content:space-between;align-items:center;color:var(--paper);font-size:13px}
 #chat-font-size{width:100%;margin:12px 0 0;accent-color:var(--lime)}
 #history-search{margin:0 0 6px}
@@ -399,14 +450,19 @@ html.android-app,.android-app body{height:100%;min-height:0}
 #messages .model-markdown p{white-space:normal}
 .model-markdown>:first-child{margin-top:0}
 .model-markdown>:last-child{margin-bottom:0}
-.model-markdown h1,.model-markdown h2,.model-markdown h3,.model-markdown h4,.model-markdown h5,.model-markdown h6{font-size:1.1em;margin:12px 0 4px;line-height:1.3}
+.model-markdown h1,.model-markdown h2,.model-markdown h3,.model-markdown h4,.model-markdown h5,.model-markdown h6{font-family:system-ui,sans-serif;margin:1em 0 .35em;line-height:1.25;letter-spacing:normal}
+.model-markdown h1{font-size:1.45em}
+.model-markdown h2{font-size:1.25em}
+.model-markdown h3{font-size:1.12em}
+.model-markdown h4,.model-markdown h5,.model-markdown h6{font-size:1em}
 .model-markdown ul,.model-markdown ol{padding-left:1.35em;margin:6px 0}
 .model-markdown li+li{margin-top:3px}
 .model-markdown a{color:var(--lime);font-weight:bold;text-decoration:underline;text-underline-offset:.15em}
 .model-markdown a:focus-visible{outline:1px solid currentColor;outline-offset:2px}
-.model-markdown blockquote{margin:8px 0;padding:2px 8px;border-left:2px solid var(--line);color:var(--muted)}
+.model-markdown blockquote{margin:10px 0;padding:8px 11px;border:1px solid var(--line);border-inline-start:3px solid var(--lime);border-radius:8px;background:var(--panel);color:var(--paper)}
+.model-markdown blockquote p:first-child{margin-top:0} .model-markdown blockquote p:last-child{margin-bottom:0}
 .model-markdown hr{border:0;border-top:1px solid var(--line);margin:10px 0}
-.model-markdown code{font:inherit;background:var(--ink);padding:1px 3px;border-radius:3px}
+.model-markdown code{font:inherit;font-family:ui-monospace,monospace;letter-spacing:normal;background:var(--ink);padding:1px 3px;border-radius:3px}
 .model-markdown pre,.markdown-scroll{margin:8px 0;max-width:100%;overflow-x:auto}
 .model-markdown pre{background:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;font:inherit;white-space:pre;overflow-wrap:normal}
 .model-markdown pre code{padding:0}
@@ -436,7 +492,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <body>
 <main>
 <canvas id="codex-watermark" width="440" height="420" aria-hidden="true"></canvas>
-<header>
+<header id="chat-toolbar">
 <div class="header-actions">
 <button id="provider" class="icon" disabled aria-label="Settings" title="Settings"></button>
 <button id="model-button" class="icon" aria-label="Select model" title="Select model"></button>
@@ -448,7 +504,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="codex-exit" class="icon" type="button" aria-label="Exit Codex mode" title="Exit Codex mode" hidden>
 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m5 5 8 8m0-8-8 8"/></svg>
 </button>
-<button id="codex-settings" class="icon" type="button" aria-label="Codex connection settings" title="Codex connection settings" aria-haspopup="dialog" aria-controls="codex-dialog" hidden></button>
+<button id="codex-settings" class="icon" type="button" aria-label="Codex connection settings" title="Codex connection settings" aria-haspopup="dialog" aria-controls="codex-dialog" hidden><svg aria-hidden="true" width="24" height="24" viewBox="86 84 50 44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M98 115c-11 0-10-14-2-15 1-9 12-12 18-5 6-3 13 1 13 7 8 4 4 17-4 17h-23c-3 0-4-2-2-4zM101 102l5 5-5 5m11 0h8"/></svg></button>
 <button id="app-update" class="icon" type="button" aria-label="Download app update" hidden>
 <svg aria-hidden="true" width="24" height="24" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14V4m-4 4 4-4 4 4"/></svg>
 </button>
@@ -465,9 +521,13 @@ html.android-app,.android-app body{height:100%;min-height:0}
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v9M7.2 5.8a8 8 0 1 0 9.6 0"/></svg>
   </button>
 </div>
+<a id="chat-top-up" hidden rel="noopener noreferrer">
+  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4v16m4-12.5H10a2.25 2.25 0 0 0 0 4.5h4a2.25 2.25 0 0 1 0 4.5H8"/></svg>
+</a>
 <button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </div>
+<button id="immersive-toolbar-handle" type="button" aria-label="Show toolbar" aria-controls="chat-toolbar" hidden></button>
 </header>
 <section id="messages" aria-label="Conversation" aria-live="polite">
 <div id="empty" aria-hidden="true">
@@ -488,8 +548,16 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button type="button" class="send" aria-label="Send" aria-hidden="true" tabindex="-1" aria-description="Swipe up to attach, down to export Markdown, left to select all, or right to clear the message. Arrow keys also work."><i class="send-mark" aria-hidden="true"></i></button>
 <small id="composer-gesture" role="status" hidden></small>
 </form>
+<button id="immersive-handle" type="button" aria-label="Show message field" aria-controls="composer" aria-expanded="false" hidden></button>
+<small id="message-toast" role="status" hidden></small>
 </main>
 <dialog id="image-viewer" aria-label="Image preview"><img alt="Generated image" draggable="false"></dialog>
+<dialog id="branch-message" aria-label="Branch chat">
+<form method="dialog">
+<p>Create a separate chat from this message?</p>
+<div class="dialog-actions"><button value="cancel" autofocus>Cancel</button><button class="primary" value="branch">Branch</button></div>
+</form>
+</dialog>
 <dialog id="clear-draft" aria-label="Clear message">
 <p>Clear the current message?</p>
 <form method="dialog" class="dialog-actions">
@@ -513,6 +581,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <option value="openrouter">OpenRouter</option>
 <option value="openai">OpenAI</option>
 <option value="gemini">Gemini</option>
+<option value="factory" hidden>Factory.ai</option>
 <option value="custom">Custom (OpenAI-compatible)</option>
 </select>
 </div>
@@ -520,6 +589,13 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <div class="url-field">
 <span class="url-icon" aria-hidden="true"></span>
 <input id="provider-base" aria-label="API base URL" type="url" placeholder="https://api.example.com/v1" required>
+</div>
+<div id="factory-fields" class="provider-row" hidden>
+<select id="factory-target-kind" aria-label="Factory target type">
+<option value="environment">Environment</option>
+<option value="computer">Computer</option>
+</select>
+<input id="factory-target-id" aria-label="Factory target ID" placeholder="Environment ID" maxlength="200" autocapitalize="none" spellcheck="false">
 </div>
 <div class="key-field">
 <span class="key-icon" aria-hidden="true"></span>
@@ -569,16 +645,29 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <div id="model-list" tabindex="-1" autofocus></div>
 </dialog>
 <dialog id="appearance-dialog" aria-label="Appearance">
+<div class="theme-swatches" role="group" aria-label="Color theme">
+<button type="button" data-theme-option="dark" aria-label="Dark" title="Dark" aria-pressed="false" style="--swatch-bg:#080d08;--swatch-accent:#baff56"></button>
+<button type="button" data-theme-option="light" aria-label="Light" title="Light" aria-pressed="false" style="--swatch-bg:#ffffff;--swatch-accent:#315c16"></button>
+<button type="button" data-theme-option="amoled" aria-label="AMOLED Black" title="AMOLED Black" aria-pressed="false" style="--swatch-bg:#000000;--swatch-accent:#baff56"></button>
+<button type="button" data-theme-option="nord" aria-label="Nord" title="Nord" aria-pressed="false" style="--swatch-bg:#2e3440;--swatch-accent:#88c0d0"></button>
+<button type="button" data-theme-option="dracula" aria-label="Dracula" title="Dracula" aria-pressed="false" style="--swatch-bg:#282a36;--swatch-accent:#bd93f9"></button>
+<button type="button" data-theme-option="solarized" aria-label="Solarized Dark" title="Solarized Dark" aria-pressed="false" style="--swatch-bg:#002b36;--swatch-accent:#2aa198"></button>
+<button type="button" data-theme-option="gruvbox" aria-label="Gruvbox" title="Gruvbox" aria-pressed="false" style="--swatch-bg:#282828;--swatch-accent:#fabd2f"></button>
+<button type="button" data-theme-option="catppuccin" aria-label="Catppuccin Mocha" title="Catppuccin Mocha" aria-pressed="false" style="--swatch-bg:#1e1e2e;--swatch-accent:#cba6f7"></button>
+</div>
 <div class="appearance-options" role="group" aria-label="Appearance controls">
-<button type="button" data-theme-option="dark" aria-pressed="true">Dark</button>
-<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
 <button id="enter-to-send" class="appearance-icon" type="button" aria-label="Enter to send" aria-pressed="false" title="Enter to send · Shift+Enter for a new line">
 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5v5H4m3-3-3 3 3 3"/></svg>
 </button>
 <button id="fullscreen-toggle" class="appearance-icon" type="button" aria-label="Full screen" aria-pressed="false" title="Full screen" hidden>
 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 6V2h4m6 0h4v4m0 6v4h-4m-6 0H2v-4"/></svg>
 </button>
+<button id="immersive-toggle" class="appearance-icon" type="button" aria-label="Immersive" title="Immersive" aria-pressed="false"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h12M9 3v8M6 8l3 3 3-3"/></svg></button>
+<button id="appearance-credits" class="appearance-icon" type="button" aria-label="Creator credits" title="Creator credits"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="9" r="7"/><path d="M9 8v4m0-6h.01"/></svg></button>
+<button id="appearance-codex" class="appearance-icon" type="button" aria-label="Show Codex toolbar icon" title="Show Codex toolbar icon" aria-pressed="true" hidden><svg aria-hidden="true" width="20" height="20" viewBox="86 84 50 44" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"><path d="M98 115c-11 0-10-14-2-15 1-9 12-12 18-5 6-3 13 1 13 7 8 4 4 17-4 17h-23c-3 0-4-2-2-4zM101 102l5 5-5 5m11 0h8"/></svg></button>
+<button id="appearance-update" class="appearance-icon" type="button" aria-label="Check for app update" title="Check for app update" hidden><svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12V3m-3 3 3-3 3 3M3 12v3h12v-3"/></svg></button>
 </div>
+<small id="appearance-update-status" role="status"></small>
 <label class="font-size-label" for="chat-font-size">Chat font size <output id="chat-font-size-value" for="chat-font-size">16 px</output></label>
 <input id="chat-font-size" type="range" min="12" max="22" step="1" value="16">
 </dialog>
@@ -639,12 +728,14 @@ function appendMessage(author, content, mine, target = messages) {
 }
 
 const presets = {
+  factory: 'https://api.factory.ai/api/v0',
   openrouter: 'https://openrouter.ai/api/v1',
   openai: 'https://api.openai.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai'
 };
 const kenariBase = 'https://kenari.id/v1';
 const routrBase = 'https://api.routr.cloud/v1';
+const naraBase = 'https://router.bynara.id/v1';
 const demoBeamId = 'beam-1-0:free';
 const demoProfileId = 'builtin-kenari-demo';
 const liveModelKey = 'neural-link.active-provider-model.v1';
@@ -654,6 +745,9 @@ const form = find('provider-form');
 const typeInput = find('provider-type');
 const nameInput = find('provider-name');
 const baseInput = find('provider-base');
+const factoryKind = find('factory-target-kind');
+const factoryId = find('factory-target-id');
+if (window.HackGptAndroid) typeInput.querySelector('[value="factory"]').hidden = false;
 const keyInput = find('provider-key');
 const modelSearch = find('model-search');
 const sendButton = find('composer').querySelector('.send');
@@ -843,12 +937,50 @@ function updateModelStatus() {
   find('test-model').disabled = configuring || !draft?.connectionId || !connections.has(draft.connectionId) || !draftModels().length;
 }
 
+const providerTopUpLinks = new Map([
+  ['apimurah.com', ['ApiMurah', 'https://apimurah.com/register?ref=PQA96DKS']],
+  ['kenari.id', ['Kenari', 'https://kenari.id/code/KNR-6B7U9E']],
+  ['routr.cloud', ['Routr', 'https://routr.cloud/pricing']],
+  ['router.bynara.id', ['NaraRouter', 'https://router.bynara.id/register?ref=AMBADWBY']],
+  ['openrouter.ai', ['OpenRouter', 'https://openrouter.ai/settings/credits']],
+  ['api.openai.com', ['OpenAI', 'https://platform.openai.com/settings/organization/billing/overview']],
+  ['generativelanguage.googleapis.com', ['Gemini', 'https://aistudio.google.com/billing']]
+]);
+
+function updateTopUpLink(connection, freeDemo) {
+  const link = find('chat-top-up');
+  let destination;
+  if (connection?.base && !freeDemo) {
+    try {
+      const host = new URL(connection.base).hostname;
+      destination = providerTopUpLinks.get(host);
+      if (!destination && host.endsWith('.apimurah.com')) destination = providerTopUpLinks.get('apimurah.com');
+      if (!destination && host === 'api.routr.cloud') destination = providerTopUpLinks.get('routr.cloud');
+    } catch {
+      // A provider without a valid base URL has no billing destination.
+    }
+  }
+  link.hidden = !destination;
+  link.closest('header').classList.toggle('has-top-up', !!destination);
+  if (!destination) {
+    link.removeAttribute('href');
+    return;
+  }
+  const [name, url] = destination;
+  link.href = url;
+  if (!window.HackGptAndroid) link.target = '_blank';
+  link.title = 'Top up ' + name;
+  link.setAttribute('aria-label', link.title);
+}
+
 async function updateChatCredit(model, refresh = false) {
   const connection = model?.connection;
   const freeDemo = model?.profile?.id === demoProfileId;
+  updateTopUpLink(connection, freeDemo);
   const routr = connection?.base === routrBase;
+  const nara = connection?.base === naraBase;
   const key = freeDemo ? 'free-demo' : routr ? JSON.stringify([connection.id, model.id])
-    : connection?.base === kenariBase ? connection.id : null;
+    : nara || connection?.base === kenariBase ? connection.id : null;
   if (key === creditConnection && !refresh) return;
   const credit = find('chat-credit');
   if (key !== creditConnection) {
@@ -868,7 +1000,7 @@ async function updateChatCredit(model, refresh = false) {
   }
   if (!key) return;
   try {
-    const result = await localApi(routr ? 'routr-quota' : 'kenari-balance',
+    const result = await localApi(routr ? 'routr-quota' : nara ? 'nara-balance' : 'kenari-balance',
       {connection: connection.id, ...(routr && {model: model.id})});
     if (revision !== creditRevision) return;
     const amount = detailNumber(result.balance);
@@ -887,8 +1019,9 @@ async function updateChatCredit(model, refresh = false) {
         showAmount(credit.getAttribute('aria-pressed') === 'true');
         credit.onclick = () => showAmount(credit.getAttribute('aria-pressed') !== 'true');
       } else {
-        credit.textContent = (amount / 1_000_000).toLocaleString('id-ID', {maximumFractionDigits: 0});
-        credit.title = 'Available Kenari balance in Indonesian rupiah';
+        const rupiah = nara ? amount : amount / 1_000_000;
+        credit.textContent = rupiah.toLocaleString('id-ID', {maximumFractionDigits: nara ? 2 : 0});
+        credit.title = 'Available ' + (nara ? 'NaraRouter' : 'Kenari') + ' balance in Indonesian rupiah';
         credit.setAttribute('aria-label', credit.title + ' · ' + credit.textContent);
       }
     }
@@ -1042,12 +1175,12 @@ modelDialog.addEventListener('click', event => {
 window.addEventListener('resize', limitInspectorModelList);
 modelSearch.oninput = renderModels;
 
-function onLongPress(element, action) {
+function onLongPress(element, action, acceptsTarget = () => true) {
   let press;
   let consumed = false;
   const cancel = () => { clearTimeout(press?.timer); press = null; };
   element.addEventListener('pointerdown', event => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0 || !acceptsTarget(event.target)) return;
     consumed = false;
     cancel();
     press = {id: event.pointerId, x: event.clientX, y: event.clientY};
@@ -1128,6 +1261,7 @@ function inspectorLines(model, details = {}) {
 function updateInspectorTestLabel(model) {
   const name = modelFailure(model) ? 'Retest model' : 'Test response';
   const button = find('inspector-test');
+  button.hidden = model.connection?.type === 'factory';
   button.setAttribute('aria-label', name);
   button.title = name + '. Provider charges may apply.';
 }
@@ -1153,7 +1287,7 @@ async function inspectModel(model) {
       return item;
     }));
   };
-  if (model.profile.id === demoProfileId) { render({}); return; }
+  if (model.profile.id === demoProfileId || model.connection?.type === 'factory') { render({}); return; }
   render({}, 'Loading provider details…');
   try {
     const details = await localApi('provider-details', {connection: model.connection.id, model: model.id});
@@ -1255,6 +1389,8 @@ function editProvider(profile) {
   typeInput.value = profile?.type ?? 'openrouter';
   nameInput.value = profile?.name ?? 'OpenRouter';
   baseInput.value = profile?.base ?? presets.openrouter;
+  factoryKind.value = profile?.factoryTarget?.kind ?? 'environment';
+  factoryId.value = profile?.factoryTarget?.id ?? '';
   keyInput.value = '';
   find('provider-model-search').value = '';
   modelTests.clear();
@@ -1264,7 +1400,9 @@ function editProvider(profile) {
 
 function matchesDraftFields() {
   return draft?.type === typeInput.value
-    && draft.base === baseInput.value.trim().replace(/\/+$/, '');
+    && draft.base === baseInput.value.trim().replace(/\/+$/, '')
+    && (draft.type !== 'factory' || (draft.factoryTarget?.kind === factoryKind.value
+      && draft.factoryTarget?.id === factoryId.value.trim()));
 }
 
 function detailNumber(value) {
@@ -1275,6 +1413,11 @@ function detailNumber(value) {
 
 function refreshSettings() {
   baseInput.readOnly = typeInput.value !== 'custom';
+  const factory = typeInput.value === 'factory';
+  find('factory-fields').hidden = !factory;
+  factoryId.required = factory;
+  factoryId.placeholder = factoryKind.value === 'computer' ? 'Computer ID' : 'Environment ID';
+  find('test-model').hidden = factory;
   const matches = matchesDraftFields();
   const deferredKey = keyInput.value.trim() !== '';
   const connected = matches && connections.has(draft.connectionId);
@@ -1303,10 +1446,13 @@ typeInput.onchange = () => {
   const saved = profiles.find(profile => profile.id === editingId && profile.type === typeInput.value);
   nameInput.value = saved?.name ?? typeInput.selectedOptions[0].textContent.replace(/ \(.*\)$/, '');
   baseInput.value = presets[typeInput.value] ?? saved?.base ?? '';
+  factoryKind.value = saved?.factoryTarget?.kind ?? 'environment';
+  factoryId.value = saved?.factoryTarget?.id ?? '';
   keyInput.value = '';
   refreshSettings();
 };
 baseInput.oninput = refreshSettings;
+factoryKind.onchange = factoryId.oninput = refreshSettings;
 keyInput.oninput = () => {
   find('save-provider').disabled = configuring || !matchesDraftFields() || !connections.has(draft.connectionId) || !!keyInput.value.trim();
 };
@@ -1334,7 +1480,11 @@ function connect() {
     type: typeInput.value, base: baseInput.value, key: keyInput.value,
     connection: matchesDraftFields() ? draft.connectionId : undefined
   };
-  settingsRequest('Loading provider models…', async () => {
+  if (input.type === 'factory') {
+    input.factoryTarget = {kind: factoryKind.value, id: factoryId.value.trim()};
+    input.connection = draft?.type === 'factory' ? draft.connectionId : undefined;
+  }
+  settingsRequest(input.type === 'factory' ? 'Checking Factory target…' : 'Loading provider models…', async () => {
     const connection = await localApi('connect', input);
     const hidden = matchesDraftFields() ? draft.hidden : new Set();
     releaseDraftConnection();
@@ -1343,7 +1493,8 @@ function connect() {
     baseInput.value = connection.base;
     keyInput.value = '';
     modelTests.clear();
-    return 'Choose models, then save this provider.';
+    return input.type === 'factory' ? 'Factory target verified. Save to use Droid in chat.'
+      : 'Choose models, then save this provider.';
   });
 }
 
@@ -1362,6 +1513,7 @@ find('save-provider').onclick = () => {
     type: draft.type, base: draft.base, models: draft.models,
     hidden: [...draft.hidden], connectionId: draft.connectionId
   };
+  if (draft.factoryTarget) saved.factoryTarget = draft.factoryTarget;
   settingsRequest('Saving provider…', async () => {
     const connection = await localApi('save', {connection: saved.connectionId});
     connections.set(connection.id, connection);
@@ -1527,7 +1679,7 @@ function updateModelTestDots() {
 find('test-model').onclick = () => {
   const connection = connections.get(draft?.connectionId);
   const models = draftModels();
-  if (!connection || !models.length || configuring) return;
+  if (!connection || connection.type === 'factory' || !models.length || configuring) return;
   const status = find('provider-status');
   settingsRequest('Testing 0 of ' + models.length + ' models…', async () => {
     modelTests.clear();
@@ -1621,17 +1773,41 @@ function saveChats() {
   try {
     localStorage.setItem(storageKey, JSON.stringify(chats));
     find('history-status').textContent = '';
+    return true;
   } catch {
     find('history-status').textContent = 'History could not be saved to this browser.';
+    return false;
   }
 }
 
-function showChat(chat, credits = false, preserveDraft = false) {
-  attachments = [];
-  attachmentVersion++;
+let inlineEdit;
+let chatViewVersion = 0;
+let loadingChatImages = false;
+
+function branchDepth(chat) {
+  if (Number.isSafeInteger(chat.branchDepth) && chat.branchDepth > 0) return chat.branchDepth;
+  if (chat.branchFrom || chat.title?.endsWith(' (branch)')) return 1;
+  return 0;
+}
+
+function branchPrefix(chat, filename = false) {
+  const depth = branchDepth(chat);
+  if (!depth) return '';
+  if (filename && depth > 30) return '•＞'.repeat(30) + '… ';
+  return (filename ? '•＞' : '•>').repeat(depth) + ' ';
+}
+
+async function showChat(chat, credits = false, preserveDraft = false, preserveAttachments = false) {
+  const view = ++chatViewVersion;
+  loadingChatImages = false;
+  if (!preserveAttachments) {
+    attachments = [];
+    attachmentVersion++;
+  }
   renderAttachments();
   showChatError('');
   activeId = chat?.id ?? null;
+  inlineEdit = null;
   clearContents(messages);
   if (!preserveDraft) promptBox.value = '';
   updateComposerButton(currentModel());
@@ -1644,9 +1820,23 @@ function showChat(chat, credits = false, preserveDraft = false) {
     messages.append(empty);
     return;
   }
-  for (const turn of chat.turns) {
+  if (chat.turns.some(turn => turn.imageKey && !replyImages.has(turn))) {
+    loadingChatImages = true;
+    await loadChatImages(chat);
+    if (view !== chatViewVersion) return;
+    loadingChatImages = false;
+  }
+  if (branchDepth(chat)) chat.branchAt ??= chat.turns.length;
+  const branchAt = chat.branchAt ?? -1;
+  for (const [index, turn] of chat.turns.entries()) {
     if (turn.handoff) showCompletedHandoff(turn.handoff);
-    showTurn(turn);
+    showTurn(turn, messages, chat);
+    if (index + 1 === branchAt) {
+      const notice = document.createElement('small');
+      notice.className = 'branch-notice';
+      notice.textContent = branchPrefix(chat) + (chat.branchFrom ? 'Branched from ' + chat.branchFrom : 'Branch chat');
+      messages.append(notice);
+    }
   }
   syncModelHandoff(currentModel());
   messages.scrollTop = messages.scrollHeight;
@@ -1931,7 +2121,7 @@ function renderPendingHandoff(handoff) {
 }
 
 function canSummarize(model) {
-  return !!model?.connection && !model.imageOnly && !modelFailure(model)
+  return !!model?.connection && model.connection.type !== 'factory' && !model.imageOnly && !modelFailure(model)
     && (!Array.isArray(model.modalities) || model.modalities.includes('text'));
 }
 
@@ -1993,9 +2183,9 @@ async function generateHandoffSummary(handoff, editor, status, refreshButtons) {
   }
 }
 
-function prepareModelRequest(chat, model, text, files, handoff) {
+function prepareModelRequest(chat, model, text, files, handoff, savedBoundary, editing = false) {
   const turns = chat?.turns ?? [];
-  let boundary;
+  let boundary = savedBoundary;
   if (handoff) {
     if (handoff.summaryRequest) throw new Error('Wait for the summary before sending.');
     const summary = handoff.mode === 'summary' ? (handoff.summaries.get(handoff.level) ?? '').trim() : '';
@@ -2018,7 +2208,7 @@ function prepareModelRequest(chat, model, text, files, handoff) {
   const prompt = model.imageOnly
     ? (previous.length ? 'Use this previous conversation as context for the next image prompt:\n'
       + JSON.stringify(previous.map(({role, content}) => ({role, content}))) + '\n\nNew image prompt:\n' + text : text)
-    : promptWithVisualFormats(text);
+    : model.connection.type === 'factory' ? text : promptWithVisualFormats(text);
   const messages = [...(model.imageOnly ? [] : previous), {role: 'user', content: prompt, files}];
   if (handoff?.tokenLimit > 0 && estimateHandoffTokens(model.imageOnly ? [] : previous, prompt) > handoff.tokenLimit) {
     throw new Error('This request exceeds the estimated input budget. Use a shorter summary or Fresh start.');
@@ -2029,6 +2219,14 @@ function prepareModelRequest(chat, model, text, files, handoff) {
     throw new Error('This request includes more than 6 MB of attachments. Remove draft files or use a shorter handoff.');
   }
   const payload = {connection: model.connection.id, model: model.id, messages};
+  if (model.connection.type === 'factory') {
+    const previousFactory = turns.at(-1)?.stats;
+    if (!editing && !boundary && previousFactory?.factoryConnection === model.connection.id
+        && typeof previousFactory.factorySession === 'string') {
+      payload.factorySession = previousFactory.factorySession;
+      payload.messages = [messages.at(-1)];
+    }
+  }
   if (new Blob([JSON.stringify(payload)]).size > 12_000_000) {
     throw new Error('This request is too large. Use a shorter summary or Fresh start.');
   }
@@ -2055,57 +2253,73 @@ function swipeCue(deleting) {
   return cue;
 }
 
-function attachSwipeGesture(row, button, actions, thresholds = {}) {
+function attachSwipeGesture(row, button, actions, thresholds = {}, horizontalLock = false) {
   let start = null;
   let dragging = false;
   let suppressClick = false;
 
   button.onpointerdown = event => {
-    if (!event.isPrimary || event.button !== 0) return;
+    if (!event.isPrimary || event.button !== 0 || event.target.closest('.inline-message-edit')) return;
     start = {id: event.pointerId, x: event.clientX, y: event.clientY};
     dragging = false;
     suppressClick = false;
+    if (horizontalLock) button.setPointerCapture(event.pointerId);
   };
 
   button.onpointermove = event => {
     if (start?.id !== event.pointerId) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    const vertical = Math.abs(dy) >= Math.abs(dx);
+    const vertical = !(horizontalLock && dragging) && Math.abs(dy) >= Math.abs(dx);
     const direction = vertical ? (dy < 0 ? 'up' : 'down') : (dx < 0 ? 'left' : 'right');
     if (!dragging) {
-      if (vertical && !actions.up && Math.abs(dy) > 8) {
-        start = null;
+      const slop = horizontalLock ? 5 : 8;
+      if (vertical && !actions.up && Math.abs(dy) > slop) {
+        if (!horizontalLock || Math.abs(dy) > Math.abs(dx) * 1.5) start = null;
         return;
       }
-      if (Math.max(Math.abs(dx), actions.up ? Math.abs(dy) : 0) < 8) return;
+      if (Math.max(Math.abs(dx), actions.up ? Math.abs(dy) : 0) < slop) return;
       dragging = true;
       suppressClick = true;
-      button.setPointerCapture(event.pointerId);
+      if (!horizontalLock) button.setPointerCapture(event.pointerId);
       row.classList.add('dragging');
     }
     row.dataset.swipe = actions[direction] ? direction : '';
     const offset = actions[direction] && !vertical ? dx : 0;
-    button.style.setProperty('--swipe-x', Math.max(-96, Math.min(96, offset)) + 'px');
+    if (horizontalLock) {
+      const distance = Math.abs(offset);
+      const reveal = 48;
+      const travel = Math.min(96, Math.min(reveal, distance) + Math.max(0, distance - reveal) * .38);
+      row.style.setProperty('--swipe-progress', Math.min(1, distance / reveal));
+      button.style.setProperty('--swipe-x', Math.sign(offset) * travel + 'px');
+    } else {
+      button.style.setProperty('--swipe-x', Math.max(-96, Math.min(96, offset)) + 'px');
+    }
   };
 
   function finish(event, commit) {
     if (start?.id !== event.pointerId) return;
     const dx = event.clientX - start.x;
     const dy = event.clientY - start.y;
-    const vertical = Math.abs(dy) >= Math.abs(dx);
+    const vertical = !(horizontalLock && dragging) && Math.abs(dy) >= Math.abs(dx);
     const direction = vertical ? (dy < 0 ? 'up' : 'down') : (dx < 0 ? 'left' : 'right');
-    const shouldOpen = commit && dragging && Math.abs(vertical ? dy : dx) >= (thresholds[direction] ?? 64);
+    let threshold = thresholds[direction] ?? 64;
+    if (horizontalLock && !vertical) {
+      const edgeDistance = dx > 0 ? document.documentElement.clientWidth - start.x : start.x;
+      threshold = Math.min(threshold, Math.max(10, edgeDistance * .7));
+    }
+    const shouldOpen = commit && dragging && Math.abs(vertical ? dy : dx) >= threshold;
     start = null;
     dragging = false;
     row.classList.remove('dragging');
     delete row.dataset.swipe;
+    if (horizontalLock) row.style.removeProperty('--swipe-progress');
     button.style.removeProperty('--swipe-x');
     if (shouldOpen) actions[direction]?.();
   }
 
   button.onpointerup = event => finish(event, true);
-  button.onpointerleave = event => { if (!dragging) finish(event, false); };
+  button.onpointerleave = event => { if (!horizontalLock && !dragging) finish(event, false); };
   button.onpointercancel = event => finish(event, false);
   button.onlostpointercapture = event => finish(event, false);
   row.addEventListener('click', event => {
@@ -2116,6 +2330,7 @@ function attachSwipeGesture(row, button, actions, thresholds = {}) {
   }, true);
 
   button.onkeydown = event => {
+    if (event.target.closest('.inline-message-edit')) return;
     const action = event.key === 'ArrowLeft' ? actions.left : event.key === 'ArrowRight' ? actions.right
       : event.key === 'ArrowUp' ? actions.up : null;
     if (!action) return;
@@ -2168,7 +2383,7 @@ function renderHistory() {
     const row = document.createElement('div');
     row.className = 'swipe-row';
     let held = false;
-    const open = historyButton(chat.title, event => {
+    const open = historyButton(branchPrefix(chat) + chat.title, event => {
       if (held && event.detail) {
         held = false;
         return;
@@ -2306,6 +2521,11 @@ if (window.HackGptAndroid?.setFullScreen) {
 }
 
 const appearanceDialog = find('appearance-dialog');
+find('appearance-credits').onclick = () => {
+  if (sending || window.hackGptCodexMode) return;
+  appearanceDialog.close();
+  revealCredits();
+};
 const fontSize = find('chat-font-size');
 const themeButtons = [...appearanceDialog.querySelectorAll('[data-theme-option]')];
 const themeKey = 'neural-link.theme';
@@ -2336,7 +2556,8 @@ promptBox.addEventListener('keydown', event => {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  window.HackGptAndroid?.setLightTheme(theme === 'light');
+  if (window.HackGptAndroid?.setAppearanceTheme) window.HackGptAndroid.setAppearanceTheme(theme);
+  else window.HackGptAndroid?.setLightTheme(theme === 'light');
   for (const button of themeButtons) {
     button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme));
   }
@@ -2348,7 +2569,8 @@ function applyFontSize(value) {
   find('chat-font-size-value').textContent = fontSize.value + ' px';
 }
 
-applyTheme(stored(themeKey) === 'light' ? 'light' : 'dark');
+const savedTheme = stored(themeKey);
+applyTheme(themeButtons.some(button => button.dataset.themeOption === savedTheme) ? savedTheme : 'dark');
 applyFontSize(stored(fontSizeKey) ?? '16');
 for (const button of themeButtons) {
   button.onclick = () => {
@@ -2398,7 +2620,9 @@ find('chat-action-form').onsubmit = event => {
   event.preventDefault();
   const {chat, deleting, ids} = pendingAction;
   if (deleting) {
+    const removed = chats.filter(item => ids.has(item.id));
     chats = chats.filter(item => !ids.has(item.id));
+    if (saveChats()) for (const item of removed) removeChatImages(item);
     if (ids.has(activeId)) showChat(null);
     for (const id of ids) selectedHistory.delete(id);
     if (!selectedHistory.size) selectingHistory = false;
@@ -2411,7 +2635,7 @@ find('chat-action-form').onsubmit = event => {
     }
     chat.title = title;
   }
-  saveChats();
+  if (!deleting) saveChats();
   actionDialog.close();
   renderHistory();
   const next = historyList.querySelector('button') ?? historyList;
@@ -2487,12 +2711,13 @@ function fileEncoding(file) {
 
 function acceptsFile(file, model) {
   const support = attachmentCapabilities(model);
-  return !!model?.connection && !model.imageOnly && (file.kind === 'text' || support[file.kind]);
+  return !!model?.connection && model.connection.type !== 'factory'
+    && !model.imageOnly && (file.kind === 'text' || support[file.kind]);
 }
 
 function openAttachmentPicker() {
-  if (window.hackGptCodexMode) {
-    showChatError('Codex mode currently accepts text messages.');
+  if (window.hackGptCodexMode || currentModel()?.connection?.type === 'factory') {
+    showChatError('This chat currently accepts text messages only.');
     return;
   }
   if (sending || readingFiles) return;
@@ -2571,6 +2796,106 @@ clearDraft.addEventListener('close', () => {
 });
 dismissOnBackdrop(clearDraft);
 const composerForm = promptBox.form;
+const immersiveToggle = find('immersive-toggle');
+const immersiveHandle = find('immersive-handle');
+const immersiveKey = 'neural-link.immersive';
+let immersiveEnabled = stored(immersiveKey) === 'true';
+let immersiveTucked = immersiveEnabled;
+
+function showImmersiveComposer(tucked, animate = false) {
+  const wasHidden = composerForm.hidden;
+  const nearBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 48;
+  immersiveTucked = immersiveEnabled && tucked;
+  composerForm.hidden = immersiveTucked;
+  immersiveHandle.hidden = !immersiveEnabled;
+  immersiveHandle.setAttribute('aria-expanded', String(!immersiveTucked));
+  immersiveHandle.setAttribute('aria-label', immersiveTucked ? 'Show message field' : 'Hide message field');
+  immersiveToggle.setAttribute('aria-pressed', String(immersiveEnabled));
+  composerForm.classList.toggle('immersive-reveal', animate && wasHidden && !immersiveTucked);
+  if (immersiveTucked) {
+    promptBox.blur();
+    window.HackGptAndroid?.dismissComposerKeyboard?.();
+  }
+  if (nearBottom && wasHidden !== immersiveTucked) messages.scrollTop = messages.scrollHeight;
+}
+
+const immersiveToolbar = find('chat-toolbar');
+const toolbarHandle = find('immersive-toolbar-handle');
+const toolbarGroups = [...immersiveToolbar.querySelectorAll('.header-actions')];
+let toolbarTimer;
+
+function setToolbarTucked(tucked) {
+  clearTimeout(toolbarTimer);
+  immersiveToolbar.classList.toggle('immersive-toolbar', immersiveEnabled);
+  immersiveToolbar.classList.toggle('toolbar-tucked', tucked);
+  const focused = toolbarGroups.some(group => group.contains(document.activeElement));
+  toolbarHandle.hidden = !tucked;
+  for (const group of toolbarGroups) group.inert = tucked;
+  if (tucked && focused) toolbarHandle.focus({preventScroll: true});
+}
+
+function scheduleToolbarHide() {
+  if (!immersiveEnabled || !toolbarHandle.hidden) return;
+  clearTimeout(toolbarTimer);
+  toolbarTimer = setTimeout(() => {
+    if (document.querySelector('dialog[open]')) scheduleToolbarHide();
+    else setToolbarTucked(true);
+  }, 3000);
+}
+
+toolbarHandle.onclick = event => {
+  setToolbarTucked(false);
+  if (!event.detail) {
+    const first = [...immersiveToolbar.querySelectorAll('.header-actions button:not([disabled]), .header-actions a[href]')]
+      .find(item => item.getClientRects().length);
+    first?.focus({preventScroll: true});
+  }
+  scheduleToolbarHide();
+};
+for (const event of ['pointerdown', 'pointermove', 'keydown', 'focusin']) {
+  immersiveToolbar.addEventListener(event, scheduleToolbarHide);
+}
+document.addEventListener('close', scheduleToolbarHide, true);
+setToolbarTucked(immersiveEnabled);
+
+immersiveToggle.onclick = () => {
+  immersiveEnabled = !immersiveEnabled;
+  remember(immersiveKey, String(immersiveEnabled));
+  showImmersiveComposer(immersiveEnabled);
+  setToolbarTucked(immersiveEnabled);
+};
+
+let handlePress;
+let handledSwipe = false;
+immersiveHandle.onpointerdown = event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  handledSwipe = false;
+  handlePress = {id: event.pointerId, y: event.clientY};
+  immersiveHandle.setPointerCapture(event.pointerId);
+};
+immersiveHandle.onpointermove = event => {
+  if (handlePress?.id !== event.pointerId || handledSwipe) return;
+  const distance = event.clientY - handlePress.y;
+  if ((immersiveTucked && distance < -22) || (!immersiveTucked && distance > 22)) {
+    handledSwipe = true;
+    showImmersiveComposer(!immersiveTucked, true);
+  }
+};
+immersiveHandle.onpointerup = event => {
+  if (handlePress?.id !== event.pointerId) return;
+  handlePress = null;
+  if (event.pointerType === 'touch' && !handledSwipe) {
+    handledSwipe = true;
+    showImmersiveComposer(!immersiveTucked, true);
+  }
+};
+immersiveHandle.onpointercancel = () => { handlePress = null; };
+immersiveHandle.onclick = event => {
+  if (!event.detail || !handledSwipe) showImmersiveComposer(!immersiveTucked, true);
+  handledSwipe = false;
+};
+showImmersiveComposer(immersiveTucked);
+
 for (const grip of composerForm.querySelectorAll('.resize-grip')) {
   let drag;
   const resize = height => { promptBox.style.height = Math.max(0, height) + 'px'; };
@@ -2985,7 +3310,12 @@ function renderInlineVisual(kind, source, escape) {
 }
 
 function promptWithVisualFormats(text) {
-  if (!/\b(?:charts?|bar graphs?|mind[ -]*maps?|grafik|peta pikiran|diagrams?|flow[ -]*charts?|org[ -]*charts?|sequences?)\b/i.test(text)) return text;
+  const style = 'Use the user’s language and requested format. For ordinary chat replies, vary the layout when it helps the reader. '
+    + 'Use short Markdown headings and **bold** or *italic* for emphasis, with an occasional relevant emoji or emoticon. '
+    + 'Use a Markdown table for comparisons, a numbered list for choices, and fenced code blocks for actual code. '
+    + 'Use Markdown blockquotes (>) for short callouts or dialogue bubbles with speaker names. '
+    + 'Avoid adding sections or formats just for variety. Keep short answers simple. '
+    + 'For exact-output requests, follow the requested format without extra Markdown or commentary.';
   const fence = String.fromCharCode(96).repeat(3);
   const examples = [
     {type:'chart',title:'Bar chart',labels:['A','B'],values:[3,5]},
@@ -2994,7 +3324,7 @@ function promptWithVisualFormats(text) {
     {type:'orgchart',title:'Organization',root:{label:'Lead',children:[{label:'Team'}]}},
     {type:'sequence',title:'Sequence',participants:['User','App'],messages:[{from:'User',to:'App',label:'Open'}]}
   ];
-  return text + '\n\nIf a diagram or chart fits the request, use a fenced json block containing one object '
+  return text + '\n\n' + style + '\nIf a diagram or chart helps explain the answer, use a fenced json block containing one object '
     + 'with a type field. Use double-quoted JSON, short labels, and the schema for the requested visual. '
     + 'Use separate blocks when asked for multiple visuals. Supported examples:\n'
     + examples.map(example => fence + 'json\n' + JSON.stringify(example) + '\n' + fence).join('\n');
@@ -3050,16 +3380,54 @@ function renderReplyMarkup(article, reply) {
 }
 
 
-const replyImages = new Map();
+const replyImages = new WeakMap();
+let replyImageDatabase;
 
-function rememberReplyImages(turn, images) {
+function imageStorage(mode, operation) {
+  replyImageDatabase ??= new Promise((resolve, reject) => {
+    const request = indexedDB.open('hackgpt-reply-images', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('images');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  }).catch(error => {
+    replyImageDatabase = null;
+    throw error;
+  });
+  return replyImageDatabase.then(database => new Promise((resolve, reject) => {
+    const transaction = database.transaction('images', mode);
+    const request = operation(transaction.objectStore('images'));
+    transaction.oncomplete = () => resolve(request?.result);
+    transaction.onabort = () => reject(transaction.error);
+  }));
+}
+
+async function saveReplyImages(turn, images) {
   replyImages.set(turn, images);
-  let bytes = [...replyImages.values()].flat().reduce((size, source) => size + source.length, 0);
-  for (const [oldTurn, oldImages] of replyImages) {
-    if (bytes <= 16_000_000) break;
-    bytes -= oldImages.reduce((size, source) => size + source.length, 0);
-    replyImages.delete(oldTurn);
-  }
+  turn.imageCount = images.length;
+  const key = newId();
+  await imageStorage('readwrite', store => store.put(images, key));
+  turn.imageKey = key;
+}
+
+function loadChatImages(chat) {
+  return Promise.all(chat.turns.map(async turn => {
+    if (!turn.imageKey || replyImages.has(turn)) return;
+    try {
+      const images = await imageStorage('readonly', store => store.get(turn.imageKey));
+      if (Array.isArray(images)) replyImages.set(turn, images);
+    } catch {
+      // The text of the conversation is still available if local image storage fails.
+    }
+  }));
+}
+
+function removeChatImages(chat) {
+  const retained = new Set(chats.flatMap(item => item.turns.map(turn => turn.imageKey)));
+  const keys = chat.turns.map(turn => turn.imageKey).filter(key => key && !retained.has(key));
+  if (!keys.length) return;
+  imageStorage('readwrite', store => {
+    for (const key of keys) store.delete(key);
+  }).catch(() => {});
 }
 
 function replyImageSource(value) {
@@ -3102,7 +3470,7 @@ let viewerRotation = 0;
 let viewerX = 0;
 let viewerY = 0;
 let viewerPinch;
-let viewerMoved = false;
+let viewerBackdropPress;
 
 function renderImageViewer() {
   if (!viewerImage.naturalWidth || !imageViewer.open) return;
@@ -3129,7 +3497,7 @@ function openImageViewer(image) {
   if (imageViewer.open) return;
   viewerScale = 1;
   viewerAngle = viewerRotation = viewerX = viewerY = 0;
-  viewerMoved = false;
+  viewerBackdropPress = null;
   viewerImage.alt = image.alt;
   viewerImage.src = image.src;
   imageViewer.showModal();
@@ -3147,16 +3515,20 @@ viewerImage.onload = renderImageViewer;
 window.addEventListener('resize', renderImageViewer);
 imageViewer.onpointerdown = event => {
   if (event.button !== 0 || viewerPointers.size >= 2) return;
-  if (!viewerPointers.size) viewerMoved = false;
-  if (event.target !== viewerImage && !viewerPointers.size) return;
+  if (event.target !== viewerImage && !viewerPointers.size) {
+    viewerBackdropPress = {id: event.pointerId, x: event.clientX, y: event.clientY};
+    return;
+  }
+  viewerBackdropPress = null;
   event.target.setPointerCapture(event.pointerId);
   viewerPointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
   if (viewerPointers.size === 2) {
-    viewerMoved = true;
     viewerPinch = {...viewerGesture(), scale: viewerScale, rotation: viewerRotation};
   }
 };
 imageViewer.onpointermove = event => {
+  if (viewerBackdropPress?.id === event.pointerId &&
+      Math.hypot(event.clientX - viewerBackdropPress.x, event.clientY - viewerBackdropPress.y) > 8) viewerBackdropPress = null;
   const previous = viewerPointers.get(event.pointerId);
   if (!previous) return;
   const point = {x: event.clientX, y: event.clientY};
@@ -3169,11 +3541,11 @@ imageViewer.onpointermove = event => {
   } else if (viewerScale > 1) {
     viewerX += point.x - previous.x;
     viewerY += point.y - previous.y;
-    viewerMoved = true;
   }
   renderImageViewer();
 };
 imageViewer.onpointerup = imageViewer.onpointercancel = imageViewer.onlostpointercapture = event => {
+  if (event.type === 'pointercancel' && viewerBackdropPress?.id === event.pointerId) viewerBackdropPress = null;
   if (!viewerPointers.delete(event.pointerId) || !viewerPinch) return;
   const rotation = Math.round(viewerAngle / 90) * 90;
   if (rotation !== viewerRotation) viewerX = viewerY = 0;
@@ -3182,11 +3554,13 @@ imageViewer.onpointerup = imageViewer.onpointercancel = imageViewer.onlostpointe
   renderImageViewer();
 };
 imageViewer.onclick = event => {
-  if (event.target === imageViewer && !viewerMoved) imageViewer.close();
+  if (event.target === imageViewer && viewerBackdropPress) imageViewer.close();
+  viewerBackdropPress = null;
 };
 imageViewer.oncontextmenu = event => event.preventDefault();
 imageViewer.onclose = () => {
   viewerPointers.clear();
+  viewerBackdropPress = null;
   viewerPinch = null;
   viewerImage.removeAttribute('src');
 };
@@ -3224,27 +3598,155 @@ function appendReplyImage(answer, source, turn) {
     meta.textContent = [...replyStats(turn), ...dimensions, ...file].join(' · ');
   };
   image.onload = refresh;
-  let lastTap = -Infinity;
-  image.onclick = () => {
-    const now = performance.now();
-    if (now - lastTap < 350) {
-      lastTap = -Infinity;
-      openImageViewer(image);
-    } else lastTap = now;
-  };
+  image.onclick = () => openImageViewer(image);
   image.onkeydown = event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     openImageViewer(image);
   };
-  onLongPress(image, () => openImageViewer(image));
   image.src = source;
   refresh();
   answer.append(image, footer);
 }
 
-function showTurn(turn, target = messages) {
-  showFileNames(appendMessage('', turn.question, true, target), turn.files);
+
+function canChangeTurn(chat, turn) {
+  const index = chat.turns.indexOf(turn);
+  let boundary = chat.turns.length - 1;
+  while (boundary >= 0 && chat.turns[boundary].handoff?.mode !== 'summary') boundary--;
+  return activeId === chat.id && !sending && !window.hackGptCodexMode
+    && index >= 0 && index >= boundary;
+}
+
+const branchMessage = find('branch-message');
+let pendingBranch;
+dismissOnBackdrop(branchMessage);
+
+function confirmBranch(chat, turn) {
+  if (!canChangeTurn(chat, turn)) return;
+  pendingBranch = {chat, turn};
+  branchMessage.returnValue = '';
+  branchMessage.showModal();
+}
+
+branchMessage.querySelector('form').onsubmit = event => {
+  event.preventDefault();
+  const choice = pendingBranch;
+  pendingBranch = null;
+  branchMessage.close();
+  if (event.submitter?.value === 'branch' && choice) branchTurn(choice.chat, choice.turn);
+};
+
+function branchTurn(chat, turn) {
+  if (!canChangeTurn(chat, turn)) return;
+  const turns = chat.turns.slice(0, chat.turns.indexOf(turn) + 1).map(item => {
+    if (!item.stats?.factorySession) return item;
+    const copy = {...item, stats: {...item.stats}};
+    delete copy.stats.factorySession;
+    const images = replyImages.get(item);
+    const files = turnFiles.get(item);
+    if (images) replyImages.set(copy, images);
+    if (files) turnFiles.set(copy, files);
+    return copy;
+  });
+  const branch = {...chat, id: newId(), title: chat.title.replace(/ \(branch\)$/, '').slice(0, 80), branchFrom: branchPrefix(chat) + chat.title, branchDepth: branchDepth(chat) + 1, branchAt: turns.length,
+    createdAt: new Date().toISOString(), turns};
+  chats.unshift(branch);
+  saveChats();
+  showChat(branch);
+}
+
+let messageToastTimer;
+
+function closeTurnEdit() {
+  if (!inlineEdit) return;
+  const {bubble, form, original} = inlineEdit;
+  inlineEdit = null;
+  form.remove();
+  original.hidden = false;
+  bubble.focus();
+}
+
+function openTurnEdit(chat, turn, bubble) {
+  if (!canChangeTurn(chat, turn) || bubble === inlineEdit?.bubble) return;
+  closeTurnEdit();
+  const original = bubble.querySelector('p');
+  const form = document.createElement('form');
+  form.className = 'inline-message-edit';
+  const field = document.createElement('textarea');
+  field.setAttribute('aria-label', 'Edited message');
+  field.value = turn.question;
+  field.required = true;
+  const note = document.createElement('small');
+  note.textContent = 'Sending replaces this reply and any later messages.';
+  const actions = document.createElement('div');
+  actions.className = 'dialog-actions';
+  const cancel = historyButton('Cancel', closeTurnEdit);
+  const send = document.createElement('button');
+  send.type = 'submit';
+  send.className = 'primary';
+  send.textContent = 'Send edit';
+  actions.append(cancel, send);
+  form.append(field, note, actions);
+  original.hidden = true;
+  bubble.prepend(form);
+  inlineEdit = {bubble, form, original};
+  field.focus();
+  field.setSelectionRange(field.value.length, field.value.length);
+  form.onkeydown = event => {
+    if (event.key === 'Escape') closeTurnEdit();
+  };
+  form.onsubmit = event => {
+    event.preventDefault();
+    const text = field.value.trim();
+    if (!text || !canChangeTurn(chat, turn)) return;
+    closeTurnEdit();
+    sendChatMessage(null, {chat, turn, text, row: bubble.closest('.message-swipe')});
+  };
+}
+
+async function copyTurnText(text) {
+  if (!text) return;
+  const toast = find('message-toast');
+  try {
+    if (window.HackGptAndroid?.copyMessageText) window.HackGptAndroid.copyMessageText(text);
+    else await navigator.clipboard.writeText(text);
+    toast.textContent = 'Message copied';
+  } catch {
+    toast.textContent = 'Could not copy message';
+  }
+  toast.hidden = false;
+  clearTimeout(messageToastTimer);
+  messageToastTimer = setTimeout(() => { toast.hidden = true; toast.textContent = ''; }, 1700);
+}
+
+function addTurnSwipe(chat, turn, bubble) {
+  if (!canChangeTurn(chat, turn)) return;
+  const row = document.createElement('div');
+  row.className = 'swipe-row message-swipe';
+  for (const [label, style] of [['Branch', 'branch-cue'], ['Edit', 'edit-cue']]) {
+    const cue = document.createElement('span');
+    cue.className = 'message-cue ' + style;
+    cue.textContent = label;
+    cue.setAttribute('aria-hidden', 'true');
+    row.append(cue);
+  }
+  bubble.replaceWith(row);
+  row.append(bubble);
+  bubble.classList.add('swipe-button');
+  bubble.tabIndex = 0;
+  bubble.setAttribute('aria-description', 'Swipe right to branch, or left to edit. Arrow keys also work.');
+  attachSwipeGesture(row, bubble, {right: () => confirmBranch(chat, turn), left: () => openTurnEdit(chat, turn, bubble)}, {left: 42, right: 42}, true);
+}
+
+function showTurn(turn, target = messages, chat) {
+  const bubble = appendMessage('', turn.question, true, target);
+  showFileNames(bubble, turn.files);
+  if (chat) {
+    bubble.classList.add('copyable-message');
+    onLongPress(bubble, () => copyTurnText(turn.question), target => !target.closest('.inline-message-edit'));
+    addTurnSwipe(chat, turn, bubble);
+  }
   const answer = appendMessage(turn.model || 'ASSISTANT', turn.reply, false, target);
   const images = replyImages.get(turn) ?? [];
   if (turn.reply) renderReplyMarkup(answer, turn.reply);
@@ -3334,14 +3836,20 @@ function markdownExportEntry(chat, exportedAt) {
     const stats = replyStats(turn);
     if (stats.length) sections.push('Response details · ' + stats.join(' · '));
   }
-  return {name: exportTimestamp(date) + ' - ' + safeTitle + '.md', markdown: sections.join('\n\n') + '\n'};
+  const prefix = exportTimestamp(date) + ' - ' + branchPrefix(chat, true);
+  let exportTitle = '';
+  for (const character of safeTitle) {
+    if (prefix.length + exportTitle.length + character.length + 3 > 128) break;
+    exportTitle += character;
+  }
+  return {name: prefix + exportTitle + '.md', markdown: sections.join('\n\n') + '\n'};
 }
 
 function exportTimestamp(date) {
   return date.toISOString().slice(0, 19).replace(/:/g, '-') + 'Z';
 }
 
-function exportChatMarkdown(conversations, report, archive = false) {
+async function exportChatMarkdown(conversations, report, archive = false) {
   if (!conversations.length) {
     report('Open a conversation with a reply before exporting.');
     return;
@@ -3351,6 +3859,7 @@ function exportChatMarkdown(conversations, report, archive = false) {
     return;
   }
   const now = new Date();
+  await Promise.all(conversations.map(loadChatImages));
   const entries = conversations.map(chat => markdownExportEntry(chat, now));
   const name = archive ? exportTimestamp(now) + ' - HackGpt chats.zip' : entries[0].name;
   const content = archive ? JSON.stringify(entries) : entries[0].markdown;
@@ -3428,30 +3937,43 @@ async function receiveReply(payload, onEvent, signal) {
 
 stopResponse.onclick = () => window.hackGptCodexMode ? window.hackGptCodexMode.stop() : requestAbort?.abort();
 
-find('composer').onsubmit = async event => {
-  event.preventDefault();
+find('composer').onsubmit = sendChatMessage;
+async function sendChatMessage(event, edit) {
+  event?.preventDefault();
   if (window.hackGptCodexMode) return window.hackGptCodexMode.send();
-  if (sending || readingFiles) return;
-  const text = promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : '');
+  if (sending || readingFiles || loadingChatImages) return;
+  const text = edit?.text ?? (promptBox.value.trim() || (attachments.length ? 'Review the attached files.' : ''));
   const model = currentModel();
   if (!text || !model?.connection) return;
-  if (!attachments.every(file => acceptsFile(file, model))) {
+  if (!edit && !attachments.every(file => acceptsFile(file, model))) {
     showChatError('Remove attachments this model cannot use, or choose a compatible model.');
     return;
   }
   const connection = model.connection;
   const source = model.profile?.id ?? null;
   let chat = chats.find(item => item.id === activeId);
-  const files = [...attachments];
-  syncModelHandoff(model);
-  const handoff = pendingHandoff;
+  if (edit && (chat !== edit.chat || !canChangeTurn(chat, edit.turn))) return;
+  const editIndex = edit ? chat.turns.indexOf(edit.turn) : -1;
+  const requestChat = edit ? {...chat, turns: chat.turns.slice(0, editIndex)} : chat;
+  const files = edit ? (turnFiles.get(edit.turn) ?? []) : [...attachments];
+  if (edit && files.length !== (edit.turn.files?.length ?? 0)) {
+    showChatError('The original attachments are unavailable. Branch the chat to send a new message with files.');
+    return;
+  }
+  if (!files.every(file => acceptsFile(file, model))) {
+    showChatError('The selected model cannot use these attachments.');
+    return;
+  }
+  if (!edit) syncModelHandoff(model);
+  const handoff = edit ? null : pendingHandoff;
   let request;
   try {
-    request = prepareModelRequest(chat, model, text, files, handoff);
+    request = prepareModelRequest(requestChat, model, text, files, handoff, edit?.turn.handoff, !!edit);
   } catch (error) {
     showChatError(error.message);
     return;
   }
+  let imageSaveFailed = false;
   const turn = {question: text, files: files.map(file => file.name), model: model.name,
     modelSelection: model.selection, providerName: model.profile.name, reply: '', provider: connection.type};
   if (request.boundary) turn.handoff = request.boundary;
@@ -3460,8 +3982,13 @@ find('composer').onsubmit = async event => {
   {
     const originalChat = chat;
     const originalDraft = promptBox.value;
-    promptBox.value = '';
-    if (!chat) clearContents(messages);
+    if (!edit) promptBox.value = '';
+    if (edit && edit.row?.parentElement === messages) {
+      while (messages.lastElementChild !== edit.row) messages.lastElementChild.remove();
+      edit.row.remove();
+    } else if (!chat) {
+      clearContents(messages);
+    }
     requestAbort = new AbortController();
     setSending(true);
     if (handoff) handoff.element.inert = true;
@@ -3505,35 +4032,44 @@ find('composer').onsubmit = async event => {
       }, requestAbort.signal);
       if (!turn.reply.trim() && !images.length) throw new Error('The provider returned no displayable image or text.');
     } catch (error) {
-      if (requestAbort.signal.aborted && (turn.reply.trim() || images.length)) {
+      if (!edit && requestAbort.signal.aborted && (turn.reply.trim() || images.length)) {
         turn.stopped = true;
       } else {
-        showChat(originalChat, false, true);
+        showChat(originalChat, false, true, !!edit);
         if (!promptBox.value) promptBox.value = originalDraft;
-        attachments.push(...files);
+        if (!edit) attachments.push(...files);
+        images.length = 0;
         showChatError(requestAbort.signal.aborted ? 'Response stopped.' : error.message);
         return;
       }
     } finally {
+      if (images.length) {
+        try {
+          await saveReplyImages(turn, images);
+        } catch {
+          imageSaveFailed = true;
+        }
+      }
       if (handoff) handoff.element.inert = false;
       setSending(false);
-      if (connection.base === routrBase || (connection.base === kenariBase && model.profile.id !== demoProfileId)) {
+      if (connection.base === routrBase || connection.base === naraBase
+          || (connection.base === kenariBase && model.profile.id !== demoProfileId)) {
         updateChatCredit(model, true);
       }
       requestAbort = null;
     }
-    if (images.length) {
-      rememberReplyImages(turn, images);
-      turn.imageCount = images.length;
-    }
+
   }
 
   if (!chat) chat = {id: newId(), title: text.replace(/\s+/g, ' ').slice(0, 60), source, createdAt: new Date().toISOString(), turns: []};
   if (files.length) turnFiles.set(turn, files);
+  const removed = edit ? chat.turns.splice(editIndex) : [];
+  if (edit && chat.branchAt > editIndex + 1) chat.branchAt = editIndex + 1;
   chat.turns.push(turn);
   chats = [chat, ...chats.filter(item => item.id !== chat.id)];
-  saveChats();
-  showChat(chat, false, true);
+  if (saveChats() && removed.length) removeChatImages({turns: removed});
+  await showChat(chat, false, true, !!edit);
+  if (imageSaveFailed && activeId === chat.id) showChatError('Images could not be saved on this device.');
 };
 
 
@@ -3728,13 +4264,20 @@ if (window.HackGptAndroid?.openAppUpdate) {
   const button = find('app-update');
   const toolbar = button.closest('header');
   const refreshInterval = 30 * 60_000;
+  const manual = find('appearance-update');
+  const status = find('appearance-update-status');
   let nextCheck = 0;
-  async function checkForAppUpdate() {
+  let pendingCheck;
+  manual.hidden = false;
+  async function checkForAppUpdate(force = false) {
     const now = Date.now();
-    if (document.visibilityState !== 'visible' || now < nextCheck) return;
-    nextCheck = now + refreshInterval;
+    if (!force && (document.visibilityState !== 'visible' || now < nextCheck)) return;
+    if (!pendingCheck) {
+      nextCheck = now + refreshInterval;
+      pendingCheck = androidRequest('app-update').finally(() => { pendingCheck = null; });
+    }
     try {
-      const update = await androidRequest('app-update');
+      const update = await pendingCheck;
       const tag = update?.tag;
       button.hidden = !tag;
       toolbar.classList.toggle('has-app-update', !!tag);
@@ -3743,12 +4286,19 @@ if (window.HackGptAndroid?.openAppUpdate) {
         button.setAttribute('aria-label', button.title);
         button.onclick = () => window.HackGptAndroid.openAppUpdate(tag);
       }
+      if (force) status.textContent = tag ? 'HackGpt ' + tag + ' is available. Use the update icon in the toolbar.' : 'HackGpt is up to date.';
     } catch {
-      // Retry the public release check later if GitHub is temporarily unreachable.
+      if (force) status.textContent = 'Could not check for updates. Try again.';
     }
   }
+  manual.onclick = async () => {
+    manual.disabled = true;
+    status.textContent = 'Checking for updates…';
+    try { await checkForAppUpdate(true); }
+    finally { manual.disabled = false; }
+  };
   checkForAppUpdate();
-  document.addEventListener('visibilitychange', checkForAppUpdate);
+  document.addEventListener('visibilitychange', () => checkForAppUpdate());
   setInterval(checkForAppUpdate, refreshInterval);
 }
 </script>
@@ -3829,7 +4379,19 @@ if (window.HackGptAndroid?.openAppUpdate) {
     connectionError.textContent = error.message;
   }
   endpointInput.addEventListener('input', updateSavedTokenHint);
-  settingsButton.hidden = false;
+  const codexIconToggle = find('appearance-codex');
+  const codexIconKey = 'neural-link.codex-toolbar-icon';
+  function showCodexIcon(show) {
+    settingsButton.hidden = !show;
+    codexIconToggle.setAttribute('aria-pressed', String(show));
+  }
+  showCodexIcon(stored(codexIconKey) !== 'false');
+  codexIconToggle.hidden = false;
+  codexIconToggle.onclick = () => {
+    const show = settingsButton.hidden;
+    remember(codexIconKey, String(show));
+    showCodexIcon(show);
+  };
   settingsButton.onclick = () => dialog.showModal();
 
   function setDraft(value) {
@@ -3879,6 +4441,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
 
   function sync() {
     const showStop = Boolean(window.hackGptCodexMode && turnId);
+    if (window.hackGptCodexMode) stopResponse.hidden = !showStop;
     if (sendButton.classList.contains('is-stop') !== showStop) {
       sendButton.classList.toggle('is-stop', showStop);
       if (showStop) {

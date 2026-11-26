@@ -105,7 +105,7 @@ Both exports preserve the original Markdown, including headings, tables, code bl
 
 HackGpt displays images returned by supported models and can render bar charts, mind maps, flowcharts, org charts, and sequence diagrams in chat. Ask in plain language. HackGpt adds format guidance when it recognizes a request for a visual.
 
-Tap the pulsing **↓** under a generated image to save it. Double-tap or hold the image to open a centered preview. Pinch to zoom, twist two fingers to rotate in 90° steps, and tap the background to close. The line below the image shows elapsed time, pixel dimensions, file size, and format, plus provider-reported tokens and cost when available.
+Tap the pulsing **↓** under a generated image to save it. Tap the image to open a centered preview. Pinch to zoom, twist two fingers to rotate in 90° steps, and tap the background to close. The line below the image shows elapsed time, pixel dimensions, file size, and format, plus provider-reported tokens and cost when available.
 
 | To see a… | Try asking |
 | --- | --- |
@@ -114,6 +114,12 @@ Tap the pulsing **↓** under a generated image to save it. Double-tap or hold t
 | Flowchart | “Draw a flowchart for resetting a forgotten password.” |
 | Org chart | “Create an org chart for a small product team.” |
 | Sequence diagram | “Show a sequence diagram for a checkout request between the customer, shop, and payment provider.” |
+
+## Factory.ai
+
+In **Settings**, choose **Factory.ai**, enter a Factory API key, and select an **Environment** or **Computer** with its ID. Tap **Connect** to verify the target, then **Save**. Pick **Droid** in the model picker and send a text message. Follow-up messages in the same conversation can resume the Factory session.
+
+[Factory Droid API and target IDs](https://docs.factory.com/droid-exec/execute-api)
 
 ## Codex on PC
 

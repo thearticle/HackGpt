@@ -126,7 +126,7 @@ public final class MainActivity extends Activity {
         codex = new CodexBridge(web);
         web.addJavascriptInterface(codex, "HackGptCodex");
         setContentView(root);
-        applyTheme(false);
+        applyTheme("dark");
         fullScreen = getPreferences(MODE_PRIVATE).getBoolean("full_screen", false);
         if (fullScreen) applyStatusBarVisibility();
         root.post(root::requestApplyInsets);
@@ -211,8 +211,23 @@ public final class MainActivity extends Activity {
         root.requestApplyInsets();
     }
 
-    void applyTheme(boolean light) {
-        int color = light ? Color.WHITE : Color.rgb(8, 13, 8);
+    void dismissComposerKeyboard() {
+        var keyboard = getSystemService(android.view.inputmethod.InputMethodManager.class);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(web.getWindowToken(), 0);
+    }
+
+    void applyTheme(String theme) {
+        boolean light = "light".equals(theme);
+        int color = switch (theme == null ? "" : theme) {
+            case "light" -> Color.WHITE;
+            case "amoled" -> Color.BLACK;
+            case "nord" -> 0xff2e3440;
+            case "dracula" -> 0xff282a36;
+            case "solarized" -> 0xff002b36;
+            case "gruvbox" -> 0xff282828;
+            case "catppuccin" -> 0xff1e1e2e;
+            default -> Color.rgb(8, 13, 8);
+        };
         root.setBackgroundColor(color);
         web.setBackgroundColor(color);
         if (Build.VERSION.SDK_INT < 35) {

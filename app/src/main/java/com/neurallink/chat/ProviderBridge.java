@@ -87,6 +87,7 @@ final class ProviderBridge {
                         case "connect" -> connect(input, request);
                         case "provider-details" -> providerDetails(input.getString("connection"), input.optString("model"), request);
                         case "kenari-balance" -> kenariBalance(input.getString("connection"), request);
+                        case "nara-balance" -> naraBalance(input.getString("connection"), request);
                         case "routr-quota" -> routrQuota(input.getString("connection"), input.getString("model"), request);
                         case "save" -> save(input.getString("connection"), true);
                         case "disconnect" -> save(input.getString("connection"), false);
@@ -210,9 +211,24 @@ final class ProviderBridge {
         });
     }
 
-    @JavascriptInterface public void setLightTheme(boolean light) {
+    @JavascriptInterface public void copyMessageText(String text) {
+        if (text == null || text.isEmpty()) return;
+        activity.runOnUiThread(() -> {
+            if (closed) return;
+            var clipboard = activity.getSystemService(android.content.ClipboardManager.class);
+            if (clipboard != null) clipboard.setPrimaryClip(android.content.ClipData.newPlainText("HackGpt message", text));
+        });
+    }
+
+    @JavascriptInterface public void dismissComposerKeyboard() {
+        activity.runOnUiThread(() -> {
+            if (!closed) activity.dismissComposerKeyboard();
+        });
+    }
+
+    @JavascriptInterface public void setAppearanceTheme(String theme) {
         web.post(() -> {
-            if (!closed) activity.applyTheme(light);
+            if (!closed) activity.applyTheme(theme);
         });
     }
 
@@ -274,6 +290,7 @@ final class ProviderBridge {
     private JSONObject publicProvider(JSONObject connection) throws Exception {
         var result = new JSONObject();
         for (String field : new String[]{"id", "name", "type", "base", "models"}) result.put(field, connection.get(field));
+        if (connection.has("factoryTarget")) result.put("factoryTarget", connection.getJSONObject("factoryTarget"));
         synchronized (this) {
             return result.put("saved", saved.containsKey(connection.getString("id")));
         }
@@ -284,6 +301,8 @@ final class ProviderBridge {
     private static final String GEMINI_METADATA_BASE = "https://generativelanguage.googleapis.com/v1beta";
     private static final String ROUTR_ORIGIN = "https://api.routr.cloud";
     private static final String ROUTR_BASE = ROUTR_ORIGIN + "/v1";
+    private static final String NARA_ORIGIN = "https://router.bynara.id";
+    private static final String NARA_BASE = NARA_ORIGIN + "/v1";
     private static final String DEMO_BEAM = "beam-1-0:free";
     private JSONObject demoProvider;
     private boolean demoLoaded;
@@ -339,6 +358,40 @@ final class ProviderBridge {
             }
         }
         return result;
+    }
+
+    private JSONObject naraBalance(String id, Request request) throws Exception {
+        var provider = find(id);
+        if (provider == null || !NARA_BASE.equals(provider.getString("base"))) {
+            throw new Failure("Connect a NaraRouter provider first.");
+        }
+        var account = new JSONObject().put("base", NARA_ORIGIN).put("key", provider.getString("key"));
+        var body = new JSONObject().put("jsonrpc", "2.0").put("id", 1).put("method", "tools/call")
+                .put("params", new JSONObject().put("name", "get_balance").put("arguments", new JSONObject()));
+        var response = readJson(open(account, "/mcp", body, request));
+        var result = response.optJSONObject("result");
+        if (result == null || result.optBoolean("isError")) throw new Failure("NaraRouter balance is unavailable.");
+        Object amount = naraAvailable(result.optJSONObject("structuredContent"));
+        var content = result.optJSONArray("content");
+        for (int i = 0; amount == null && content != null && i < content.length(); i++) {
+            var part = content.optJSONObject(i);
+            if (part == null || !"text".equals(part.optString("type"))) continue;
+            try {
+                amount = naraAvailable(new JSONObject(part.optString("text")));
+            } catch (org.json.JSONException ignored) {
+                // Only structured balance values are displayed.
+            }
+        }
+        return new JSONObject().put("balance", amount);
+    }
+
+    private static Object naraAvailable(JSONObject data) {
+        if (data == null) return null;
+        for (String key : new String[]{"available", "availableCredits", "available_credits"}) {
+            Object value = data.opt(key);
+            if (value instanceof Number || value instanceof String) return value;
+        }
+        return null;
     }
 
     private JSONObject providerDetails(String id, String selectedModel, Request request) throws Exception {
@@ -425,6 +478,7 @@ final class ProviderBridge {
             case "openrouter" -> "https://openrouter.ai/api/v1";
             case "openai" -> "https://api.openai.com/v1";
             case "gemini" -> "https://generativelanguage.googleapis.com/v1beta/openai";
+            case "factory" -> "https://api.factory.ai/api/v0";
             case "custom" -> input.optString("base").trim();
             default -> throw new Failure("Choose a provider.");
         };
@@ -448,12 +502,26 @@ final class ProviderBridge {
             case "openrouter" -> "OpenRouter";
             case "openai" -> "OpenAI";
             case "gemini" -> "Gemini";
+            case "factory" -> "Factory.ai";
             default -> url.getHost();
         };
         var provider = new JSONObject().put("id", UUID.randomUUID().toString()).put("name", name)
                 .put("type", type).put("base", base).put("key", key);
-        String listing = "openrouter".equals(type) ? "/models/user" : "/models";
-        JSONArray catalog = readJson(open(provider, listing, null, request)).optJSONArray("data");
+        JSONArray catalog;
+        if ("factory".equals(type)) {
+            var target = input.getJSONObject("factoryTarget");
+            String kind = target.optString("kind");
+            if (!"environment".equals(kind) && !"computer".equals(kind)) {
+                throw new Failure("Choose a Factory environment or computer.");
+            }
+            String targetId = factoryIdentifier(target.optString("id"));
+            factoryJson(provider, "/" + kind + "s/" + targetId, null, request);
+            provider.put("factoryTarget", new JSONObject().put("kind", kind).put("id", targetId));
+            catalog = new JSONArray().put(new JSONObject().put("id", "droid").put("name", "Droid"));
+        } else {
+            String listing = "openrouter".equals(type) ? "/models/user" : "/models";
+            catalog = readJson(open(provider, listing, null, request)).optJSONArray("data");
+        }
         if (catalog == null) throw new Failure("The provider returned an unsupported model catalog.");
         var models = new LinkedHashMap<String, JSONObject>();
         for (int i = 0; i < catalog.length(); i++) {
@@ -483,6 +551,7 @@ final class ProviderBridge {
                 support.put("image", image).put("pdf", pdf);
             }
             if ("gemini".equals(type)) support.put("pdf", false);
+            if ("factory".equals(type)) support.put("pdf", false).put("image", false);
             var entry = new JSONObject().put("id", id).put("name", model.optString("name", id)).put("input", support);
             if (imageEndpoint != null) {
                 entry.put("imageOnly", true);
@@ -537,6 +606,12 @@ final class ProviderBridge {
         }
         if (model == null) throw new Failure("Select a connected model.");
         String type = provider.getString("type");
+        if ("factory".equals(type)) {
+            if (!streaming || input.optBoolean("textOnly")) {
+                throw new Failure("Open a chat and send a message to start Droid.");
+            }
+            return factoryChat(provider, input, id, request, start);
+        }
         var modalities = model.optJSONArray("modalities");
         boolean imageOnly = model.optBoolean("imageOnly") || (modalities != null && !contains(modalities, "text"));
         String imageEndpoint = imageEndpoint(type, provider.getString("base"), model.getString("id"), imageOnly);
@@ -593,6 +668,123 @@ final class ProviderBridge {
         if (request.cancelled) return JSONObject.NULL;
         if (!reader.hasText && reader.imageCount == 0) throw new Failure("The model returned no supported text or images.");
         return reader.stats(isSse);
+    }
+
+    private static String factoryIdentifier(String value) throws Failure {
+        if (!value.matches("[A-Za-z0-9_-]{1,200}")) throw new Failure("Invalid Factory target or session ID.");
+        return value;
+    }
+
+    private static JSONObject factoryJson(JSONObject provider, String path, JSONObject body, Request request)
+            throws Exception {
+        try {
+            return readJson(open(provider, path, body, request));
+        } finally {
+            request.release();
+        }
+    }
+
+    private Object factoryChat(JSONObject provider, JSONObject input, String id, Request request, long start)
+            throws Exception {
+        var messages = input.getJSONArray("messages");
+        var last = messages.optJSONObject(messages.length() - 1);
+        if (last == null || !"user".equals(last.optString("role")) || last.optString("content").trim().isEmpty()) {
+            throw new Failure("Enter a text message for Droid.");
+        }
+        for (int i = 0; i < messages.length(); i++) {
+            var files = messages.getJSONObject(i).optJSONArray("files");
+            if (files != null && files.length() > 0) throw new Failure("Droid currently accepts text messages only.");
+        }
+        String sessionId = input.optString("factorySession");
+        var selected = provider.getJSONObject("factoryTarget");
+        String kind = selected.getString("kind");
+        var target = sessionId.isEmpty()
+                ? new JSONObject().put("kind", kind).put(kind + "Id", selected.getString("id"))
+                : new JSONObject().put("kind", "session").put("sessionId", factoryIdentifier(sessionId));
+        String prompt = last.getString("content");
+        if (sessionId.isEmpty() && messages.length() > 1) {
+            var history = new JSONArray();
+            for (int i = 0; i < messages.length() - 1; i++) {
+                var message = messages.getJSONObject(i);
+                history.put(new JSONObject().put("role", message.optString("role"))
+                        .put("content", message.optString("content")));
+            }
+            prompt = "Conversation context for reference:\n" + history + "\n\nCurrent message:\n" + prompt;
+        }
+        var started = factoryJson(provider, "/droid/execute",
+                new JSONObject().put("prompt", prompt).put("target", target), request);
+        sessionId = factoryIdentifier(started.optString("sessionId"));
+        String computerId = factoryIdentifier(started.optString("computerId"));
+        String promptId = factoryIdentifier(started.optString("messageId"));
+        String path = "/sessions/" + sessionId;
+        String query = "?computerId=" + computerId;
+        long deadline = SystemClock.elapsedRealtime() + 300_000;
+        try {
+            while (!request.cancelled && SystemClock.elapsedRealtime() < deadline) {
+                Thread.sleep(2500);
+                try {
+                    var session = factoryJson(provider, path + query, null, request);
+                    if (!"idle".equals(session.optString("status"))) continue;
+                    String reply = factoryReply(provider, path + "/messages" + query + "&limit=100", promptId, request);
+                    if (reply.trim().isEmpty()) continue;
+                    for (int offset = 0; offset < reply.length();) {
+                        int end = Math.min(offset + 8_000, reply.length());
+                        if (end < reply.length() && Character.isHighSurrogate(reply.charAt(end - 1))) end--;
+                        emit(id, "event", new JSONObject().put("type", "delta").put("text", reply.substring(offset, end)));
+                        offset = end;
+                    }
+                    return new JSONObject().put("factorySession", sessionId)
+                            .put("factoryConnection", provider.getString("id"))
+                            .put("durationMs", SystemClock.elapsedRealtime() - start);
+                } catch (Failure error) {
+                    if (error.status != 404) throw error;
+                }
+            }
+            if (request.cancelled) return JSONObject.NULL;
+            throw new Failure("Droid did not finish in time. Check the session in Factory.");
+        } finally {
+            if (request.cancelled) {
+                try {
+                    factoryJson(provider, path + "/interrupt", new JSONObject(), new Request());
+                } catch (Exception ignored) {
+                    // Factory may deny interruption or have already closed the session.
+                }
+            }
+        }
+    }
+
+    private static String factoryReply(JSONObject provider, String path, String promptId, Request request)
+            throws Exception {
+        String cursor = "";
+        boolean seenPrompt = false;
+        var reply = new StringBuilder();
+        for (int page = 0; page < 20; page++) {
+            var result = factoryJson(provider, cursor.isEmpty() ? path : path + "&cursor="
+                    + android.net.Uri.encode(cursor), null, request);
+            var messages = result.getJSONArray("messages");
+            for (int i = 0; i < messages.length(); i++) {
+                var message = messages.getJSONObject(i);
+                if (promptId.equals(message.optString("id"))) {
+                    seenPrompt = true;
+                    continue;
+                }
+                if (seenPrompt && "user".equals(message.optString("role"))) return reply.toString();
+                if (!seenPrompt || !"assistant".equals(message.optString("role"))) continue;
+                var content = message.getJSONArray("content");
+                for (int j = 0; j < content.length(); j++) {
+                    var part = content.getJSONObject(j);
+                    String value = part.optString("text");
+                    if (!"text".equals(part.optString("type")) || value.trim().isEmpty()) continue;
+                    if (reply.length() > 0) reply.append("\n\n");
+                    reply.append(value);
+                }
+            }
+            var pagination = result.optJSONObject("pagination");
+            if (pagination == null || !pagination.optBoolean("hasMore")) break;
+            cursor = pagination.optString("nextCursor", "");
+            if (cursor.isEmpty()) break;
+        }
+        return reply.toString();
     }
 
     private Object generateImage(JSONObject provider, JSONObject model, JSONObject input, String id, Request request,
@@ -747,13 +939,14 @@ final class ProviderBridge {
         connection.setConnectTimeout(15_000);
         boolean imageRequest = endpoint.startsWith("/images");
         boolean kenariImage = imageRequest && KENARI_BASE.equals(provider.getString("base"));
-        connection.setReadTimeout(body == null ? 20_000 : kenariImage ? 300_000 : imageRequest ? 180_000 : 90_000);
+        connection.setReadTimeout(body == null ? 20_000 : kenariImage || "/droid/execute".equals(endpoint)
+                ? 300_000 : imageRequest ? 180_000 : 90_000);
         if (GEMINI_METADATA_BASE.equals(provider.getString("base"))) {
             connection.setRequestProperty("x-goog-api-key", provider.getString("key"));
         } else {
             connection.setRequestProperty("Authorization", "Bearer " + provider.getString("key"));
         }
-        connection.setRequestProperty("Accept", body != null && body.optBoolean("stream")
+        connection.setRequestProperty("Accept", "/mcp".equals(endpoint) || (body != null && body.optBoolean("stream"))
                 ? "text/event-stream, application/json" : "application/json");
         if (body != null) {
             byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
@@ -772,7 +965,7 @@ final class ProviderBridge {
             case 402 -> "The provider requires a balance or credits for this request (HTTP 402).";
             case 429 -> "Provider rate limit or quota reached (HTTP 429).";
             default -> "The provider returned HTTP " + status + ". Check the model, endpoint, and account access.";
-        });
+        }, status);
     }
 
     private static JSONObject readJson(HttpsURLConnection connection) throws Exception {
@@ -834,8 +1027,15 @@ final class ProviderBridge {
     }
 
     static final class Failure extends IOException {
+        final int status;
+
         Failure(String message) {
+            this(message, 0);
+        }
+
+        Failure(String message, int status) {
             super(message);
+            this.status = status;
         }
     }
 }
