@@ -44,9 +44,13 @@ button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color
 .send,.icon{width:44px;padding:0;font-size:20px}
 header{display:flex;justify-content:space-between;align-items:center;margin-left:-12px;margin-right:-18px;transform:translateY(-12px)}
 #immersive-toolbar-handle[hidden]{display:none}
-#immersive-toolbar-handle{position:absolute;inset:0 8px 0 auto;width:54px;min-height:0;padding:0;display:grid;place-items:center;border:0;background:transparent;color:var(--lime);pointer-events:auto}
-#immersive-toolbar-handle::before{content:"";width:30px;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 8px currentColor;animation:send-pulse 1.8s ease-in-out infinite}
-header.immersive-toolbar{min-height:44px}
+#immersive-toolbar-handle{position:absolute;inset:0 0 0 auto;width:28px;min-height:0;padding:0 4px 0 0;display:grid;align-items:center;justify-items:end;border:0;background:transparent;color:var(--lime);pointer-events:auto}
+#immersive-toolbar-handle::before{content:"";width:3px;height:26px;border-radius:3px;background:currentColor;box-shadow:0 0 8px currentColor;animation:send-pulse 1.8s ease-in-out infinite}
+header.immersive-toolbar{min-height:44px;padding-inline-end:28px}
+header.immersive-toolbar .header-actions:nth-child(2),header.immersive-toolbar #chat-credit{min-width:0}
+header.immersive-toolbar #chat-credit{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:390px){header.immersive-toolbar .icon{width:34px}}
+@media(max-width:340px){header.immersive-toolbar .icon{width:29px}}
 header.immersive-toolbar .header-actions{transition:opacity 220ms ease,transform 220ms ease}
 header.toolbar-tucked .header-actions{opacity:0;transform:translateY(-5px);pointer-events:none}
 @media(prefers-reduced-motion:reduce){#immersive-toolbar-handle::before{animation:none}header.immersive-toolbar .header-actions{transition:none}}
@@ -527,7 +531,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </div>
-<button id="immersive-toolbar-handle" type="button" aria-label="Show toolbar" aria-controls="chat-toolbar" hidden></button>
+<button id="immersive-toolbar-handle" type="button" aria-label="Show toolbar" aria-controls="chat-toolbar" aria-expanded="false" hidden></button>
 </header>
 <section id="messages" aria-label="Conversation" aria-live="polite">
 <div id="empty" aria-hidden="true">
@@ -2822,40 +2826,20 @@ function showImmersiveComposer(tucked, animate = false) {
 const immersiveToolbar = find('chat-toolbar');
 const toolbarHandle = find('immersive-toolbar-handle');
 const toolbarGroups = [...immersiveToolbar.querySelectorAll('.header-actions')];
-let toolbarTimer;
-
 function setToolbarTucked(tucked) {
-  clearTimeout(toolbarTimer);
   immersiveToolbar.classList.toggle('immersive-toolbar', immersiveEnabled);
   immersiveToolbar.classList.toggle('toolbar-tucked', tucked);
   const focused = toolbarGroups.some(group => group.contains(document.activeElement));
-  toolbarHandle.hidden = !tucked;
+  toolbarHandle.hidden = !immersiveEnabled;
+  toolbarHandle.setAttribute('aria-expanded', String(!tucked));
+  toolbarHandle.setAttribute('aria-label', tucked ? 'Show toolbar' : 'Hide toolbar');
   for (const group of toolbarGroups) group.inert = tucked;
   if (tucked && focused) toolbarHandle.focus({preventScroll: true});
 }
 
-function scheduleToolbarHide() {
-  if (!immersiveEnabled || !toolbarHandle.hidden) return;
-  clearTimeout(toolbarTimer);
-  toolbarTimer = setTimeout(() => {
-    if (document.querySelector('dialog[open]')) scheduleToolbarHide();
-    else setToolbarTucked(true);
-  }, 3000);
-}
-
-toolbarHandle.onclick = event => {
-  setToolbarTucked(false);
-  if (!event.detail) {
-    const first = [...immersiveToolbar.querySelectorAll('.header-actions button:not([disabled]), .header-actions a[href]')]
-      .find(item => item.getClientRects().length);
-    first?.focus({preventScroll: true});
-  }
-  scheduleToolbarHide();
+toolbarHandle.onclick = () => {
+  setToolbarTucked(toolbarHandle.getAttribute('aria-expanded') === 'true');
 };
-for (const event of ['pointerdown', 'pointermove', 'keydown', 'focusin']) {
-  immersiveToolbar.addEventListener(event, scheduleToolbarHide);
-}
-document.addEventListener('close', scheduleToolbarHide, true);
 setToolbarTucked(immersiveEnabled);
 
 immersiveToggle.onclick = () => {
