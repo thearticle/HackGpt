@@ -37,7 +37,7 @@
 :root[data-theme="catppuccin"]{--ink:#1e1e2e;--panel:#313244;--line:#585b70;--lime:#cba6f7;--muted:#bac2de;--paper:#cdd6f4}
 :root:is([data-theme="nord"],[data-theme="dracula"],[data-theme="solarized"],[data-theme="gruvbox"],[data-theme="catppuccin"]){--scene-top:var(--panel);--scene-bottom:var(--ink);--glow:transparent;--mine:var(--panel);--selection:var(--line);--primary-bg:var(--lime);--primary-text:var(--ink)}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:radial-gradient(ellipse at top,var(--scene-top),var(--scene-bottom) 65%);color:var(--paper)}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;background:radial-gradient(ellipse at top,var(--scene-top),var(--scene-bottom) 65%);color:var(--paper)}
 main{width:min(100%,414px);height:min(820px,100vh);height:min(820px,100dvh);min-height:380px;background:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 0 42px var(--glow);padding:20px;display:flex;flex-direction:column}
 #composer{display:flex;align-items:stretch}
 button{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--lime);border-radius:4px;min-height:44px;padding:7px 12px;font:inherit;font-size:13px;font-weight:bold}
@@ -105,8 +105,12 @@ article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{margin-top:7px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
 #composer{position:relative}
 #composer[hidden],#immersive-handle[hidden]{display:none}
-.codex-mode #chat-status #stop-response{display:none}
-main:has(#composer[hidden]).codex-mode #chat-status #stop-response:not([hidden]){display:block}
+.codex-mode #chat-status{flex:none;position:relative;z-index:1}
+#codex-attach{flex:none;width:32px;min-height:26px;padding:0;border:0;background:transparent;color:var(--lime);line-height:1}
+#codex-attach[hidden]{display:none}
+.codex-mode #composer :is(.send,#composer-marker,#composer-gesture){display:none}
+#codex-send[hidden],main:not(.codex-mode) #codex-send{display:none}
+#codex-send{flex:none;align-self:end;margin:4px;min-height:36px;padding:0 10px}
 #immersive-handle{display:grid;place-items:center;align-self:stretch;min-height:28px;padding:0;border:0;background:transparent;color:var(--lime);touch-action:none}
 #immersive-handle::before{content:"";width:42px;height:3px;border-radius:3px;background:currentColor;box-shadow:0 0 8px currentColor;animation:send-pulse 1.8s ease-in-out infinite}
 #composer.immersive-reveal{animation:composer-reveal 170ms ease-out}
@@ -157,9 +161,57 @@ dialog::backdrop{background:var(--scrim)}
 #codex-connection-error{margin:0;color:var(--warning);font-size:12px}
 #codex-connection-error:empty{display:none}
 #codex-status,#codex-session-status{margin:0}
-#codex-session{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
-#codex-session-status{font-size:11px}
+#codex-session{min-width:0;overflow-wrap:anywhere}
+#codex-session{flex:1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;width:100%;column-gap:8px}
+#codex-thread-name{position:absolute;inset-inline-start:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 68px);padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity 220ms ease,visibility 0s linear 220ms}
+.codex-mode #chat-toolbar.toolbar-tucked #codex-thread-name:not(:empty){opacity:1;visibility:visible;transition-delay:0s}
+#codex-session-status{margin-inline-start:auto}
+@media(prefers-reduced-motion:reduce){#codex-thread-name{transition:none}}
+#codex-session-status{font-size:11px;min-height:26px;padding:2px 6px;border:0;background:transparent;color:var(--lime)}
+#codex-session-status::before{content:"●";margin-inline-end:6px}
+#codex-session-status[data-working="true"]::before{content:"";display:inline-block;width:9px;height:9px;border:1px solid currentColor;border-inline-end-color:transparent;border-radius:50%;vertical-align:middle;margin-inline-end:0;animation:codex-spin .85s linear infinite}
+@keyframes codex-spin{to{transform:rotate(360deg)}}
+#codex-session-status[data-working="true"]{min-width:44px;touch-action:manipulation}
+#codex-session-status[data-finished="true"]::before{margin-inline-end:0}
+#codex-session-status:disabled{opacity:1;cursor:default}
+#codex-session-detail{color:var(--muted)}
+#codex-log article.codex-answer{min-width:0;width:100%;max-width:100%;flex:none}
+#codex-log .codex-activity{color:var(--muted);font-size:12px}
+#codex-log .codex-activity details{min-width:0;max-width:100%}
+#codex-log pre{max-width:100%;max-height:min(42vh,360px);overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.codex-code{margin:10px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--ink)}
+.codex-code header{position:static;transform:none;margin:0;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--line);pointer-events:auto}
+.codex-code header button{min-height:36px;padding:2px 8px;border:0}
+#codex-log .codex-code pre{margin:0;border:0;border-radius:0}
+#codex-log .codex-activity details{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel)}
+#codex-log .codex-activity pre{white-space:pre;margin-bottom:0}
+#codex-log pre:focus-visible{outline:1px solid var(--lime);outline-offset:2px}
+#codex-log details>summary{cursor:pointer;color:var(--lime)}
+#codex-dialog select{width:100%;font:inherit;color:var(--paper);background:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px}
+#codex-approval-panel{display:grid;gap:6px} #codex-approval-panel[hidden]{display:none}
+#codex-approval-panel small{line-height:1.4}
+#codex-approval-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px}#codex-approval-mode button[aria-pressed="true"]{background:var(--primary-bg);color:var(--primary-text)}
+#codex-session-detail,#codex-model-status{width:100%}
+#codex-model-panel{display:grid;gap:6px}
+#codex-model-panel[hidden]{display:none}
+#codex-model-options{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:8px}
+#codex-model-options label{display:grid;gap:4px;min-width:0;font-size:12px}
+#codex-quota-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#codex-quota{white-space:pre-line}
+#codex-quota-refresh{min-height:36px}
+#codex-notifications[hidden]{display:none}#codex-notifications[aria-pressed="true"]{border-color:var(--lime)}
+@media(prefers-reduced-motion:reduce){#codex-session-status[data-working="true"]::before{animation:none}}
 #codex-session small:empty{display:none}
+.codex-thread-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px}
+.codex-thread-row button{min-width:0}
+.codex-thread-row .codex-thread-open{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.codex-thread-row button[aria-pressed="true"]{border-color:var(--lime)}
+.codex-thread-row .codex-thread-action{width:40px;padding:0;font-size:16px}
+#codex-thread-rename{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;margin-bottom:8px}
+#codex-thread-rename[hidden],#codex-thread-feedback:empty{display:none}
+#codex-project-alias{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;margin-bottom:10px}#codex-project-alias label{grid-column:1/-1;font-size:12px}
+#codex-project-title,#codex-thread-title{min-width:0;padding:6px;background:var(--ink);color:var(--paper);border:1px solid var(--line);font:inherit}
+#codex-thread-feedback{display:block;margin-bottom:8px}
 #codex-thread-dialog h2{font-size:14px;margin:0 0 10px}
 #codex-threads{max-height:55dvh;overflow:auto}
 #codex-threads button{text-align:start;overflow-wrap:anywhere}
@@ -175,7 +227,7 @@ dialog::backdrop{background:var(--scrim)}
 #codex-exit svg,#codex-exit::before{grid-area:1/1}
 #codex-exit::before{content:"";width:28px;height:28px;border:1px solid currentColor;border-radius:50%;pointer-events:none;animation:update-ring-pulse 1.8s ease-in-out infinite}
 @media(prefers-reduced-motion:reduce){#codex-exit::before{animation:none}}
-.codex-mode :is(#provider,#model-button,#history-button,#chat-top-up,#chat-credit,#reset,#demo-status,#pending-files){display:none}
+.codex-mode :is(#provider,#model-button,#history-button,#chat-top-up,#chat-credit,#reset,#demo-status){display:none}
 .codex-mode{position:relative;isolation:isolate}
 #codex-watermark{display:none;position:absolute;inset:0;width:min(60%,240px);height:auto;margin:auto;opacity:.19;pointer-events:none;z-index:-1}
 .codex-mode #codex-watermark{display:block}
@@ -531,6 +583,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button id="chat-credit" type="button" aria-live="polite" hidden disabled></button>
 <button id="reset" class="icon" aria-label="New chat" title="New chat (hold for credits)"></button>
 </div>
+<small id="codex-thread-name" aria-live="polite"></small>
 <button id="immersive-toolbar-handle" type="button" aria-label="Show toolbar" aria-controls="chat-toolbar" aria-expanded="false" hidden></button>
 </header>
 <section id="messages" aria-label="Conversation" aria-live="polite">
@@ -541,7 +594,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<div id="chat-status"><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><small id="codex-thread-name" aria-live="polite"></small><small id="codex-session-status" role="status"></small></div><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
+<div id="chat-status"><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
@@ -549,6 +602,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 <button type="button" class="resize-grip left" aria-label="Resize message field from upper left" aria-controls="prompt" aria-description="Drag vertically or use the up and down arrow keys."></button>
 <button type="button" class="resize-grip right" aria-label="Resize message field from upper right" aria-controls="prompt" aria-description="Drag vertically or use the up and down arrow keys."></button>
 <button id="composer-marker" type="button" aria-label="Show send controls. Hold and drag to move." hidden></button>
+<button id="codex-send" type="submit" aria-label="Send to Codex" title="Send to Codex" hidden>↑</button>
 <button type="button" class="send" aria-label="Send" aria-hidden="true" tabindex="-1" aria-description="Swipe up to attach, down to export Markdown, left to select all, or right to clear the message. Arrow keys also work."><i class="send-mark" aria-hidden="true"></i></button>
 <small id="composer-gesture" role="status" hidden></small>
 </form>
@@ -2543,6 +2597,7 @@ function applyEnterToSend(enabled) {
   enterToSend.setAttribute('aria-pressed', String(enabled));
   updateComposerButton(currentModel(), enabled);
   promptBox.enterKeyHint = enabled ? 'send' : 'enter';
+  window.hackGptCodexMode?.sync();
 }
 
 applyEnterToSend(stored(enterToSendKey) === 'true');
@@ -2659,11 +2714,12 @@ function attachmentCapabilities(model) {
 }
 
 function updateAttachmentControl(model) {
+  const codex = Boolean(window.hackGptCodexMode);
   const {image, pdf} = attachmentCapabilities(model);
   filePicker.accept = [
     '.txt,.md,.csv,.tsv,.json,.jsonl,.xml,.log',
-    (image || !model?.connection) && '.png,.jpg,.jpeg,.gif,.webp',
-    (pdf || !model?.connection) && '.pdf'
+    (codex || image || !model?.connection) && '.png,.jpg,.jpeg,.gif,.webp',
+    (!codex && (pdf || !model?.connection)) && '.pdf'
   ].filter(Boolean).join(',');
 }
 
@@ -2720,7 +2776,7 @@ function acceptsFile(file, model) {
 }
 
 function openAttachmentPicker() {
-  if (window.hackGptCodexMode || currentModel()?.connection?.type === 'factory') {
+  if (!window.hackGptCodexMode && currentModel()?.connection?.type === 'factory') {
     showChatError('This chat currently accepts text messages only.');
     return;
   }
@@ -3147,6 +3203,7 @@ async function addAttachments(load) {
   showChatError('');
   const model = currentModel();
   const accepted = [];
+  const forCodex = Boolean(window.hackGptCodexMode);
   const images = {png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp'};
   let size = attachments.reduce((sum, file) => sum + file.size, 0);
   try {
@@ -3159,7 +3216,8 @@ async function addAttachments(load) {
       if (!mime && !/\.(txt|md|csv|tsv|json|jsonl|xml|log)$/i.test(file.name)) {
         throw new Error('Use an image, PDF, or UTF-8 file such as TXT, CSV, or JSON.');
       }
-      if (model?.connection && !acceptsFile({kind}, model)) throw new Error('The selected model does not support ' + kind + ' attachments.');
+      if (forCodex && kind === 'pdf') throw new Error('Codex attachments support images and UTF-8 files.');
+      if (!forCodex && model?.connection && !acceptsFile({kind}, model)) throw new Error('The selected model does not support ' + kind + ' attachments.');
       if (file.size > (kind === 'text' ? 256_000 : 5_000_000)) {
         throw new Error(kind === 'text' ? 'Text and data files must be under 256 KB.' : 'Images and PDFs must be under 5 MB.');
       }
@@ -3178,6 +3236,7 @@ async function addAttachments(load) {
   } finally {
     readingFiles = false;
     updateAttachmentControl(currentModel());
+    window.hackGptCodexMode?.sync();
   }
 }
 
@@ -3689,13 +3748,13 @@ function openTurnEdit(chat, turn, bubble) {
   };
 }
 
-async function copyTurnText(text) {
+async function copyTurnText(text, confirmation = 'Message copied') {
   if (!text) return;
   const toast = find('message-toast');
   try {
     if (window.HackGptAndroid?.copyMessageText) window.HackGptAndroid.copyMessageText(text);
     else await navigator.clipboard.writeText(text);
-    toast.textContent = 'Message copied';
+    toast.textContent = confirmation;
   } catch {
     toast.textContent = 'Could not copy message';
   }
@@ -4291,6 +4350,25 @@ if (window.HackGptAndroid?.openAppUpdate) {
     <div class="url-field"><span class="url-icon" aria-hidden="true"></span><input id="codex-url" aria-label="Private server URL" type="url" placeholder="Private server URL" required autocapitalize="none" spellcheck="false"></div>
     <div class="key-field"><span class="key-icon" aria-hidden="true"></span><input id="codex-token" aria-label="Connection token" type="password" placeholder="Connection token" autocomplete="new-password"></div>
     <div class="name-field"><span class="name-icon" aria-hidden="true"></span><input id="codex-project" aria-label="Project folder on PC" placeholder="Project folder on PC" required spellcheck="false"></div>
+    <div id="codex-model-panel" hidden>
+      <div id="codex-model-options">
+        <label>Model<select id="codex-model"></select></label>
+        <label>Reasoning<select id="codex-effort"></select></label>
+      </div>
+      <div id="codex-quota-row">
+        <small id="codex-quota" role="status">Usage limits unavailable.</small>
+        <button id="codex-quota-refresh" type="button">Refresh usage</button>
+      </div>
+    </div>
+    <button id="codex-notifications" type="button" aria-pressed="false" hidden>Task notifications</button>
+    <div id="codex-approval-panel" hidden>
+      <span id="codex-approval-label">Approval mode</span>
+      <div id="codex-approval-mode" role="group" aria-labelledby="codex-approval-label">
+        <button type="button" data-approval="ask" aria-pressed="true">Ask each time</button>
+        <button type="button" data-approval="always" aria-pressed="false">Always approve</button>
+      </div>
+      <small id="codex-approval-detail">Choose how HackGpt handles approval requests for this project.</small>
+    </div>
     <div id="codex-connect-row">
       <button id="codex-connect-button" class="primary" type="submit">Connect</button>
       <small id="codex-status" role="status">Disconnected</small>
@@ -4300,6 +4378,17 @@ if (window.HackGptAndroid?.openAppUpdate) {
 </dialog>
 <dialog id="codex-thread-dialog" aria-labelledby="codex-thread-heading">
   <h2 id="codex-thread-heading">Project threads</h2>
+  <form id="codex-project-alias">
+    <label for="codex-project-title">Project display name</label>
+    <input id="codex-project-title" maxlength="80" placeholder="Use folder name">
+    <button type="submit">Save name</button>
+  </form>
+  <form id="codex-thread-rename" hidden>
+    <input id="codex-thread-title" aria-label="Thread name" maxlength="100" required>
+    <button type="button" id="codex-thread-rename-cancel">Cancel</button>
+    <button type="submit" class="primary">Save</button>
+  </form>
+  <small id="codex-thread-feedback" role="status"></small>
   <div id="codex-threads"></div>
 </dialog>
 <script>
@@ -4336,8 +4425,184 @@ if (window.HackGptAndroid?.openAppUpdate) {
   const approvalCards = new Map();
   const settings = {sandbox: 'workspace-write', approvalPolicy: 'on-request', approvalsReviewer: 'user'};
   let sequence = 0, project = '', threadId = '', turnId = '', busy = false;
-  let connected = false, regularDraft = '', codexDraft = '', regularScroll = 0;
+  let connected = false, regularDraft = '', regularScroll = 0;
   let connecting = false, connectionAttempt = 0, savedEndpoint = '';
+
+  const sessionStatus = find('codex-session-status');
+  const sessionDetail = find('codex-session-detail');
+  const codexModel = find('codex-model');
+  const codexEffort = find('codex-effort');
+  const quota = find('codex-quota');
+  const quotaRefresh = find('codex-quota-refresh');
+  let catalog = [], threadModel = '', threadEffort = '', quotaRevision = 0;
+  let preference = {};
+
+  function updateModelChoices() {
+    const model = catalog.find(item => item.model === preference.model);
+    const defaultChoice = label => new Option(label, '');
+    const defaultModel = catalog.find(item => item.model === threadModel);
+    codexModel.replaceChildren(defaultChoice('Server default' + (threadModel ? ' · ' + (defaultModel?.displayName || threadModel) : '')),
+      ...catalog.map(item => new Option(item.displayName || item.model, item.model)));
+    codexModel.value = model?.model ?? '';
+    const available = (model || defaultModel || catalog.find(item => item.isDefault))?.supportedReasoningEfforts ?? [];
+    const effort = model?.defaultReasoningEffort || threadEffort;
+    codexEffort.replaceChildren(defaultChoice('Default' + (effort ? ' · ' + effort : '')),
+      ...available.map(item => new Option(item.reasoningEffort, item.reasoningEffort)));
+    codexEffort.value = available.some(item => item.reasoningEffort === preference.effort) ? preference.effort : '';
+    codexModel.disabled = !connected || !catalog.length;
+    codexEffort.disabled = !connected || !available.length;
+    find('codex-model-status').textContent = [model?.displayName || model?.model || threadModel,
+      codexEffort.value || effort].filter(Boolean).join(' · ');
+  }
+
+  function loadModelPreferences() {
+    try { preference = JSON.parse(stored(sessionKey('model', threadId))) || {}; }
+    catch { preference = {}; }
+    updateModelChoices();
+  }
+
+  function saveModelPreferences() {
+    preference = {model: codexModel.value, effort: codexEffort.value};
+    remember(sessionKey('model', threadId), JSON.stringify(preference));
+    updateModelChoices();
+  }
+
+  codexModel.onchange = () => { codexEffort.value = ''; saveModelPreferences(); };
+  codexEffort.onchange = saveModelPreferences;
+
+  async function loadModelCatalog(attempt) {
+    const models = new Map();
+    const cursors = new Set();
+    let cursor;
+    do {
+      const result = await rpc('model/list', cursor ? {cursor} : {});
+      if (attempt !== connectionAttempt) return;
+      for (const model of result?.data ?? []) if (model.model && !model.hidden) models.set(model.model, model);
+      cursor = result?.nextCursor;
+      if (cursors.has(cursor)) break;
+      cursors.add(cursor);
+    } while (cursor);
+    catalog = [...models.values()];
+    updateModelChoices();
+  }
+
+  function showQuota(snapshot) {
+    const windows = [snapshot?.primary, snapshot?.secondary];
+    const lines = [[300, '5-hour'], [10080, 'Weekly']].map(([duration, label]) => {
+      const entry = windows.find(window => window?.windowDurationMins === duration);
+      if (!Number.isFinite(entry?.usedPercent)) return label + ': unavailable';
+      const left = Math.max(0, Math.min(100, 100 - entry.usedPercent));
+      const reset = Number.isFinite(entry.resetsAt) && entry.resetsAt > 0
+        ? new Date(entry.resetsAt * 1000).toLocaleString() : '';
+      return label + ': ' + left.toLocaleString(undefined, {maximumFractionDigits: 1}) + '% left'
+        + (reset ? ' · resets ' + reset : '');
+    });
+    quota.textContent = lines.join('\n');
+  }
+
+  async function loadQuota() {
+    if (!connected) return;
+    const revision = ++quotaRevision;
+    quotaRefresh.disabled = true;
+    quota.textContent = 'Checking usage…';
+    try {
+      const response = await rpc('account/rateLimits/read', {});
+      if (revision === quotaRevision) showQuota(response?.rateLimitsByLimitId?.codex ?? response?.rateLimits);
+    } catch {
+      if (revision === quotaRevision) showQuota(null);
+    } finally {
+      if (revision === quotaRevision) quotaRefresh.disabled = false;
+    }
+  }
+  quotaRefresh.onclick = loadQuota;
+
+  const notificationButton = find('codex-notifications');
+  const notificationKey = 'neural-link.codex-task-notifications';
+  let notificationsEnabled = stored(notificationKey) === 'true';
+  let notificationState = '';
+  function notifyTask(state) {
+    if (!notificationsEnabled && state !== 'clear') return;
+    if (notificationState === state) return;
+    notificationState = state;
+    bridge.showTaskNotification?.(state);
+  }
+  if (bridge.showTaskNotification) {
+    notificationButton.hidden = false;
+    notificationButton.setAttribute('aria-pressed', String(notificationsEnabled));
+    notificationButton.onclick = () => {
+      notificationsEnabled = !notificationsEnabled;
+      remember(notificationKey, String(notificationsEnabled));
+      notificationButton.setAttribute('aria-pressed', String(notificationsEnabled));
+      if (notificationsEnabled) {
+        bridge.requestTaskNotifications();
+        if (connected && turnId) notifyTask('working');
+      } else notifyTask('clear');
+    };
+  }
+
+  const approvalButtons = [...find('codex-approval-mode').querySelectorAll('button')];
+  const codexAttach = find('codex-attach');
+  const codexFiles = new Map();
+  const pendingCodexFiles = new Map();
+  let regularAttachments = [], approvalMode = 'ask';
+
+  function showApprovalMode() {
+    approvalMode = stored(sessionKey('approval')) === 'always' ? 'always' : 'ask';
+    for (const button of approvalButtons) {
+      button.setAttribute('aria-pressed', String(button.dataset.approval === approvalMode));
+    }
+    find('codex-approval-detail').textContent = approvalMode === 'always'
+      ? 'Approves supported requests from the active thread on this PC. Extra permissions are granted for the current turn.'
+      : 'Each approval request needs your decision.';
+  }
+  for (const button of approvalButtons) button.onclick = () => {
+    remember(sessionKey('approval'), button.dataset.approval);
+    showApprovalMode();
+    if (approvalMode === 'always') {
+      for (const card of approvalCards.values()) approvePending.get(card)?.();
+    }
+  };
+
+  function swapAttachments(next) {
+    attachmentVersion++;
+    attachments = next;
+    renderAttachments();
+  }
+
+  function threadAttachments() {
+    const key = sessionKey('attachments', threadId);
+    if (!codexFiles.has(key)) codexFiles.set(key, []);
+    return codexFiles.get(key);
+  }
+
+  codexAttach.onclick = () => {
+    if (connected && !busy && !connecting && threadId) openAttachmentPicker();
+  };
+
+  let reconnectTimer, retryCount = 0, reconnectAllowed = false, reconnecting = false;
+  let endpoint = '', outcome = '', queued = null;
+
+  function sessionKey(kind, id = '') {
+    return 'neural-link.codex.' + JSON.stringify([endpoint, project, kind, id]);
+  }
+
+  function saveDraft() {
+    if (window.hackGptCodexMode && endpoint && project) remember(sessionKey('draft', threadId), prompt.value);
+  }
+
+  function readDraft() {
+    return stored(sessionKey('draft', threadId)) ?? '';
+  }
+
+  function updateThreadName() {
+    const folder = project.split(/[\\/]+/).filter(Boolean).at(-1) || project;
+    const label = threadLabels.get(threadId) || threadId;
+    const projectTitle = stored(sessionKey('project-title')) || folder;
+    threadName.textContent = [projectTitle, label].filter(Boolean).join(' / ');
+    threadName.title = threadName.textContent;
+  }
+
+  prompt.addEventListener('input', saveDraft);
 
   function updateSavedTokenHint() {
     tokenInput.placeholder = savedEndpoint && endpointInput.value.trim() === savedEndpoint
@@ -4357,7 +4622,11 @@ if (window.HackGptAndroid?.openAppUpdate) {
     const saved = JSON.parse(storedConnection);
     endpointInput.value = saved.endpoint || '';
     projectInput.value = saved.project || '';
-    if (saved.hasToken) savedEndpoint = saved.endpoint;
+    if (saved.hasToken) {
+      savedEndpoint = endpoint = saved.endpoint;
+      project = saved.project || '';
+      threadId = stored(sessionKey('thread')) || '';
+    }
     updateSavedTokenHint();
   } catch (error) {
     connectionError.textContent = error.message;
@@ -4392,27 +4661,32 @@ if (window.HackGptAndroid?.openAppUpdate) {
     dialog.close();
     regularScroll = messages.scrollTop;
     regularDraft = prompt.value;
+    regularAttachments = attachments;
+    swapAttachments(threadAttachments());
     regularMessages.append(...messages.childNodes);
     messages.append(log, approvals);
-    window.hackGptCodexMode = {send, stop, exportChat};
+    window.hackGptCodexMode = {send, stop, exportChat, sync};
+    updateAttachmentControl(currentModel());
     messages.closest('main').classList.add('codex-mode');
-    status = find('codex-session-status');
+    status = sessionDetail;
     session.hidden = exit.hidden = false;
     prompt.setAttribute('aria-label', 'Message Codex');
     showChatError('');
-    setDraft(codexDraft);
+    setDraft(readDraft());
     if (log.isConnected) messages.scrollTop = messages.scrollHeight;
     sync();
   }
 
   function leaveMode() {
     if (!window.hackGptCodexMode) return;
-    codexDraft = prompt.value;
+    saveDraft();
     log.remove();
     approvals.remove();
     messages.append(regularMessages);
     messages.scrollTop = regularScroll;
     window.hackGptCodexMode = null;
+    swapAttachments(regularAttachments);
+    updateAttachmentControl(currentModel());
     messages.closest('main').classList.remove('codex-mode');
     session.hidden = exit.hidden = true;
     status = connectionError;
@@ -4424,20 +4698,33 @@ if (window.HackGptAndroid?.openAppUpdate) {
   }
 
   function sync() {
-    const showStop = Boolean(window.hackGptCodexMode && turnId);
-    if (window.hackGptCodexMode) stopResponse.hidden = !showStop;
-    if (sendButton.classList.contains('is-stop') !== showStop) {
-      sendButton.classList.toggle('is-stop', showStop);
-      if (showStop) {
-        resetComposerHold();
-        showComposerControl(false);
-      } else {
-        hideComposerControl();
-      }
-      updateComposerButton(currentModel());
-      if (showStop) composerMarker.hidden = true;
-    }
-    find('codex-new').disabled = pick.disabled = busy;
+    const inCodex = Boolean(window.hackGptCodexMode);
+    if (inCodex) stopResponse.hidden = true;
+    const codexSend = find('codex-send');
+    codexSend.hidden = !inCodex || enterToSend.getAttribute('aria-pressed') === 'true';
+    codexAttach.hidden = !inCodex;
+    codexAttach.disabled = !connected || connecting || busy || !threadId;
+    codexSend.disabled = !connected || connecting || busy || !threadId;
+    find('codex-approval-panel').hidden = !connected;
+    find('codex-model-panel').hidden = !connected;
+    find('codex-new').disabled = pick.disabled = busy || !connected;
+    find('codex-refresh').disabled = !connected;
+    const needsApproval = connected && approvalCards.size > 0;
+    if (connected && turnId) notifyTask(needsApproval ? 'approval' : 'working');
+    const statusLabel = connecting ? (reconnecting ? 'Reconnecting…' : 'Connecting…')
+      : !connected ? 'Disconnected · Retry' : needsApproval ? 'Approval needed'
+        : busy ? 'Working' : outcome || (threadId ? 'Ready' : 'Choose a thread');
+    const spinnerOnly = connected && !connecting && busy && !needsApproval;
+    const dotOnly = statusLabel === 'Finished';
+    sessionStatus.textContent = spinnerOnly || dotOnly ? '' : statusLabel;
+    sessionStatus.dataset.finished = String(dotOnly);
+    sessionStatus.setAttribute('aria-label', statusLabel);
+    sessionStatus.dataset.working = String(spinnerOnly);
+    sessionStatus.disabled = connecting;
+    sessionStatus.title = spinnerOnly ? 'Tap twice to stop Codex'
+      : needsApproval ? 'Review approval request' : connected ? 'Codex settings' : 'Retry connection';
+    if (!spinnerOnly || stopTap?.turn !== turnId) stopTap = null;
+    updateThreadName();
     updateConnectionStatus();
   }
 
@@ -4457,36 +4744,171 @@ if (window.HackGptAndroid?.openAppUpdate) {
     });
   }
 
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    if (!reconnectAllowed || connecting || connected || document.hidden || !endpoint || !project) return;
+    reconnectTimer = setTimeout(() => connectToPc(endpoint, project, '', true),
+      Math.min(15000, 1000 * 2 ** Math.min(retryCount++, 4)));
+  }
+
   function disconnected(message) {
+    if (turnId || busy) notifyTask(message ? 'unknown' : 'clear');
     connectionAttempt++;
-    connecting = false;
-    connected = false;
-    leaveMode();
+    connecting = connected = busy = false;
+    quotaRevision++;
+    catalog = [];
+    quotaRefresh.disabled = false;
+    showQuota(null);
+    updateModelChoices();
+
+    turnId = '';
+    queued = null;
     for (const request of pending.values()) {
       clearTimeout(request.timer);
-      request.reject(new Error(message));
+      request.reject(new Error(message || 'Disconnected.'));
     }
     pending.clear();
-    threadId = turnId = '';
-    threadLabels.clear();
-    threadName.textContent = '';
     threadDialog.close();
-    busy = false;
-    log.replaceChildren();
     approvals.replaceChildren();
     approvalCards.clear();
-    replies.clear();
-    fileChanges.clear();
-    session.hidden = true;
     connectionError.textContent = message;
+    sessionDetail.textContent = threadId ? 'Task status is unknown until you reconnect.' : message;
+    sync();
+    scheduleReconnect();
+  }
+
+  function connectToPc(nextEndpoint, nextProject, token, retry = false) {
+    if (connecting || (connected && busy)) return;
+    const error = bridge.connect(nextEndpoint, token, nextProject);
+    if (error) {
+      connectionError.textContent = error;
+      sessionDetail.textContent = error;
+      scheduleReconnect();
+      return;
+    }
+    saveDraft();
+    const changed = endpoint !== nextEndpoint || project !== nextProject;
+    reconnectAllowed = false;
+    disconnected('');
+    endpoint = savedEndpoint = nextEndpoint;
+    project = nextProject;
+    showApprovalMode();
+    if (changed) {
+      threadLabels.clear();
+      log.replaceChildren();
+      threadId = stored(sessionKey('thread')) || '';
+      if (window.hackGptCodexMode) { swapAttachments(threadAttachments()); setDraft(readDraft()); }
+    }
+    reconnectAllowed = connecting = true;
+    reconnecting = retry;
+    tokenInput.value = '';
+    updateSavedTokenHint();
     sync();
   }
 
+  let stopTap = null;
+  let stopPending = '';
+  sessionStatus.onclick = () => {
+    if (sessionStatus.dataset.working === 'true') {
+      if (!turnId || stopPending === turnId) return;
+      const now = performance.now();
+      if (stopTap?.turn === turnId && now - stopTap.time <= 450) {
+        stopTap = null;
+        stop();
+      } else {
+        stopTap = {turn: turnId, time: now};
+      }
+      return;
+    }
+    if (!connected) connectToPc(endpoint, project, '', true);
+    else if (approvalCards.size) approvalCards.values().next().value?.scrollIntoView({block: 'center'});
+    else dialog.showModal();
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) scheduleReconnect();
+    else saveDraft();
+  });
+  window.addEventListener('online', scheduleReconnect);
+
+  const codexReplyTimers = new WeakMap();
+
+  function nearCodexBottom() {
+    return log.isConnected && messages.scrollHeight - messages.clientHeight - messages.scrollTop < 60;
+  }
+
+  function renderCodexReply(row, value, complete = true) {
+    clearTimeout(codexReplyTimers.get(row));
+    codexReplyTimers.delete(row);
+    const pinned = nearCodexBottom();
+    const original = row.lastElementChild;
+    const scrollPositions = [...original.querySelectorAll('pre, .markdown-scroll')]
+      .map(block => [block.scrollLeft, block.scrollTop]);
+    const paragraph = document.createElement('p');
+    paragraph.textContent = value;
+    original.replaceWith(paragraph);
+    renderReplyMarkup(row, value);
+    [...row.lastElementChild.querySelectorAll('pre, .markdown-scroll')].forEach((block, index) => {
+      const position = scrollPositions[index];
+      if (position) [block.scrollLeft, block.scrollTop] = position;
+      block.tabIndex = 0;
+      if (block.tagName !== 'PRE') return;
+      const code = block.querySelector('code');
+      const language = [...(code?.classList ?? [])].find(name => name.startsWith('language-'))?.slice(9);
+      block.setAttribute('aria-label', language ? language + ' code block' : 'Code block');
+      if (!complete || !code) return;
+      const frame = document.createElement('div');
+      frame.className = 'codex-code';
+      const tools = document.createElement('header');
+      const label = document.createElement('small');
+      label.textContent = language || 'Code';
+      tools.append(label, historyButton('Copy code', () => copyTurnText(code.textContent, 'Code copied')));
+      block.replaceWith(frame);
+      frame.append(tools, block);
+      if (position) [block.scrollLeft, block.scrollTop] = position;
+    });
+    if (pinned) messages.scrollTop = messages.scrollHeight;
+  }
+
+  function queueCodexReply(row) {
+    if (codexReplyTimers.has(row)) return;
+    codexReplyTimers.set(row, setTimeout(() => {
+      renderCodexReply(row, messageText.get(row).value, false);
+    }, 100));
+  }
+
+  function appendActivity(label, value) {
+    if (!value) return;
+    const row = append(label, value);
+    row.classList.add('codex-activity');
+    const details = document.createElement('details');
+    const heading = document.createElement('summary');
+    heading.textContent = label;
+    const code = document.createElement('pre');
+    code.tabIndex = 0;
+    code.textContent = value;
+    details.append(heading, code);
+    row.replaceChildren(details);
+  }
+
+  function showCodexActivity(item) {
+    if (item.type === 'fileChange') {
+      const changes = item.changes ?? [];
+      appendActivity('File changes · ' + changes.length, changes.map(change =>
+        change.path + '\n' + (change.diff ?? '')).join('\n\n'));
+    } else if (item.type === 'commandExecution') {
+      appendActivity('Command · ' + item.status, item.command);
+    }
+  }
+
   function append(label, value) {
+    const pinned = nearCodexBottom();
     const row = appendMessage(label, value, label === 'You', log);
     messageText.set(row, {label, value});
-    if (label === 'Codex' && value) renderReplyMarkup(row, value);
-    messages.scrollTop = messages.scrollHeight;
+    if (label === 'Codex') {
+      row.classList.add('codex-answer');
+      if (value) renderCodexReply(row, value);
+    }
+    if (pinned) messages.scrollTop = messages.scrollHeight;
     return row;
   }
 
@@ -4513,40 +4935,139 @@ if (window.HackGptAndroid?.openAppUpdate) {
       threadLabels.set(thread.id, thread.name || thread.preview || thread.id);
     }
     if (threadId && !threadLabels.has(threadId)) threadLabels.set(threadId, currentLabel || threadId);
-    threadName.textContent = threadLabels.get(threadId) || '';
+    updateThreadName();
     if (threadDialog.open) renderThreadPicker();
   }
 
+  const renameThreadForm = find('codex-thread-rename');
+  const renameThreadTitle = find('codex-thread-title');
+  const threadFeedback = find('codex-thread-feedback');
+  let renamingThread;
+
+  function threadOrder() {
+    try {
+      const saved = JSON.parse(stored(sessionKey('thread-order')));
+      if (Array.isArray(saved)) return new Map(saved);
+    } catch {}
+    return new Map();
+  }
+
+  function rememberThreadOrder(order) {
+    remember(sessionKey('thread-order'), JSON.stringify([...order]));
+  }
+
+  function closeThreadRename() {
+    renamingThread = null;
+    renameThreadForm.hidden = true;
+    threadFeedback.textContent = '';
+  }
+  find('codex-thread-rename-cancel').onclick = closeThreadRename;
+  threadDialog.addEventListener('close', closeThreadRename);
+
+  renameThreadForm.onsubmit = async event => {
+    event.preventDefault();
+    const id = renamingThread;
+    const name = renameThreadTitle.value.trim();
+    if (!id || !name || !connected) return;
+    const attempt = connectionAttempt;
+    const save = renameThreadForm.querySelector('[type="submit"]');
+    save.disabled = true;
+    try {
+      await rpc('thread/name/set', {threadId: id, name});
+      if (attempt !== connectionAttempt) return;
+      threadLabels.set(id, name);
+      const order = threadOrder();
+      const entry = order.get(id);
+      if (entry) {
+        order.set(id, {...entry, label: name});
+        rememberThreadOrder(order);
+      }
+      if (renamingThread === id) closeThreadRename();
+      updateThreadName();
+      if (threadDialog.open) renderThreadPicker();
+    } catch (error) {
+      if (attempt === connectionAttempt && renamingThread === id) threadFeedback.textContent = error.message;
+    } finally {
+      save.disabled = false;
+    }
+  };
+
   function renderThreadPicker() {
     threads.replaceChildren();
-    if (!threadLabels.size) {
+    const order = threadOrder();
+    const entries = new Map(threadLabels);
+    for (const [id, entry] of order) {
+      if (entry.pinned && entry.label && !entries.has(id)) entries.set(id, entry.label);
+    }
+    if (!entries.size) {
       const emptyList = document.createElement('small');
       emptyList.textContent = 'No threads in this project yet.';
       threads.append(emptyList);
       return;
     }
-    for (const [id, label] of threadLabels) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = label;
-      button.setAttribute('aria-pressed', String(id === threadId));
-      button.onclick = () => {
+    const sorted = [...entries].sort(([first], [second]) => {
+      const a = order.get(first), b = order.get(second);
+      return Number(Boolean(b?.pinned)) - Number(Boolean(a?.pinned))
+        || (b?.opened || 0) - (a?.opened || 0);
+    });
+    for (const [id, label] of sorted) {
+      const pinned = Boolean(order.get(id)?.pinned);
+      const row = document.createElement('div');
+      row.className = 'codex-thread-row';
+      row.dataset.threadId = id;
+      const open = historyButton(label, () => {
         threadDialog.close();
         if (id !== threadId) openThread(id).catch(onError);
-      };
-      threads.append(button);
+      });
+      open.className = 'codex-thread-open';
+      open.title = label;
+      open.setAttribute('aria-current', String(id === threadId));
+      const pin = historyButton(pinned ? '◆' : '◇', () => {
+        const latest = threadOrder();
+        latest.set(id, {...latest.get(id), pinned: !pinned, label});
+        rememberThreadOrder(latest);
+        renderThreadPicker();
+        [...threads.children].find(item => item.dataset.threadId === id)?.querySelector('.codex-thread-action')?.focus();
+      });
+      const rename = historyButton('✎', () => {
+        renamingThread = id;
+        threadFeedback.textContent = '';
+        renameThreadTitle.value = label;
+        renameThreadForm.hidden = false;
+        renameThreadTitle.select();
+      });
+      pin.className = rename.className = 'codex-thread-action';
+      pin.setAttribute('aria-pressed', String(pinned));
+      pin.setAttribute('aria-label', (pinned ? 'Unpin ' : 'Pin ') + label);
+      rename.setAttribute('aria-label', 'Rename ' + label);
+      pin.title = pinned ? 'Unpin thread' : 'Pin thread';
+      rename.title = 'Rename thread';
+      row.append(open, pin, rename);
+      threads.append(row);
     }
   }
 
   async function openThread(id) {
     if (busy) return;
+    const attempt = connectionAttempt;
+    const previousThread = threadId;
+    saveDraft();
+    queued = {id, events: []};
     busy = true;
     sync();
     try {
       const result = id
         ? await rpc('thread/resume', {...settings, cwd: project, threadId: id})
         : await rpc('thread/start', {...settings, cwd: project});
+      if (attempt !== connectionAttempt) return;
       threadId = result.thread.id;
+      threadModel = result.model || '';
+      threadEffort = result.reasoningEffort || '';
+      loadModelPreferences();
+      remember(sessionKey('thread'), threadId);
+      if (previousThread !== threadId && window.hackGptCodexMode) { swapAttachments(threadAttachments()); setDraft(readDraft()); }
+      turnId = '';
+      outcome = '';
       log.replaceChildren();
       replies.clear();
       fileChanges.clear();
@@ -4557,57 +5078,81 @@ if (window.HackGptAndroid?.openAppUpdate) {
           if (item.type === 'userMessage') {
             append('You', item.content.filter(part => part.type === 'text').map(part => part.text).join('\n'));
           } else if (item.type === 'agentMessage') {
-            append('Codex', item.text);
-          }
+            const row = append('Codex', item.text);
+            if (turn.status === 'inProgress') replies.set(item.id, row);
+          } else if (turn.status !== 'inProgress') showCodexActivity(item);
         }
         if (turn.status === 'inProgress') turnId = turn.id;
       }
-      status.textContent = '';
+      sessionDetail.textContent = '';
       const label = result.thread.name || threadLabels.get(threadId) || result.thread.preview || 'New thread';
       threadLabels.set(threadId, label);
-      threadName.textContent = label;
+      const order = threadOrder();
+      const latestOpened = Math.max(Date.now(), ...[...order.values()].map(entry => (entry.opened || 0) + 1));
+      order.set(threadId, {...order.get(threadId), opened: latestOpened, label});
+      rememberThreadOrder(order);
+      updateThreadName();
+      const events = queued.events;
+      queued = null;
+      for (const event of events) window.hackGptCodexEvent('message', event);
+      reconcileSend(result.thread);
     } finally {
-      busy = Boolean(turnId);
-      sync();
+      if (attempt === connectionAttempt) {
+        queued = null;
+        busy = Boolean(turnId);
+        sync();
+      }
     }
   }
+
+  const approvePending = new WeakMap();
 
   function approval(message) {
     const {id, method, params} = message;
     const command = method === 'item/commandExecution/requestApproval';
     const file = method === 'item/fileChange/requestApproval';
+    const permission = method === 'item/permissions/requestApproval';
     const respond = result => bridge.send(JSON.stringify({id, result}));
-    if (!command && !file) {
+    if (!command && !file && !permission) {
       bridge.send(JSON.stringify({id, error: {code: -32601, message: 'Request type unavailable in HackGpt'}}));
       return;
     }
-    if (params.threadId !== threadId) {
-      respond({decision: 'decline'});
+    const denied = permission ? {permissions: {}, scope: 'turn'} : {decision: 'decline'};
+    if (!params?.threadId || params.threadId !== threadId) {
+      respond(denied);
       return;
     }
-    const card = document.createElement('article');
-    const detail = document.createElement('pre');
+    const accepted = permission ? {permissions: params.permissions ?? {}, scope: 'turn'} : {decision: 'accept'};
+    const label = permission ? 'Permission approval' : command ? 'Command approval' : 'File change approval';
     const changes = fileChanges.get(params.itemId);
-    const target = command ? params.command : changes?.map(change => change.path + '\n' + change.diff).join('\n\n');
-    detail.textContent = [command ? 'Command approval' : 'File change approval',
-      target, params.cwd, params.grantRoot, params.reason, params.networkApprovalContext?.host].filter(Boolean).join('\n');
-    card.append(detail);
-    for (const [label, decision] of [['Approve once', 'accept'], ['Decline', 'decline']]) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = label;
-      button.disabled = decision === 'accept' && !target && !params.networkApprovalContext?.host;
-      button.onclick = () => {
-        if (respond({decision})) {
-          card.remove();
-          approvalCards.delete(id);
-        }
-        else status.textContent = 'Approval could not be sent.';
-      };
-      card.append(button);
+    const target = permission ? JSON.stringify(params.permissions ?? {}, null, 2)
+      : command ? params.command : changes?.map(change => change.path + '\n' + change.diff).join('\n\n');
+    const detailText = [target, params.cwd, params.grantRoot, params.reason, params.networkApprovalContext?.host]
+      .filter(Boolean).join('\n');
+    const card = document.createElement('article');
+
+    function finish(result, automatic = false) {
+      if (!connected || params.threadId !== threadId || !respond(result)) return false;
+      card.remove();
+      approvalCards.delete(id);
+      if (automatic) appendActivity(label + ' · approved automatically', detailText || label);
+      sync();
+      return true;
     }
+
+    if (approvalMode === 'always' && finish(accepted, true)) return;
+    const detail = document.createElement('pre');
+    detail.textContent = [label, detailText].filter(Boolean).join('\n');
+    card.append(detail);
+    for (const [title, result] of [['Approve once', accepted], ['Decline', denied]]) {
+      card.append(historyButton(title, () => {
+        if (!finish(result)) status.textContent = 'Approval could not be sent.';
+      }));
+    }
+    approvePending.set(card, () => finish(accepted, true));
     approvalCards.set(id, card);
     approvals.append(card);
+    sync();
   }
 
   function onError(error) { status.textContent = error.message; }
@@ -4624,9 +5169,21 @@ if (window.HackGptAndroid?.openAppUpdate) {
         bridge.send(JSON.stringify({method: 'initialized'}));
         await refresh();
         if (attempt !== connectionAttempt) return;
-        connecting = false;
         connected = true;
-        find('codex-session-status').textContent = 'Choose a thread or start a new one.';
+        retryCount = 0;
+        loadModelPreferences();
+        loadModelCatalog(attempt).catch(() => {});
+        loadQuota();
+        sessionDetail.textContent = '';
+        if (threadId) {
+          try { await openThread(threadId); }
+          catch (error) {
+            if (attempt !== connectionAttempt) return;
+            sessionDetail.textContent = 'Could not resume the saved thread. Choose a thread to continue.';
+          }
+        }
+        if (attempt !== connectionAttempt) return;
+        connecting = false;
         dialog.close();
         enterMode();
         sync();
@@ -4639,6 +5196,10 @@ if (window.HackGptAndroid?.openAppUpdate) {
     }
     let message;
     try { message = JSON.parse(data); } catch { return; }
+    if (queued?.id && message.params?.threadId === queued.id && message.method) {
+      queued.events.push(data);
+      return;
+    }
     if ('id' in message) {
       if (message.method) {
         approval(message);
@@ -4653,12 +5214,22 @@ if (window.HackGptAndroid?.openAppUpdate) {
       return;
     }
     const params = message.params;
+    if (message.method === 'account/rateLimits/updated') {
+      const snapshot = params?.rateLimits;
+      if (snapshot && (!snapshot.limitId || snapshot.limitId === 'codex')) {
+        quotaRevision++;
+        quotaRefresh.disabled = false;
+        showQuota(snapshot);
+      }
+      return;
+    }
     if (params?.threadId !== threadId) return;
     const item = params.item;
     switch (message.method) {
       case 'serverRequest/resolved':
         approvalCards.get(params.requestId)?.remove();
         approvalCards.delete(params.requestId);
+        sync();
         break;
       case 'turn/started':
         turnId = params.turn.id;
@@ -4670,8 +5241,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
         replies.set(params.itemId, row);
         const message = messageText.get(row);
         message.value += params.delta;
-        row.lastElementChild.textContent = message.value;
-        if (log.isConnected) messages.scrollTop = messages.scrollHeight;
+        queueCodexReply(row);
         break;
       }
       case 'item/started':
@@ -4682,24 +5252,23 @@ if (window.HackGptAndroid?.openAppUpdate) {
           const row = replies.get(item.id);
           if (row) {
             messageText.get(row).value = item.text;
-            row.lastElementChild.textContent = item.text;
-            renderReplyMarkup(row, item.text);
+            renderCodexReply(row, item.text);
             replies.delete(item.id);
           } else append('Codex', item.text);
-        } else if (item.type === 'fileChange') {
-          append('File changes', item.changes.map(change => change.path + '\n' + change.diff).join('\n\n'));
-        } else if (item.type === 'commandExecution') {
-          append('Command · ' + item.status, item.command);
-        }
+        } else showCodexActivity(item);
         break;
       case 'turn/completed':
+        stopPending = '';
+        notifyTask(params.turn.status === 'completed' ? 'finished' : params.turn.status === 'failed' ? 'failed' : 'stopped');
+        for (const row of replies.values()) renderCodexReply(row, messageText.get(row).value);
         turnId = '';
         busy = false;
         approvals.replaceChildren();
         approvalCards.clear();
         replies.clear();
         fileChanges.clear();
-        status.textContent = params.turn.error?.message || 'Turn ' + params.turn.status;
+        outcome = params.turn.status === 'completed' ? 'Finished' : '';
+        status.textContent = params.turn.error?.message || '';
         sync();
         break;
     }
@@ -4707,7 +5276,14 @@ if (window.HackGptAndroid?.openAppUpdate) {
 
   dismissOnBackdrop(dialog);
   dismissOnBackdrop(threadDialog);
+  find('codex-project-alias').onsubmit = event => {
+    event.preventDefault();
+    remember(sessionKey('project-title'), find('codex-project-title').value.trim());
+    updateThreadName();
+    threadFeedback.textContent = 'Project display name saved.';
+  };
   pick.onclick = () => {
+    find('codex-project-title').value = stored(sessionKey('project-title')) || '';
     renderThreadPicker();
     threadDialog.showModal();
   };
@@ -4745,58 +5321,110 @@ if (window.HackGptAndroid?.openAppUpdate) {
     resetComposerHold();
     window.getSelection()?.removeAllRanges();
     if (connected) enterMode();
+    else if (endpoint && project) { enterMode(); connectToPc(endpoint, project, '', true); }
     else dialog.showModal();
   });
   exit.onclick = leaveMode;
   find('codex-disconnect').onclick = () => {
+    reconnectAllowed = false;
+    clearTimeout(reconnectTimer);
     bridge.disconnect();
     disconnected('');
   };
   connect.onsubmit = event => {
     event.preventDefault();
-    if (connecting || (connected && busy)) return;
-    const endpoint = endpointInput.value.trim();
-    const nextProject = projectInput.value.trim();
-    const error = bridge.connect(endpoint, tokenInput.value.trim(), nextProject);
-    if (error) {
-      connectionError.textContent = error;
-      return;
-    }
-    disconnected('');
-    project = nextProject;
-    connecting = true;
-    savedEndpoint = endpoint;
-    tokenInput.value = '';
-    updateSavedTokenHint();
-    updateConnectionStatus();
+    connectToPc(endpointInput.value.trim(), projectInput.value.trim(), tokenInput.value.trim());
   };
   find('codex-new').onclick = () => openThread('').catch(onError);
   find('codex-refresh').onclick = () => refresh().catch(onError);
+  function clearSentAttachments(pendingKey) {
+    const selection = pendingCodexFiles.get(pendingKey);
+    if (!selection) return;
+    pendingCodexFiles.delete(pendingKey);
+    for (const file of selection.files) {
+      const index = selection.fileList.indexOf(file);
+      if (index >= 0) selection.fileList.splice(index, 1);
+    }
+    if (attachments === selection.fileList) renderAttachments();
+  }
+
+  function reconcileSend(thread) {
+    let uncertain;
+    try { uncertain = JSON.parse(stored(sessionKey('pending', threadId))); } catch {}
+    if (!uncertain) return;
+    const turns = thread.turns ?? [];
+    const delivered = turns.slice(uncertain.count).some(turn => turn.items.some(item =>
+      item.type === 'userMessage' && item.content.filter(part => part.type === 'text')
+        .some(part => part.text === uncertain.text)));
+    if (delivered) {
+      if (readDraft() === uncertain.text) {
+        remember(sessionKey('draft', threadId), '');
+        if (window.hackGptCodexMode && prompt.value === uncertain.text) setDraft('');
+      }
+      const pendingKey = sessionKey('pending', threadId);
+      remember(pendingKey, '');
+      clearSentAttachments(pendingKey);
+    } else {
+      sessionDetail.textContent = 'Delivery is unconfirmed. Review the thread before sending again.';
+    }
+  }
+
   async function send() {
-    const message = prompt.value.trim();
-    if (!message || busy) return;
+    const fileList = attachments;
+    const files = [...fileList];
+    const draft = prompt.value.trim();
+    const message = draft || (files.length ? 'Review the attached files.' : '');
+    if (!message || busy || readingFiles || !connected || connecting) return;
     if (!threadId) {
-      status.textContent = 'Choose a project thread or start a new one.';
+      sessionDetail.textContent = 'Choose a project thread or start a new one.';
       return;
     }
+    const attempt = connectionAttempt;
+    const draftKey = sessionKey('draft', threadId);
+    const pendingKey = sessionKey('pending', threadId);
+    const count = [...log.children].filter(row => messageText.get(row)?.label === 'You').length;
+    remember(draftKey, message);
+    remember(pendingKey, JSON.stringify({text: message, count}));
+    if (files.length) pendingCodexFiles.set(pendingKey, {files, fileList});
+    else pendingCodexFiles.delete(pendingKey);
     busy = true;
+    outcome = '';
+    sessionDetail.textContent = '';
     sync();
-    status.textContent = 'Codex is working…';
     const row = append('You', message);
-    setDraft('');
+    showFileNames(row, files.map(file => file.name));
+    messages.scrollTop = messages.scrollHeight;
     try {
-      await rpc('turn/start', {threadId, input: [{type: 'text', text: message, text_elements: []}]});
+      await rpc('turn/start', {
+        threadId,
+        input: [{type: 'text', text: message, text_elements: []}, ...files.map(file =>
+          file.kind === 'image' ? {type: 'image', url: 'data:' + file.mime + ';base64,' + file.data}
+            : {type: 'text', text: 'Attachment: ' + file.name + '\n\n' + file.data, text_elements: []})],
+        ...(codexModel.value && {model: codexModel.value}),
+        ...(codexEffort.value && {effort: codexEffort.value})
+      });
+      remember(pendingKey, '');
+      clearSentAttachments(pendingKey);
+      if (stored(draftKey) === message) {
+        remember(draftKey, '');
+        if (window.hackGptCodexMode && prompt.value.trim() === draft) setDraft('');
+      }
     } catch (error) {
       row.remove();
-      if (log.isConnected && !prompt.value) setDraft(message);
-      else if (!log.isConnected && !codexDraft) codexDraft = message;
+      if (attempt !== connectionAttempt) return;
       busy = Boolean(turnId);
+      sessionDetail.textContent = 'Delivery is unconfirmed. Review the thread before sending again.';
       sync();
-      onError(error);
     }
   }
   function stop() {
-    if (turnId) return rpc('turn/interrupt', {threadId, turnId}).catch(onError);
+    if (!connected || !turnId || stopPending === turnId) return;
+    const target = turnId;
+    stopPending = target;
+    return rpc('turn/interrupt', {threadId, turnId: target}).catch(error => {
+      if (stopPending === target) stopPending = '';
+      onError(error);
+    });
   }
   sync();
 })();

@@ -29,6 +29,66 @@ final class CodexBridge {
         vault = new CredentialVault(web.getContext(), "codex-vault");
     }
 
+    private static final String NOTIFICATION_CHANNEL = "codex-task-status";
+    private static final int NOTIFICATION_ID = 4102;
+
+    @JavascriptInterface public void requestTaskNotifications() {
+        if (android.os.Build.VERSION.SDK_INT < 33
+                || !(web.getContext() instanceof android.app.Activity activity)) return;
+        web.post(() -> {
+            String permission = android.Manifest.permission.POST_NOTIFICATIONS;
+            if (activity.checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                activity.requestPermissions(new String[]{permission}, NOTIFICATION_ID);
+            }
+        });
+    }
+
+    @JavascriptInterface public void showTaskNotification(String state) {
+        web.post(() -> {
+            var context = web.getContext();
+            var manager = context.getSystemService(android.app.NotificationManager.class);
+            if (manager == null) return;
+            if ("clear".equals(state)) {
+                manager.cancel(NOTIFICATION_ID);
+                return;
+            }
+            if (!manager.areNotificationsEnabled()) return;
+            if (android.os.Build.VERSION.SDK_INT >= 33
+                    && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            String title = switch (state == null ? "" : state) {
+                case "working" -> "Codex is working";
+                case "approval" -> "Codex needs approval";
+                case "finished" -> "Codex finished";
+                case "failed" -> "Codex task failed";
+                case "stopped" -> "Codex task stopped";
+                case "unknown" -> "Codex connection lost";
+                default -> null;
+            };
+            if (title == null) return;
+            boolean working = "working".equals(state);
+            String channelId = working ? NOTIFICATION_CHANNEL + "-progress" : NOTIFICATION_CHANNEL;
+            var channel = new android.app.NotificationChannel(channelId,
+                    working ? "Codex progress" : "Codex task status", working ? android.app.NotificationManager.IMPORTANCE_LOW : android.app.NotificationManager.IMPORTANCE_DEFAULT);
+            manager.createNotificationChannel(channel);
+            var intent = new android.content.Intent(context, MainActivity.class)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            | android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            var open = android.app.PendingIntent.getActivity(context, NOTIFICATION_ID, intent,
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+            var notification = new android.app.Notification.Builder(context, channelId)
+                    .setSmallIcon(R.drawable.ic_neural)
+                    .setContentTitle(title)
+                    .setContentText("unknown".equals(state) ? "Reconnect to check the task." : "Open HackGpt to view the thread.")
+                    .setContentIntent(open)
+                    .setOnlyAlertOnce(working)
+                    .setOngoing(working)
+                    .setAutoCancel(!working)
+                    .setVisibility(android.app.Notification.VISIBILITY_PRIVATE);
+            manager.notify(NOTIFICATION_ID, notification.build());
+        });
+    }
+
     @JavascriptInterface public synchronized String loadConnection() {
         try {
             JSONObject saved = vault.load().optJSONObject(0);
