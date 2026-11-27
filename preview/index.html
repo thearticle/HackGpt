@@ -209,7 +209,7 @@ dialog::backdrop{background:var(--scrim)}
 #codex-model-options label{display:grid;gap:4px;min-width:0;font-size:12px}
 #codex-quota-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 #codex-quota{white-space:pre-line}
-#codex-quota-clock{font-size:16px;line-height:1;vertical-align:middle}#codex-quota-shortcut{display:flex;align-items:center}
+#codex-quota-clock{font-size:16px;line-height:1;vertical-align:middle}#codex-quota-shortcut{display:flex;align-items:center;min-height:30px;padding:0 6px;border:0;background:transparent;color:var(--lime);white-space:nowrap;font-size:11px;pointer-events:auto}
 #codex-notifications[hidden]{display:none}#codex-notifications[aria-pressed="true"]{border-color:var(--lime)}
 @media(prefers-reduced-motion:reduce){:is(#codex-session-status,#stop-response)[data-state="working"]::before{animation:none}}
 #codex-session small:empty{display:none}
@@ -580,6 +580,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
   <button id="codex-new" class="icon" type="button" aria-label="New thread" title="New thread">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12h7M12 8.5v7"/></svg>
   </button>
+  <button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button>
   <button id="codex-refresh" class="icon" type="button" aria-label="Refresh threads" title="Refresh threads">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-4L4 9m0-5v5h5m-5 4a8 8 0 0 0 14 4l2-2m0 5v-5h-5"/></svg>
   </button>
@@ -604,7 +605,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<div id="chat-status"><button id="regular-attach" type="button" aria-label="Add attachment" title="Add attachment" hidden>↑</button><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button><button id="codex-approval-shortcut" type="button" aria-label="Approval mode: Ask each time" title="Approval mode: Ask each time">?</button></div><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Ready" title="Ready" data-state="idle" disabled></button></div>
+<div id="chat-status"><button id="regular-attach" type="button" aria-label="Add attachment" title="Add attachment" hidden>↑</button><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-approval-shortcut" type="button" aria-label="Approval mode: Ask each time" title="Approval mode: Ask each time">?</button></div><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Ready" title="Ready" data-state="idle" disabled></button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
@@ -805,6 +806,11 @@ const kenariBase = 'https://kenari.id/v1';
 const routrBase = 'https://api.routr.cloud/v1';
 const naraBase = 'https://router.bynara.id/v1';
 const demoBeamId = 'beam-1-0:free';
+const verifiedKenariDemoIds = new Set([
+  demoBeamId, 'ernie-5-5-flash-preview:free', 'flint-v1-0:free', 'glm-4-6v-flash:free',
+  'hy4-flash:free', 'lfm-3-1-7b:free', 'nemotron-3-5-lightning:free',
+  'nemotron-3-5-super-vl:free', 'particle-1:free'
+]);
 const demoProfileId = 'builtin-kenari-demo';
 const liveModelKey = 'neural-link.active-provider-model.v1';
 const modelDialog = find('model-dialog');
@@ -972,7 +978,8 @@ function savedModels() {
     connection.base === kenariBase && connection.saved === true);
   const demo = builtInDemo ?? {
     id: demoProfileId, name: 'Demo', connectionId: configuredKenari?.id,
-    models: [{id: demoBeamId, name: 'Beam 1.0 Free'}], hidden: []
+    models: [{id: demoBeamId, name: 'Beam 1.0 Free'}, ...(configuredKenari?.models ?? [])
+      .filter(model => model.id !== demoBeamId && verifiedKenariDemoIds.has(model.id))], hidden: []
   };
   return [demo, ...profiles].flatMap(profile => {
     const hidden = new Set(profile.hidden);

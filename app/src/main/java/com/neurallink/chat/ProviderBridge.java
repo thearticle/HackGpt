@@ -303,13 +303,29 @@ final class ProviderBridge {
     private static final String ROUTR_BASE = ROUTR_ORIGIN + "/v1";
     private static final String NARA_ORIGIN = "https://router.bynara.id";
     private static final String NARA_BASE = NARA_ORIGIN + "/v1";
-    private static final String DEMO_BEAM = "beam-1-0:free";
+    private static final String[][] DEMO_MODELS = {
+            {"beam-1-0:free", "Beam 1.0 Free"},
+            {"ernie-5-5-flash-preview:free", "ERNIE 5.5 Flash Preview"},
+            {"flint-v1-0:free", "Flint 1.0"},
+            {"glm-4-6v-flash:free", "GLM-4.6V-Flash"},
+            {"hy4-flash:free", "Hy4 Flash"},
+            {"lfm-3-1-7b:free", "LFM3 1.7B"},
+            {"nemotron-3-5-lightning:free", "Nemotron 3.5 Lightning"},
+            {"nemotron-3-5-super-vl:free", "Nemotron 3.5 Super VL"},
+            {"particle-1:free", "Particle-1"}
+    };
     private JSONObject demoProvider;
     private boolean demoLoaded;
 
-    private static JSONObject demoBeamModel() throws Exception {
-        return new JSONObject().put("id", DEMO_BEAM).put("name", "Beam 1.0 Free")
+    private static JSONObject demoModel(String id, String name) throws Exception {
+        return new JSONObject().put("id", id).put("name", name)
                 .put("input", new JSONObject().put("image", false).put("pdf", false));
+    }
+
+    private static JSONArray demoModels() throws Exception {
+        var models = new JSONArray();
+        for (var entry : DEMO_MODELS) models.put(demoModel(entry[0], entry[1]));
+        return models;
     }
 
     private synchronized JSONObject find(String id) {
@@ -322,7 +338,7 @@ final class ProviderBridge {
                     if (key != null && key.matches("kn-[A-Za-z0-9_-]{1,4096}")) {
                         demoProvider = new JSONObject().put("id", DEMO_ID).put("name", "Demo")
                                 .put("type", "custom").put("base", KENARI_BASE).put("key", key)
-                                .put("models", new JSONArray().put(demoBeamModel()));
+                                .put("models", demoModels());
                     }
                 } catch (Exception ignored) {
                     // Standard builds omit the private demo asset.
@@ -598,10 +614,12 @@ final class ProviderBridge {
                 break;
             }
         }
-        if (model == null && DEMO_BEAM.equals(input.optString("model"))
+        if (model == null && DEMO_MODELS[0][0].equals(input.optString("model"))
                 && KENARI_BASE.equals(provider.getString("base"))) {
             synchronized (this) {
-                if (saved.containsKey(provider.getString("id"))) model = demoBeamModel();
+                if (saved.containsKey(provider.getString("id"))) {
+                    model = demoModel(DEMO_MODELS[0][0], DEMO_MODELS[0][1]);
+                }
             }
         }
         if (model == null) throw new Failure("Select a connected model.");

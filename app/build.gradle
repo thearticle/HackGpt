@@ -9,6 +9,11 @@ abstract class BundleChatUi extends DefaultTask {
     @PathSensitive(PathSensitivity.NAME_ONLY)
     abstract ConfigurableFileCollection getUiFiles()
 
+    @Optional
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getDemoKey()
+
     @OutputDirectory
     abstract DirectoryProperty getOutputDirectory()
 
@@ -19,6 +24,9 @@ abstract class BundleChatUi extends DefaultTask {
         Files.deleteIfExists(directory.resolve('demo-kenari.key'))
         uiFiles.each { file ->
             Files.copy(file.toPath(), directory.resolve(file.name), StandardCopyOption.REPLACE_EXISTING)
+        }
+        if (demoKey.isPresent()) {
+            Files.copy(demoKey.get().asFile.toPath(), directory.resolve('demo-kenari.key'), StandardCopyOption.REPLACE_EXISTING)
         }
         def html = directory.resolve('index.html').toFile().getText('UTF-8')
                 .replace('\r\n', '\n').replace('\r', '\n')
@@ -39,8 +47,8 @@ android {
         applicationId 'com.thearticle.hackgpt'
         minSdk 26
         targetSdk 36
-        versionCode 31
-        versionName '1.0.29'
+        versionCode 32
+        versionName '1.0.30'
     }
 
     buildTypes {
@@ -70,7 +78,7 @@ androidComponents {
                 rootProject.file('preview/vendor/markdown-it.min.js'),
                 rootProject.file('preview/vendor/markdown-it.NOTICES.txt')
             )
-            if (demoKeyFile) uiFiles.from(rootProject.file(demoKeyFile))
+            if (demoKeyFile) demoKey.set(rootProject.file(demoKeyFile))
             outputDirectory.set(layout.buildDirectory.dir('generated/chat-ui/' + variant.name))
         }
         variant.sources.assets.addGeneratedSourceDirectory(bundle, { task -> task.outputDirectory })
