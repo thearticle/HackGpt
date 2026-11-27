@@ -90,8 +90,12 @@ final class CodexBridge {
     }
 
     @JavascriptInterface public synchronized String loadConnection() {
+        return loadConnectionProfile("codex");
+    }
+
+    @JavascriptInterface public synchronized String loadConnectionProfile(String mode) {
         try {
-            JSONObject saved = vault.load().optJSONObject(0);
+            JSONObject saved = vault.load().optJSONObject(profileIndex(mode));
             if (saved == null) return "{}";
             saved.put("hasToken", !saved.optString("token").isEmpty());
             saved.remove("token");
@@ -102,14 +106,26 @@ final class CodexBridge {
     }
 
     @JavascriptInterface public synchronized String connect(String endpoint, String token, String project) {
+        return connectProfile("codex", endpoint, token, project);
+    }
+
+    private int profileIndex(String mode) {
+        if ("codex".equals(mode)) return 0;
+        if ("antigravity".equals(mode)) return 1;
+        throw new IllegalArgumentException("Unknown connection mode");
+    }
+
+    @JavascriptInterface public synchronized String connectProfile(String mode, String endpoint, String token, String project) {
         if (endpoint == null || !endpoint.startsWith("wss://")
                 || project == null || project.trim().isEmpty()) return "Enter a secure server URL and project folder.";
         HttpUrl url = HttpUrl.parse("https://" + endpoint.substring(6));
         if (url == null || !url.username().isEmpty() || !url.password().isEmpty()
                 || url.fragment() != null || url.query() != null) return "Enter a valid secure server URL.";
         try {
+            int index = profileIndex(mode);
+            JSONArray profiles = vault.load();
             if (token == null || token.isEmpty()) {
-                JSONObject saved = vault.load().optJSONObject(0);
+                JSONObject saved = profiles.optJSONObject(index);
                 if (saved != null && endpoint.equals(saved.optString("endpoint"))) {
                     token = saved.optString("token");
                 }
@@ -117,7 +133,7 @@ final class CodexBridge {
             if (token == null || !token.matches("[!-~]{1,4096}")) {
                 return "Enter a connection token for this server.";
             }
-            vault.save(new JSONArray().put(new JSONObject()
+            vault.save(profiles.put(index, new JSONObject()
                     .put("endpoint", endpoint).put("token", token).put("project", project)));
         } catch (Exception ignored) {
             return "Could not save the connection on this device.";
