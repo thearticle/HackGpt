@@ -106,8 +106,8 @@ article p{margin:6px 0 0;white-space:pre-wrap}
 #composer{position:relative}
 #composer[hidden],#immersive-handle[hidden]{display:none}
 .codex-mode #chat-status{flex:none;position:relative;z-index:1}
-#codex-attach{font-size:14px;flex:none;width:32px;min-height:26px;padding:0;border:0;background:transparent;color:var(--lime);line-height:1}
-#codex-attach[hidden]{display:none}
+:is(#codex-attach,#regular-attach){font-size:14px;flex:none;width:32px;min-height:26px;padding:0;border:0;background:transparent;color:var(--lime);line-height:1}
+:is(#codex-attach,#regular-attach)[hidden],.codex-mode #regular-attach{display:none}
 .codex-mode #composer :is(.send,#composer-marker,#composer-gesture){display:none}
 #codex-send[hidden],main:not(.codex-mode) #codex-send{display:none}
 #codex-send{flex:none;align-self:end;margin:4px;min-height:36px;padding:0 10px}
@@ -137,10 +137,10 @@ article p{margin:6px 0 0;white-space:pre-wrap}
 @keyframes composer-tap{50%{box-shadow:0 0 14px var(--lime);transform:translateX(-50%) scale(1.08)}}
 @keyframes composer-hint-pulse{0%,100%{opacity:.72}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){#composer .send{transition:none}#composer .send.is-pulsing,#composer-marker::after,#composer-gesture{animation:none}}
-#stop-response[hidden]{display:none}
+.codex-mode #stop-response{display:none}
 #composer .send:disabled .send-mark::after{animation:none}
 #chat-status{display:flex;align-items:center;justify-content:space-between;gap:8px}
-#stop-response{min-height:32px;padding:0 9px}
+#stop-response{margin-inline-start:auto}
 .send-mark{width:12px;height:12px;transform:translate(var(--send-x,0px),var(--send-y,0px));transition:transform 160ms ease-out}
 .send.is-dragging .send-mark{transition:none}
 #messages.is-composer-gesture,#messages.is-composer-gesture *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -166,14 +166,14 @@ dialog::backdrop{background:var(--scrim)}
 #codex-thread-name{position:absolute;inset-inline-start:50%;top:50%;transform:translate(-50%,-50%);max-width:calc(100% - 68px);padding:4px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--lime);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity 220ms ease,visibility 0s linear 220ms}
 .codex-mode #chat-toolbar.toolbar-tucked #codex-thread-name:not(:empty){opacity:1;visibility:visible;transition-delay:0s}
 @media(prefers-reduced-motion:reduce){#codex-thread-name{transition:none}}
-#codex-session-status{order:1;display:grid;place-items:center;flex:none;width:32px;min-height:26px;padding:0;border:0;background:transparent;color:var(--lime);touch-action:manipulation}
-#codex-session-status::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
-#codex-session-status[data-state="working"]::before{box-sizing:border-box;width:12px;height:12px;background:transparent;border:1px solid currentColor;border-inline-end-color:transparent;animation:codex-spin .85s linear infinite}
-#codex-session-status[data-state="failed"]{color:var(--danger)}
-#codex-session-status[data-state="failed"]::before{box-sizing:border-box;width:12px;height:12px;border:1px solid currentColor;background:linear-gradient(45deg,transparent 43%,currentColor 45%,currentColor 55%,transparent 57%)}
+:is(#codex-session-status,#stop-response){order:1;display:grid;place-items:center;flex:none;width:32px;min-height:26px;padding:0;border:0;background:transparent;color:var(--lime);touch-action:manipulation}
+:is(#codex-session-status,#stop-response)::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+:is(#codex-session-status,#stop-response)[data-state="working"]::before{box-sizing:border-box;width:12px;height:12px;background:transparent;border:1px solid currentColor;border-inline-end-color:transparent;animation:codex-spin .85s linear infinite}
+:is(#codex-session-status,#stop-response)[data-state="failed"]{color:var(--danger)}
+:is(#codex-session-status,#stop-response)[data-state="failed"]::before{box-sizing:border-box;width:12px;height:12px;border:1px solid currentColor;background:linear-gradient(45deg,transparent 43%,currentColor 45%,currentColor 55%,transparent 57%)}
 #codex-session-status[data-state="attention"]::before{content:"!";width:auto;height:auto;background:none;font-weight:bold}
 @keyframes codex-spin{to{transform:rotate(360deg)}}
-#codex-session-status:disabled{opacity:1;cursor:default}
+:is(#codex-session-status,#stop-response):disabled{opacity:1;cursor:default}
 #codex-session-detail{color:var(--muted)}
 #codex-log article.codex-answer{min-width:0;width:100%;max-width:100%;flex:none}
 #codex-log .codex-answer{--lime:light-dark(#25631b,#aff65c);border-inline-start:2px solid var(--lime);padding-inline-start:10px}
@@ -211,7 +211,7 @@ dialog::backdrop{background:var(--scrim)}
 #codex-quota{white-space:pre-line}
 #codex-quota-clock{font-size:16px;line-height:1;vertical-align:middle}#codex-quota-shortcut{display:flex;align-items:center}
 #codex-notifications[hidden]{display:none}#codex-notifications[aria-pressed="true"]{border-color:var(--lime)}
-@media(prefers-reduced-motion:reduce){#codex-session-status[data-state="working"]::before{animation:none}}
+@media(prefers-reduced-motion:reduce){:is(#codex-session-status,#stop-response)[data-state="working"]::before{animation:none}}
 #codex-session small:empty{display:none}
 .codex-thread-open[aria-pressed="true"]{border-color:var(--lime)}
 .codex-thread-row button{min-width:0}
@@ -604,7 +604,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<div id="chat-status"><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button><button id="codex-approval-shortcut" type="button" aria-label="Approval mode: Ask each time" title="Approval mode: Ask each time">?</button></div><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Stop response" title="Stop response" hidden>■</button></div>
+<div id="chat-status"><button id="regular-attach" type="button" aria-label="Add attachment" title="Add attachment" hidden>↑</button><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button><button id="codex-approval-shortcut" type="button" aria-label="Approval mode: Ask each time" title="Approval mode: Ask each time">?</button></div><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Ready" title="Ready" data-state="idle" disabled></button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
 <form id="composer">
 <input id="file-picker" type="file" multiple hidden>
@@ -829,6 +829,7 @@ let composerTapExpiry;
 let composerHold;
 let markerPress;
 const stopResponse = find('stop-response');
+const regularAttach = find('regular-attach');
 const filePicker = find('file-picker');
 let attachments = [];
 let readingFiles = false;
@@ -1866,6 +1867,7 @@ function branchPrefix(chat, filename = false) {
 }
 
 async function showChat(chat, credits = false, preserveDraft = false, preserveAttachments = false) {
+  if (!sending) showRegularProgress('idle');
   const view = ++chatViewVersion;
   loadingChatImages = false;
   if (!preserveAttachments) {
@@ -2800,6 +2802,8 @@ function openAttachmentPicker() {
 }
 
 function updateComposerButton(model, enterMode = find('enter-to-send').getAttribute('aria-pressed') === 'true') {
+  regularAttach.hidden = !enterMode;
+  regularAttach.disabled = sending || !model?.connection || model.imageOnly || model.connection.type === 'factory';
   sendButton.disabled = sending;
   sendButton.classList.toggle('is-actions-only', enterMode);
   sendButton.setAttribute('aria-label', sendButton.classList.contains('is-stop')
@@ -3942,12 +3946,24 @@ async function exportChatMarkdown(conversations, report, archive = false) {
   }
 }
 
-function setSending(value) {
+let regularStopTap = -Infinity;
+
+function showRegularProgress(state) {
+  const labels = {idle: 'Ready', working: 'Responding. Double tap to stop.', finished: 'Response finished',
+    stopping: 'Stopping response', stopped: 'Response stopped', failed: 'Response failed'};
+  stopResponse.dataset.state = state === 'stopping' ? 'working' : state;
+  stopResponse.disabled = state !== 'working';
+  stopResponse.title = labels[state];
+  stopResponse.setAttribute('aria-label', labels[state]);
+  regularStopTap = -Infinity;
+}
+
+function setSending(value, outcome = 'finished') {
   sending = value;
   for (const id of ['history-button', 'provider', 'model-button']) find(id).disabled = value;
   reset.disabled = value;
   messages.setAttribute('aria-busy', String(value));
-  stopResponse.hidden = !value;
+  showRegularProgress(value ? 'working' : outcome);
   updateModelStatus();
   renderAttachments();
 }
@@ -3995,7 +4011,15 @@ async function receiveReply(payload, onEvent, signal) {
   return stats;
 }
 
-stopResponse.onclick = () => window.hackGptCodexMode ? window.hackGptCodexMode.stop() : requestAbort?.abort();
+regularAttach.onclick = openAttachmentPicker;
+stopResponse.onclick = event => {
+  if (!requestAbort || stopResponse.disabled) return;
+  const now = performance.now();
+  if (event.detail === 0 || now - regularStopTap <= 450) {
+    showRegularProgress('stopping');
+    requestAbort.abort();
+  } else regularStopTap = now;
+};
 
 function streamingPreview(body) {
   let frame = 0;
@@ -4098,6 +4122,7 @@ async function sendChatMessage(event, edit) {
     messages.scrollTop = messages.scrollHeight;
     const images = [];
     const preview = streamingPreview(body);
+    let outcome = 'finished';
     try {
       turn.stats = await receiveReply(request.payload, update => {
         if (update.type === 'image') {
@@ -4119,6 +4144,7 @@ async function sendChatMessage(event, edit) {
       }, requestAbort.signal);
       if (!turn.reply.trim() && !images.length) throw new Error('The provider returned no displayable image or text.');
     } catch (error) {
+      outcome = requestAbort.signal.aborted ? 'stopped' : 'failed';
       if (!edit && requestAbort.signal.aborted && (turn.reply.trim() || images.length)) {
         turn.stopped = true;
       } else {
@@ -4139,7 +4165,7 @@ async function sendChatMessage(event, edit) {
         }
       }
       if (handoff) handoff.element.inert = false;
-      setSending(false);
+      setSending(false, outcome);
       if (connection.base === routrBase || connection.base === naraBase
           || (connection.base === kenariBase && model.profile.id !== demoProfileId)) {
         updateChatCredit(model, true);
@@ -4156,7 +4182,9 @@ async function sendChatMessage(event, edit) {
   chat.turns.push(turn);
   chats = [chat, ...chats.filter(item => item.id !== chat.id)];
   if (saveChats() && removed.length) removeChatImages({turns: removed});
-  await showChat(chat, false, true, !!edit);
+  const rendered = showChat(chat, false, true, !!edit);
+  showRegularProgress(turn.stopped ? 'stopped' : 'finished');
+  await rendered;
   if (imageSaveFailed && activeId === chat.id) showChatError('Images could not be saved on this device.');
 };
 
@@ -4503,17 +4531,26 @@ if (window.HackGptAndroid?.openAppUpdate) {
   let catalog = [], threadModel = '', threadEffort = '', quotaRevision = 0;
   let preference = {};
   let antigravityTokens = null;
+  let antigravityQuota = new Map();
+  let accountQuota = null;
 
   function updateModelChoices() {
     const antigravity = connectionMode === 'antigravity';
     const model = catalog.find(item => item.model === preference.model);
     const defaultChoice = label => new Option(label, '');
     const defaultModel = catalog.find(item => item.model === threadModel);
+    const visibleModels = antigravity ? catalog.filter(item => item === model
+      || !catalog.some(base => item.model !== base.model
+        && item.model.replace(/-(low|medium|high|xhigh|thinking)$/, '') === base.model)) : catalog;
     codexModel.replaceChildren(defaultChoice((antigravity ? 'Antigravity default' : 'Server default') + (threadModel ? ' · ' + (defaultModel?.displayName || threadModel) : '')),
-      ...catalog.map(item => new Option(item.displayName || item.model, item.model)));
+      ...visibleModels.map(item => new Option(item.displayName || item.model, item.model)));
     codexModel.value = model?.model ?? '';
-    const available = (model || defaultModel || catalog.find(item => item.isDefault))?.supportedReasoningEfforts ?? [];
-    const effort = model?.defaultReasoningEffort || threadEffort;
+    const baseModel = (model?.model || threadModel).replace(/-(low|medium|high|xhigh|thinking)$/, '');
+    const available = antigravity ? catalog.filter(item => baseModel && item.model.startsWith(baseModel + '-')
+      && /^(low|medium|high|xhigh|thinking)$/.test(item.model.slice(baseModel.length + 1)))
+      .map(item => ({reasoningEffort: item.model.slice(baseModel.length + 1)}))
+      : (model || defaultModel || catalog.find(item => item.isDefault))?.supportedReasoningEfforts ?? [];
+    const effort = antigravity ? '' : model?.defaultReasoningEffort || threadEffort;
     codexEffort.replaceChildren(defaultChoice('Default' + (effort ? ' · ' + effort : '')),
       ...available.map(item => new Option(item.reasoningEffort, item.reasoningEffort)));
     codexEffort.value = available.some(item => item.reasoningEffort === preference.effort) ? preference.effort : '';
@@ -4522,6 +4559,13 @@ if (window.HackGptAndroid?.openAppUpdate) {
     codexEffort.closest('label').hidden = antigravity && !available.length;
     find('codex-model-status').textContent = [model?.displayName || model?.model || threadModel,
       codexEffort.value || effort].filter(Boolean).join(' · ');
+    if (antigravity) showQuota();
+  }
+
+  function antigravityModel() {
+    const model = codexModel.value || threadModel;
+    return codexEffort.value
+      ? model.replace(/-(low|medium|high|xhigh|thinking)$/, '') + '-' + codexEffort.value : model;
   }
 
   function loadModelPreferences() {
@@ -4556,12 +4600,21 @@ if (window.HackGptAndroid?.openAppUpdate) {
     updateModelChoices();
   }
 
-  function showQuota(snapshot) {
+  function showQuota(snapshot = accountQuota) {
+    accountQuota = snapshot;
     const antigravity = connectionMode === 'antigravity';
     quotaShortcut.hidden = antigravity;
     if (antigravity) {
-      quota.textContent = (antigravityTokens == null ? '' : 'Thread usage · ' + antigravityTokens.toLocaleString() + ' tokens\n')
-        + 'Antigravity quota is tracked in Antigravity Tools.';
+      const entry = antigravityQuota.get(antigravityModel());
+      const reset = entry?.resetsAt ? new Date(entry.resetsAt) : null;
+      const model = catalog.find(item => item.model === antigravityModel());
+      quota.textContent = [
+        entry ? 'Active account · ' + entry.remaining + '% left'
+          + (reset && Number.isFinite(reset.getTime()) ? ' · resets ' + reset.toLocaleString() : '')
+          : 'Antigravity model quota unavailable.',
+        model?.thinking ? 'Thinking supported' + (Number.isFinite(model.budget) ? ' · ' + model.budget + ' token budget' : '') : '',
+        antigravityTokens == null ? '' : 'Thread usage · ' + antigravityTokens.toLocaleString() + ' tokens'
+      ].filter(Boolean).join('\n');
       return;
     }
     const windows = [snapshot?.primary, snapshot?.secondary];
@@ -4579,15 +4632,18 @@ if (window.HackGptAndroid?.openAppUpdate) {
       return label + ': ' + left.toLocaleString(undefined, {maximumFractionDigits: 1}) + '% left'
         + (reset ? ' · resets ' + reset : '');
     });
-    quota.textContent = lines.join('\n');
+    quota.textContent = (antigravity && antigravityTokens != null ? 'Thread usage \xb7 ' + antigravityTokens.toLocaleString() + ' tokens\n' : '') + lines.join('\n');
     quotaShortcut.title = lines.join(' · ');
-    quotaShortcut.setAttribute('aria-label', 'Codex usage limits · ' + quotaShortcut.title);
+    quotaShortcut.setAttribute('aria-label', (antigravity ? 'Antigravity' : 'Codex') + ' usage limits · ' + quotaShortcut.title);
   }
 
   async function loadQuota() {
     if (!connected) return;
-    if (connectionMode === 'antigravity') { showQuota(null); return; }
     const revision = ++quotaRevision;
+    if (connectionMode === 'antigravity') {
+      bridge.loadAntigravityMetadata?.(endpoint, revision);
+      return;
+    }
     quota.textContent = 'Checking usage…';
     try {
       const response = await rpc('account/rateLimits/read', {});
@@ -4596,6 +4652,16 @@ if (window.HackGptAndroid?.openAppUpdate) {
       if (revision === quotaRevision) showQuota(null);
     }
   }
+
+  window.hackGptAntigravityMetadata = (revision, data) => {
+    if (revision !== quotaRevision || connectionMode !== 'antigravity' || !connected || !data) return;
+    try {
+      const info = JSON.parse(data);
+      catalog = info.models.map(item => ({model: item.id, displayName: item.name, thinking: item.thinking, budget: item.budget}));
+      antigravityQuota = new Map(info.quota.map(item => [item.id, item]));
+      updateModelChoices();
+    } catch { /* Keep the last successful metadata snapshot. */ }
+  };
 
   const notificationButton = find('codex-notifications');
   const notificationKey = 'neural-link.codex-task-notifications';
@@ -4800,7 +4866,6 @@ if (window.HackGptAndroid?.openAppUpdate) {
     session.hidden = exit.hidden = true;
     status = connectionError;
     prompt.setAttribute('aria-label', 'Message');
-    stopResponse.hidden = true;
     sync();
     showChatError('');
     setDraft(regularDraft);
@@ -4808,7 +4873,6 @@ if (window.HackGptAndroid?.openAppUpdate) {
 
   function sync() {
     const inCodex = Boolean(window.hackGptCodexMode);
-    if (inCodex) stopResponse.hidden = true;
     const codexSend = find('codex-send');
     codexSend.hidden = !inCodex || enterToSend.getAttribute('aria-pressed') === 'true';
     codexAttach.hidden = !inCodex;
@@ -4867,6 +4931,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
     connecting = connected = busy = false;
     quotaRevision++;
     catalog = [];
+    antigravityQuota.clear();
     showQuota(null);
     updateModelChoices();
 
@@ -4901,7 +4966,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
     const changed = endpoint !== nextEndpoint || project !== nextProject;
     reconnectAllowed = false;
     disconnected('');
-    endpoint = savedEndpoint = nextEndpoint;
+    endpoint = nextEndpoint;
     project = nextProject;
     showApprovalMode();
     if (changed) {
@@ -5237,7 +5302,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
       threadId = result.thread.id;
       threadModel = result.model || '';
       antigravityTokens = null;
-      if (connectionMode === 'antigravity') showQuota(null);
+      if (connectionMode === 'antigravity') showQuota();
       threadEffort = result.reasoningEffort || '';
       loadModelPreferences();
       remember(sessionKey('thread'), threadId);
@@ -5348,6 +5413,8 @@ if (window.HackGptAndroid?.openAppUpdate) {
         await refresh();
         if (attempt !== connectionAttempt) return;
         connected = true;
+        savedEndpoint = endpoint;
+        updateSavedTokenHint();
         retryCount = 0;
         loadModelPreferences();
         loadModelCatalog(attempt).catch(() => {});
@@ -5395,7 +5462,8 @@ if (window.HackGptAndroid?.openAppUpdate) {
     if (message.method === 'account/rateLimits/updated') {
       if (connectionMode === 'antigravity') return;
       const snapshot = params?.rateLimits;
-      if (snapshot && (!snapshot.limitId || snapshot.limitId === 'codex')) {
+      const limitId = connectionMode === 'antigravity' ? 'antigravity' : 'codex';
+      if (snapshot && (snapshot.limitId === limitId || (!snapshot.limitId && limitId === 'codex'))) {
         quotaRevision++;
         showQuota(snapshot);
       }
@@ -5404,7 +5472,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
     if (params?.threadId !== threadId) return;
     if (message.method === 'thread/tokenUsage/updated' && connectionMode === 'antigravity') {
       antigravityTokens = Number.isFinite(params.tokenUsage?.total?.totalTokens) ? params.tokenUsage.total.totalTokens : null;
-      showQuota(null);
+      showQuota();
       return;
     }
     const item = params.item;
@@ -5629,8 +5697,10 @@ if (window.HackGptAndroid?.openAppUpdate) {
         input: [{type: 'text', text: message, text_elements: []}, ...files.map(file =>
           file.kind === 'image' ? {type: 'image', url: 'data:' + file.mime + ';base64,' + file.data}
             : {type: 'text', text: 'Attachment: ' + file.name + '\n\n' + file.data, text_elements: []})],
-        ...(codexModel.value && {model: codexModel.value}),
-        ...(codexEffort.value && {effort: codexEffort.value})
+        ...(connectionMode === 'antigravity' ? ((codexModel.value || codexEffort.value) && {model: antigravityModel()}) : {
+          ...(codexModel.value && {model: codexModel.value}),
+          ...(codexEffort.value && {effort: codexEffort.value})
+        })
       });
       remember(pendingKey, '');
       clearSentAttachments(pendingKey);

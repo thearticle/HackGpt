@@ -121,8 +121,10 @@ final class CodexBridge {
         HttpUrl url = HttpUrl.parse("https://" + endpoint.substring(6));
         if (url == null || !url.username().isEmpty() || !url.password().isEmpty()
                 || url.fragment() != null || url.query() != null) return "Enter a valid secure server URL.";
+        final int index;
+        final JSONObject profile;
         try {
-            int index = profileIndex(mode);
+            index = profileIndex(mode);
             JSONArray profiles = vault.load();
             if (token == null || token.isEmpty()) {
                 JSONObject saved = profiles.optJSONObject(index);
@@ -133,17 +135,27 @@ final class CodexBridge {
             if (token == null || !token.matches("[!-~]{1,4096}")) {
                 return "Enter a connection token for this server.";
             }
-            vault.save(profiles.put(index, new JSONObject()
-                    .put("endpoint", endpoint).put("token", token).put("project", project)));
+            profile = new JSONObject()
+                    .put("endpoint", endpoint).put("token", token).put("project", project);
         } catch (Exception ignored) {
-            return "Could not save the connection on this device.";
+            return "Could not read the connection settings on this device.";
         }
         disconnect();
         Request request = new Request.Builder().url(url)
                 .header("Authorization", "Bearer " + token).build();
         socket = CLIENT.newWebSocket(request, new WebSocketListener() {
             @Override public void onOpen(WebSocket ws, Response response) {
-                emit(ws, "open", "");
+                synchronized (CodexBridge.this) {
+                    if (socket != ws) return;
+                    try {
+                        vault.save(vault.load().put(index, profile));
+                    } catch (Exception ignored) {
+                        ws.cancel();
+                        emit(ws, "closed", "Could not save the verified connection on this device.");
+                        return;
+                    }
+                    emit(ws, "open", "");
+                }
             }
 
             @Override public void onMessage(WebSocket ws, String message) {
@@ -166,6 +178,45 @@ final class CodexBridge {
 
     @JavascriptInterface public synchronized boolean send(String message) {
         return socket != null && socket.send(message);
+    }
+
+    @JavascriptInterface public synchronized void loadAntigravityMetadata(String endpoint, int revision) {
+        try {
+            JSONObject profile = vault.load().optJSONObject(profileIndex("antigravity"));
+            if (profile == null || !endpoint.equals(profile.optString("endpoint"))) {
+                metadataResult(revision, "");
+                return;
+            }
+            HttpUrl base = HttpUrl.parse("https://" + endpoint.substring(6).replaceFirst("/+$", ""));
+            if (base == null) {
+                metadataResult(revision, "");
+                return;
+            }
+            Request request = new Request.Builder()
+                    .url(base.newBuilder().addPathSegment("metadata").build())
+                    .header("Authorization", "Bearer " + profile.getString("token")).build();
+            CLIENT.newCall(request).enqueue(new okhttp3.Callback() {
+                @Override public void onFailure(okhttp3.Call call, java.io.IOException error) {
+                    metadataResult(revision, "");
+                }
+
+                @Override public void onResponse(okhttp3.Call call, Response response) {
+                    try (Response result = response) {
+                        var body = result.body();
+                        metadataResult(revision, result.isSuccessful() && body != null ? body.string() : "");
+                    } catch (java.io.IOException error) {
+                        metadataResult(revision, "");
+                    }
+                }
+            });
+        } catch (Exception ignored) {
+            metadataResult(revision, "");
+        }
+    }
+
+    private void metadataResult(int revision, String data) {
+        web.post(() -> web.evaluateJavascript("window.hackGptAntigravityMetadata?.(" + revision + ","
+                + JSONObject.quote(data).replace("\u2028", "\\u2028").replace("\u2029", "\\u2029") + ")", null));
     }
 
     @JavascriptInterface public synchronized void disconnect() {

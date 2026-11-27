@@ -25,3 +25,23 @@ Tap the same spot in the main chat area seven times to open the Codex panel. Tap
 To end the test, disconnect in HackGpt and interrupt both PowerShell processes with Ctrl+C. The Windows PC must remain awake while connected.
 
 [Codex App Server protocol](https://learn.chatgpt.com/docs/app-server)
+
+## Antigravity model and quota display
+
+Run the metadata helper on the PC alongside the Antigravity-backed Codex server.
+Set `HACKGPT_ANTIGRAVITY_KEY` in the helper process environment and pass the
+same capability-token file used by the Codex server:
+
+```powershell
+node preview/antigravity-metadata.cjs $codexTokenFile
+```
+
+Use private Tailscale Serve to map the Antigravity connection path plus
+`/metadata` to `http://127.0.0.1:4502`. For example:
+
+```powershell
+tailscale serve --bg --https 8443 --set-path /antigravity/metadata http://127.0.0.1:4502
+```
+
+The helper sends only model metadata and per-model quota for the currently
+active account. Antigravity Tools may choose another account for a request.
