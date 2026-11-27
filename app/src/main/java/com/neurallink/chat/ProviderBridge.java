@@ -306,13 +306,10 @@ final class ProviderBridge {
     private static final String[][] DEMO_MODELS = {
             {"beam-1-0:free", "Beam 1.0 Free"},
             {"ernie-5-5-flash-preview:free", "ERNIE 5.5 Flash Preview"},
-            {"flint-v1-0:free", "Flint 1.0"},
-            {"glm-4-6v-flash:free", "GLM-4.6V-Flash"},
             {"hy4-flash:free", "Hy4 Flash"},
             {"lfm-3-1-7b:free", "LFM3 1.7B"},
             {"nemotron-3-5-lightning:free", "Nemotron 3.5 Lightning"},
-            {"nemotron-3-5-super-vl:free", "Nemotron 3.5 Super VL"},
-            {"particle-1:free", "Particle-1"}
+            {"nemotron-3-5-super-vl:free", "Nemotron 3.5 Super VL"}
     };
     private JSONObject demoProvider;
     private boolean demoLoaded;
