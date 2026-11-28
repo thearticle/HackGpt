@@ -123,6 +123,21 @@ In **Settings**, choose **Factory.ai**, enter a Factory API key, and select an *
 
 ## Codex on PC
 
+### v1.0.37: desktop and phone handoff
+
+HackGpt refreshes the project thread list and selected conversation when returning
+to the foreground while idle. Reconnecting restores the selected thread after the
+connection becomes ready, with the thread picker available if restoration fails.
+The refresh button also reloads the selected conversation.
+
+Use the same PC folder and Codex environment, and finish each task before switching
+clients. Both clients work on the same files; conversation refresh does not force
+the desktop UI to update. See [connection and handoff instructions](CODEX-REMOTE.md).
+
+The release APK uses code/resource shrinking and the existing release certificate
+for updates over earlier official builds. Debug-signed APKs cannot update a
+release-signed installation.
+
 On Android, tap the chat area seven times or use the Codex settings gear to connect to a Codex App Server on your PC. Choose a project thread from the circled folder. Prompts and replies use the main chat. Tap the pulsing **X** to return to regular chat, or the power icon to disconnect.
 
 [Set up the private connection](CODEX-REMOTE.md)

@@ -1,4 +1,7 @@
-param([string]$Project = 'C:\Users\Ojan\Documents\ChatGPT\android llm')
+param(
+    [string]$Project = 'C:\Users\Ojan\Documents\ChatGPT\android llm',
+    [string]$ExpectedUserText = ''
+)
 $ErrorActionPreference = 'Stop'
 $ws = [Net.WebSockets.ClientWebSocket]::new()
 $ws.Options.SetRequestHeader('Authorization', 'Bearer ' + [IO.File]::ReadAllText((Join-Path $env:LOCALAPPDATA 'HackGpt-codex-remote-token')).Trim())
@@ -38,5 +41,39 @@ try {
     if ($thread) {
         $page = Invoke-Rpc 'thread/turns/list' @{threadId=$thread.id;limit=5;sortDirection='desc';itemsView='full'}
         [pscustomobject]@{HistoryThread=$thread.id;PagedTurns=@($page.data).Count;OlderHistoryAvailable=[bool]$page.nextCursor} | ConvertTo-Json
+        $sessionDirectory = Join-Path $env:USERPROFILE '.codex\sessions'
+        $localSession = Get-ChildItem -LiteralPath $sessionDirectory -Recurse -File -Filter "*$($thread.id).jsonl" | Select-Object -First 1
+        if (!$localSession) { throw 'Server thread was not found in the desktop session environment.' }
+        $metadata = Get-Content -LiteralPath $localSession.FullName -TotalCount 1 | ConvertFrom-Json
+        if ($metadata.payload.id -ne $thread.id -or $metadata.payload.cwd -ne $Project) {
+            throw 'Desktop and server session metadata differ.'
+        }
+        $firstClient = $ws
+        $ws = [Net.WebSockets.ClientWebSocket]::new()
+        try {
+            $ws.Options.SetRequestHeader('Authorization', 'Bearer ' + [IO.File]::ReadAllText((Join-Path $env:LOCALAPPDATA 'HackGpt-codex-remote-token')).Trim())
+            $ws.ConnectAsync([Uri]'wss://desktop-5inlh0t.tail3c5fd0.ts.net:8443/', $cts.Token).GetAwaiter().GetResult() | Out-Null
+            $null = Invoke-Rpc 'initialize' @{clientInfo=@{name='hackgpt_handoff_check';version='1.0'}}
+            $bytes = [Text.Encoding]::UTF8.GetBytes('{"method":"initialized"}')
+            $ws.SendAsync([ArraySegment[byte]]::new($bytes), [Net.WebSockets.WebSocketMessageType]::Text, $true, $cts.Token).GetAwaiter().GetResult() | Out-Null
+            $secondPage = Invoke-Rpc 'thread/turns/list' @{threadId=$thread.id;limit=5;sortDirection='desc';itemsView='full'}
+            $firstIds = @($page.data | ForEach-Object id)
+            $secondIds = @($secondPage.data | ForEach-Object id)
+            if (Compare-Object $firstIds $secondIds) { throw 'Thread history changed between client reads; repeat after the task finishes.' }
+            if ($ExpectedUserText) {
+                $matchingUserMessages = @($secondPage.data | ForEach-Object {
+                    $_.items | Where-Object type -EQ 'userMessage' | ForEach-Object {
+                        $text = ($_.content | Where-Object type -EQ 'text' | ForEach-Object text) -join "`n"
+                        if ($text.Trim() -eq $ExpectedUserText.Trim()) { $true }
+                    }
+                })
+                if (!$matchingUserMessages.Count) { throw 'Expected user message was not found in recent shared history.' }
+                [pscustomobject]@{ExpectedUserMessageFound=$true;MatchingMessages=$matchingUserMessages.Count} | ConvertTo-Json
+            }
+            [pscustomobject]@{DesktopSessionMatched=$true;ProjectMatched=$true;SecondClientHistoryMatched=$true;ComparedTurns=$firstIds.Count;PromptsSent=0} | ConvertTo-Json
+        } finally {
+            $ws.Dispose()
+            $ws = $firstClient
+        }
     }
 } finally { $ws.Dispose(); $cts.Dispose() }

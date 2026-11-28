@@ -5,12 +5,12 @@ const html = fs.readFileSync(require('node:path').join(__dirname, '../preview/in
 const start = html.indexOf('  window.hackGptCodexEvent = async (kind, data) => {');
 const end = html.indexOf('    let message;', start);
 const handler = html.slice(start, end) + '\n};';
-async function run({fail = false, stale = false} = {}) {
+async function run({fail = false, stale = false, saved = 'saved-large-thread', restoreFails = false} = {}) {
   const calls = [];
   const context = {
     window: {hackGptCodexMode: {}}, connectionAttempt: 1,
     connected: false, connecting: true, savedEndpoint: '', endpoint: 'wss://test/', retryCount: 3,
-    threadId: 'saved-large-thread', threadModel: '', threadEffort: '', outcome: '',
+    threadId: saved, threadModel: '', threadEffort: '', outcome: '',
     bridge: {send() {}, disconnect() { calls.push('disconnect'); }},
     rpc: async method => { calls.push(method); if (fail) throw Error('rejected'); },
     refresh: async () => { calls.push('list'); if (stale) context.connectionAttempt++; },
@@ -20,7 +20,7 @@ async function run({fail = false, stale = false} = {}) {
     dialog: {close() {}}, enterMode() {}, swapAttachments() {}, threadAttachments() {},
     setDraft() {}, readDraft() {}, sessionDetail: {}, sync() {},
     pick: {onclick() { calls.push('picker'); }},
-    openThread: () => { calls.push('resume'); return new Promise(() => {}); },
+    openThread: async () => { calls.push('resume'); assert.equal(context.connecting, false); if (restoreFails) throw Error('missing thread'); return new Promise(() => {}); },
     disconnected(message) { calls.push(message); },
   };
   vm.createContext(context);
@@ -63,15 +63,40 @@ async function run({fail = false, stale = false} = {}) {
   assert.equal(ok.context.connected, true);
   assert.equal(ok.context.connecting, false);
   assert.equal(ok.context.threadId, '');
-  assert(ok.calls.includes('picker'));
-  assert(!ok.calls.includes('resume'), 'saved history must not gate reconnection');
-  assert(ok.calls.indexOf('save') < ok.calls.indexOf('picker'));
+  assert(!ok.calls.includes('picker'));
+  assert(ok.calls.includes('resume'), 'restore saved history after connection becomes ready');
+  assert(ok.calls.indexOf('save') < ok.calls.indexOf('resume'));
+  const fresh = await run({saved: ''});
+  assert(fresh.calls.includes('picker'));
+  const restoreFailure = await run({restoreFails: true});
+  await Promise.resolve();
+  assert.equal(restoreFailure.context.connected, true);
+  assert(restoreFailure.calls.includes('picker'));
   const failure = await run({fail: true});
   assert(failure.calls.includes('disconnect'));
   assert(!failure.calls.includes('picker'));
   const stale = await run({stale: true});
   assert(!stale.calls.includes('picker'));
   assert.equal(stale.context.connected, false);
+  const syncStart = html.indexOf('  async function refreshWorkspace() {');
+  const syncEnd = html.indexOf('  async function openThread(id)', syncStart);
+  const syncCalls = [];
+  const workspace = {connected: true, connecting: false, document: {hidden: false}, busy: false,
+    connectionAttempt: 1, threadId: 'desktop-thread',
+    refresh: async () => syncCalls.push('list'), openThread: async id => syncCalls.push(id)};
+  vm.createContext(workspace);
+  vm.runInContext(html.slice(syncStart, syncEnd), workspace);
+  await workspace.refreshWorkspace();
+  assert.deepEqual(syncCalls, ['list', 'desktop-thread']);
+  for (const flag of ['busy', 'connecting']) {
+    syncCalls.length = 0; workspace[flag] = true;
+    await workspace.refreshWorkspace();
+    assert.equal(syncCalls.length, 0);
+    workspace[flag] = false;
+  }
+  workspace.refresh = async () => { workspace.connectionAttempt++; };
+  await workspace.refreshWorkspace();
+  assert.equal(syncCalls.length, 0, 'stale refresh must not restore another connection');
   for (const script of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(script[1]);
-  console.log('PASS: full PC paths required; app-server threads included; thread pages loaded; reconnect, stale/error handling, and script syntax pass.');
+  console.log('PASS: workspace refresh, saved-thread handoff, restore failure fallback, busy/stale guards, pagination, path validation, and script syntax.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

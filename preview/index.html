@@ -5044,7 +5044,10 @@ if (window.HackGptAndroid?.openAppUpdate) {
     else dialog.showModal();
   };
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) scheduleReconnect();
+    if (!document.hidden) {
+      scheduleReconnect();
+      refreshWorkspace().catch(onError);
+    }
     else saveDraft();
   });
   window.addEventListener('online', scheduleReconnect);
@@ -5344,6 +5347,15 @@ if (window.HackGptAndroid?.openAppUpdate) {
     }
   }
 
+  async function refreshWorkspace() {
+    if (!connected || connecting || document.hidden || busy) return;
+    const attempt = connectionAttempt;
+    const selected = threadId;
+    await refresh();
+    if (attempt !== connectionAttempt || !connected || busy || selected !== threadId) return;
+    if (selected) await openThread(selected);
+  }
+
   async function openThread(id) {
     if (busy) return;
     const attempt = connectionAttempt;
@@ -5477,8 +5489,9 @@ if (window.HackGptAndroid?.openAppUpdate) {
         loadModelPreferences();
         loadModelCatalog(attempt).catch(() => {});
         loadQuota();
-        // A saved thread can have a large history or fail to resume. Workspace
-        // connectivity must not depend on restoring it before showing the picker.
+        // Mark the connection ready before restoring history, so a failed or
+        // large saved conversation cannot prevent workspace access.
+        const savedThread = threadId;
         saveDraft();
         threadId = '';
         threadModel = threadEffort = outcome = '';
@@ -5495,7 +5508,13 @@ if (window.HackGptAndroid?.openAppUpdate) {
         }
         sessionDetail.textContent = 'Connected. Choose a workspace thread or start a new one.';
         sync();
-        pick.onclick();
+        if (savedThread) {
+          openThread(savedThread).catch(error => {
+            if (attempt !== connectionAttempt) return;
+            sessionDetail.textContent = 'Could not sync the saved thread: ' + error.message + '. Choose a workspace thread to continue.';
+            if (!threadId) pick.onclick();
+          });
+        } else pick.onclick();
       } catch (error) {
         if (attempt !== connectionAttempt) return;
         bridge.disconnect();
@@ -5699,7 +5718,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
   find('codex-new').onclick = () => openThread('').catch(onError);
   find('codex-refresh').onclick = () => {
     if (connectionMode === 'antigravity') loadQuota();
-    refresh().catch(onError);
+    refreshWorkspace().catch(onError);
   };
   function clearSentAttachments(pendingKey) {
     const selection = pendingCodexFiles.get(pendingKey);

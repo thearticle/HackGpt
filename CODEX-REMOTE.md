@@ -13,6 +13,32 @@ missing HTTPS mapping, ready, and an active TCP client connection (which does no
 prove that a phone has authenticated). Installation is per-user in
 `%LOCALAPPDATA%\HackGpt-Tray`; it does not enable Windows login startup.
 
+## Switching between desktop and phone
+
+Use the same PC project folder and Codex environment on both clients. Finish the
+current task before switching. HackGpt refreshes the workspace thread list and
+reloads the selected conversation when returning to the foreground while idle.
+The refresh button also reloads the selected conversation. After reconnecting,
+HackGpt restores the selected thread after the connection is ready; if restoration
+fails, the thread picker remains available. Refresh does not send a prompt or
+replay an unconfirmed message. Active phone turns are not interrupted by refresh.
+This does not force the desktop UI to refresh or sync separate Codex environments.
+
+### Checking the connection
+
+Run `powershell.exe -NoProfile -File tools\Test-HackGpt-Connection.ps1` on the PC.
+The diagnostic reads the workspace thread list, checks the latest thread against
+the local desktop session metadata, and compares recent turn IDs through two
+independent authenticated connections. It sends no prompts. With
+`-ExpectedUserText 'your test message'`, it also checks for an exact user message
+in the recent history. The script currently uses this installation's Tailscale
+endpoint and token file; adapt those for another PC.
+
+On 2026-11-28, the live check matched the desktop project/session and five recent
+turns across two connections. The phone test message was found in shared history,
+and the user confirmed the handoff. This is a handoff check, not a guarantee of
+continuous synchronization between desktop and phone interfaces.
+
 ## Manual connection
 
 Tap the same spot in the main chat area seven times to open the Codex panel. Tap outside the panel to close it. HackGpt uses the Codex App Server protocol. Threads come from the App Server's Codex environment on your PC and are filtered by the project path you enter.
