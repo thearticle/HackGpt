@@ -1,5 +1,20 @@
 # Try Codex on PC from HackGpt
 
+## One-click Windows tray control
+
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools\Install-HackGpt-Tray.ps1` once.
+Then open **HackGpt Connection** on the desktop to start the server and tray controls.
+Double-click the tray icon to turn the connection on or off, or right-click for status,
+connection details, and logs. Turning it off stops the Codex server on port 4500,
+including any active work on that server. Exiting the tray leaves the server running.
+The launcher reuses the existing token and private Tailscale HTTPS mapping on port
+8443, preserving other routes. Status distinguishes server off, Tailscale offline,
+missing HTTPS mapping, ready, and an active TCP client connection (which does not
+prove that a phone has authenticated). Installation is per-user in
+`%LOCALAPPDATA%\HackGpt-Tray`; it does not enable Windows login startup.
+
+## Manual connection
+
 Tap the same spot in the main chat area seven times to open the Codex panel. Tap outside the panel to close it. HackGpt uses the Codex App Server protocol. Threads come from the App Server's Codex environment on your PC and are filtered by the project path you enter.
 
 1. On the PC, install or update the Codex CLI and sign in. Connect the PC and phone to the same private Tailscale network. Tailscale Serve needs HTTPS enabled for that network.

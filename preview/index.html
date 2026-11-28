@@ -182,13 +182,16 @@ dialog::backdrop{background:var(--scrim)}
 #codex-model-options label[hidden],#codex-quota-shortcut[hidden]{display:none}
 #codex-model-options:has(label[hidden]){grid-template-columns:minmax(0,1fr)}
 #codex-log .codex-activity{color:var(--muted);font-size:12px}
+#messages #codex-log article.codex-activity{padding-block:0}
 #codex-log .codex-activity details{min-width:0;max-width:100%}
 #codex-log pre{max-width:100%;max-height:min(42vh,360px);overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y}
 .codex-code{margin:10px 0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--ink)}
 .codex-code header{position:static;transform:none;margin:0;padding:0 8px;background:var(--panel);border-bottom:1px solid var(--line);pointer-events:auto}
 .codex-code header button{min-height:36px;padding:2px 8px;border:0}
 #codex-log .codex-code pre{margin:0;border:0;border-radius:0}
-#codex-log .codex-activity details{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel)}
+#codex-log .codex-activity details{border:1px solid var(--line);border-radius:6px;padding:5px 9px;background:var(--panel)}
+#codex-log .codex-activity summary{list-style:none}
+#codex-log .codex-activity summary::-webkit-details-marker{display:none}
 #codex-log .codex-activity pre{white-space:pre;margin-bottom:0}
 #codex-log pre:focus-visible{outline:1px solid var(--lime);outline-offset:2px}
 #codex-log details>summary{cursor:pointer;color:var(--lime)}
@@ -602,7 +605,7 @@ html.android-app,.android-app body{height:100%;min-height:0}
 </div>
 </section>
 <small id="chat-error" role="alert" hidden></small>
-<div id="chat-status"><button id="regular-attach" type="button" aria-label="Add attachment" title="Add attachment" hidden>↑</button><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button><button id="codex-refresh" type="button" aria-label="Refresh threads" title="Refresh threads">
+<div id="chat-status"><button id="regular-attach" type="button" aria-label="Add attachment" title="Add attachment" hidden>↑</button><button id="codex-attach" type="button" aria-label="Attach to Codex" title="Attach to Codex" hidden>↑</button><small id="demo-status" aria-live="polite"></small><div id="codex-session" hidden><button id="codex-session-status" type="button" disabled></button><small id="codex-model-status"></small><div id="codex-quick-controls"><button id="codex-quota-shortcut" type="button" aria-label="Codex usage limits"><span id="antigravity-quota-badge" aria-hidden="true" hidden></span><span id="codex-quota-badges" aria-hidden="true"><span class="codex-quota-clock">◷</span> <span id="codex-quota-five">–</span> ▦ <span id="codex-quota-week">–</span></span></button><button id="codex-refresh" type="button" aria-label="Refresh threads" title="Refresh threads">
     <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-4L4 9m0-5v5h5m-5 4a8 8 0 0 0 14 4l2-2m0 5v-5h-5"/></svg>
   </button><button id="codex-approval-shortcut" type="button" aria-label="Approval mode: Ask each time" title="Approval mode: Ask each time">?</button></div><small id="codex-session-detail" role="status"></small></div><button id="stop-response" type="button" aria-label="Ready" title="Ready" data-state="idle" disabled></button></div>
 <div id="pending-files" aria-label="Attached files" hidden></div>
@@ -4437,11 +4440,11 @@ if (window.HackGptAndroid?.openAppUpdate) {
     </select>
     <div class="url-field"><span class="url-icon" aria-hidden="true"></span><input id="codex-url" aria-label="Private server URL" type="url" placeholder="Private server URL" required autocapitalize="none" spellcheck="false"></div>
     <div class="key-field"><span class="key-icon" aria-hidden="true"></span><input id="codex-token" aria-label="Connection token" type="password" placeholder="Connection token" autocomplete="new-password"></div>
-    <div class="name-field"><span class="name-icon" aria-hidden="true"></span><input id="codex-project" aria-label="Project folder on PC" placeholder="Project folder on PC" required spellcheck="false"></div>
+    <div class="name-field"><span class="name-icon" aria-hidden="true"></span><input id="codex-project" aria-label="Full project folder path on PC" placeholder="Full PC path, e.g. C:\Projects\MyApp" required autocapitalize="none" spellcheck="false"></div>
     <div id="codex-model-panel" hidden>
       <div id="codex-model-options">
         <label>Model<select id="codex-model"></select></label>
-        <label>Reasoning<select id="codex-effort"></select></label>
+        <label><span id="codex-effort-label">Reasoning</span><select id="codex-effort"></select></label>
       </div>
       <div id="codex-quota-row">
         <small id="codex-quota" role="status">Usage limits unavailable.</small>
@@ -4538,7 +4541,13 @@ if (window.HackGptAndroid?.openAppUpdate) {
   let preference = {};
   let antigravityTokens = null;
   let antigravityQuota = new Map();
+  let antigravityMetadataState = '';
   let accountQuota = null;
+
+  function antigravityModelLabel(model) {
+    const quotaEntry = antigravityQuota.get(model.model);
+    return (model.displayName || model.model) + (quotaEntry ? ' · ' + quotaEntry.remaining + '% left' : '');
+  }
 
   function updateModelChoices() {
     const antigravity = connectionMode === 'antigravity';
@@ -4549,20 +4558,26 @@ if (window.HackGptAndroid?.openAppUpdate) {
       || !catalog.some(base => item.model !== base.model
         && item.model.replace(/-(low|medium|high|xhigh|thinking)$/, '') === base.model)) : catalog;
     codexModel.replaceChildren(defaultChoice((antigravity ? 'Antigravity default' : 'Server default') + (threadModel ? ' · ' + (defaultModel?.displayName || threadModel) : '')),
-      ...visibleModels.map(item => new Option(item.displayName || item.model, item.model)));
+      ...visibleModels.map(item => new Option(antigravity ? antigravityModelLabel(item) : item.displayName || item.model, item.model)));
     codexModel.value = model?.model ?? '';
     const baseModel = (model?.model || threadModel).replace(/-(low|medium|high|xhigh|thinking)$/, '');
     const available = antigravity ? catalog.filter(item => baseModel && item.model.startsWith(baseModel + '-')
       && /^(low|medium|high|xhigh|thinking)$/.test(item.model.slice(baseModel.length + 1)))
-      .map(item => ({reasoningEffort: item.model.slice(baseModel.length + 1)}))
+      .map(item => ({reasoningEffort: item.model.slice(baseModel.length + 1), modelId: item.model}))
       : (model || defaultModel || catalog.find(item => item.isDefault))?.supportedReasoningEfforts ?? [];
     const effort = antigravity ? '' : model?.defaultReasoningEffort || threadEffort;
-    codexEffort.replaceChildren(defaultChoice('Default' + (effort ? ' · ' + effort : '')),
-      ...available.map(item => new Option(item.reasoningEffort, item.reasoningEffort)));
+    codexEffort.replaceChildren(defaultChoice(antigravity && !available.length
+      ? (model || defaultModel)?.thinking ? 'Model default' : 'No selectable levels'
+      : 'Default' + (effort ? ' · ' + effort : '')),
+      ...available.map(item => {
+        const entry = antigravityQuota.get(item.modelId);
+        const label = item.reasoningEffort;
+        return new Option(entry ? label + ' · ' + entry.remaining + '% left' : label, label);
+      }));
     codexEffort.value = available.some(item => item.reasoningEffort === preference.effort) ? preference.effort : '';
     codexModel.disabled = !connected || !catalog.length;
     codexEffort.disabled = !connected || !available.length;
-    codexEffort.closest('label').hidden = antigravity && !available.length;
+    find('codex-effort-label').textContent = antigravity ? 'Thinking' : 'Reasoning';
     find('codex-model-status').textContent = [model?.displayName || model?.model || threadModel,
       codexEffort.value || effort].filter(Boolean).join(' · ');
     if (antigravity) showQuota();
@@ -4609,15 +4624,21 @@ if (window.HackGptAndroid?.openAppUpdate) {
   function showQuota(snapshot = accountQuota) {
     accountQuota = snapshot;
     const antigravity = connectionMode === 'antigravity';
-    quotaShortcut.hidden = antigravity;
+    quotaShortcut.hidden = false;
+    find('antigravity-quota-badge').hidden = !antigravity;
+    find('codex-quota-badges').hidden = antigravity;
     if (antigravity) {
       const entry = antigravityQuota.get(antigravityModel());
       const reset = entry?.resetsAt ? new Date(entry.resetsAt) : null;
       const model = catalog.find(item => item.model === antigravityModel());
+      find('antigravity-quota-badge').textContent = entry ? '◷ ' + entry.remaining + '%' : '◷ –';
+      quotaShortcut.title = entry ? 'Antigravity model quota · ' + entry.remaining + '% left' : 'Antigravity model quota unavailable';
+      quotaShortcut.setAttribute('aria-label', quotaShortcut.title);
       quota.textContent = [
+        antigravityMetadataState,
         entry ? 'Active account · ' + entry.remaining + '% left'
           + (reset && Number.isFinite(reset.getTime()) ? ' · resets ' + reset.toLocaleString() : '')
-          : 'Antigravity model quota unavailable.',
+          : antigravityMetadataState ? '' : 'Antigravity model quota unavailable.',
         model?.thinking ? 'Thinking supported' + (Number.isFinite(model.budget) ? ' · ' + model.budget + ' token budget' : '') : '',
         antigravityTokens == null ? '' : 'Thread usage · ' + antigravityTokens.toLocaleString() + ' tokens'
       ].filter(Boolean).join('\n');
@@ -4647,6 +4668,9 @@ if (window.HackGptAndroid?.openAppUpdate) {
     if (!connected) return;
     const revision = ++quotaRevision;
     if (connectionMode === 'antigravity') {
+      antigravityMetadataState = typeof bridge.loadAntigravityMetadata === 'function'
+        ? 'Loading Antigravity models and quota…' : 'Update HackGpt to load Antigravity models and quota.';
+      showQuota();
       bridge.loadAntigravityMetadata?.(endpoint, revision);
       return;
     }
@@ -4660,13 +4684,17 @@ if (window.HackGptAndroid?.openAppUpdate) {
   }
 
   window.hackGptAntigravityMetadata = (revision, data) => {
-    if (revision !== quotaRevision || connectionMode !== 'antigravity' || !connected || !data) return;
+    if (revision !== quotaRevision || connectionMode !== 'antigravity' || !connected) return;
     try {
       const info = JSON.parse(data);
       catalog = info.models.map(item => ({model: item.id, displayName: item.name, thinking: item.thinking, budget: item.budget}));
       antigravityQuota = new Map(info.quota.map(item => [item.id, item]));
+      antigravityMetadataState = '';
       updateModelChoices();
-    } catch { /* Keep the last successful metadata snapshot. */ }
+    } catch {
+      antigravityMetadataState = 'Antigravity metadata unavailable. Check the PC proxy and refresh.';
+      showQuota();
+    }
   };
 
   const notificationButton = find('codex-notifications');
@@ -4938,6 +4966,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
     quotaRevision++;
     catalog = [];
     antigravityQuota.clear();
+    antigravityMetadataState = '';
     showQuota(null);
     updateModelChoices();
 
@@ -4959,6 +4988,14 @@ if (window.HackGptAndroid?.openAppUpdate) {
 
   function connectToPc(nextEndpoint, nextProject, token, retry = false) {
     if (connecting || (connected && busy)) return;
+    nextProject = nextProject.trim();
+    if (!/^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+|\/)/.test(nextProject)) {
+      reconnectAllowed = false;
+      clearTimeout(reconnectTimer);
+      connectionError.textContent = 'Enter the full project folder path on the PC, not a folder or project name.';
+      sessionDetail.textContent = connectionError.textContent;
+      return;
+    }
     const error = supportsProfiles
       ? bridge.connectProfile(connectionMode, nextEndpoint, token, nextProject)
       : bridge.connect(nextEndpoint, token, nextProject);
@@ -5113,12 +5150,27 @@ if (window.HackGptAndroid?.openAppUpdate) {
   }
 
   async function refresh() {
-    const result = await rpc('thread/list', {cwd: project, limit: 40});
+    const attempt = connectionAttempt;
     const currentLabel = threadLabels.get(threadId);
+    const listed = new Map();
+    const cursors = new Set();
+    let cursor;
+    do {
+      const result = await rpc('thread/list', {
+        cwd: project, limit: 100,
+        sourceKinds: ['cli', 'vscode', 'appServer', 'exec', 'unknown'],
+        ...(cursor && {cursor})
+      });
+      if (attempt !== connectionAttempt) return;
+      for (const thread of result.data ?? []) {
+        listed.set(thread.id, thread.name || thread.preview || thread.id);
+      }
+      cursor = result.nextCursor;
+      if (cursors.has(cursor)) break;
+      cursors.add(cursor);
+    } while (cursor);
     threadLabels.clear();
-    for (const thread of result.data) {
-      threadLabels.set(thread.id, thread.name || thread.preview || thread.id);
-    }
+    for (const [id, label] of listed) threadLabels.set(id, label);
     if (threadId && !threadLabels.has(threadId)) threadLabels.set(threadId, currentLabel || threadId);
     updateThreadName();
     if (threadDialog.open) renderThreadPicker();
@@ -5235,7 +5287,7 @@ if (window.HackGptAndroid?.openAppUpdate) {
     find('codex-thread-count').textContent = entries.size + (entries.size === 1 ? ' project thread' : ' project threads');
     if (!entries.size) {
       const emptyList = document.createElement('small');
-      emptyList.textContent = 'No threads in this project yet.';
+      emptyList.textContent = 'No threads found for ' + project + '. Check the full PC folder path in connection settings, or start a new thread.';
       threads.append(emptyList);
       return;
     }
@@ -5425,19 +5477,25 @@ if (window.HackGptAndroid?.openAppUpdate) {
         loadModelPreferences();
         loadModelCatalog(attempt).catch(() => {});
         loadQuota();
-        sessionDetail.textContent = '';
-        if (threadId) {
-          try { await openThread(threadId); }
-          catch (error) {
-            if (attempt !== connectionAttempt) return;
-            sessionDetail.textContent = 'Could not resume the saved thread. Choose a thread to continue.';
-          }
-        }
-        if (attempt !== connectionAttempt) return;
+        // A saved thread can have a large history or fail to resume. Workspace
+        // connectivity must not depend on restoring it before showing the picker.
+        saveDraft();
+        threadId = '';
+        threadModel = threadEffort = outcome = '';
+        log.replaceChildren();
+        replies.clear();
+        fileChanges.clear();
+        loadModelPreferences();
         connecting = false;
         dialog.close();
         enterMode();
+        if (window.hackGptCodexMode) {
+          swapAttachments(threadAttachments());
+          setDraft(readDraft());
+        }
+        sessionDetail.textContent = 'Connected. Choose a workspace thread or start a new one.';
         sync();
+        pick.onclick();
       } catch (error) {
         if (attempt !== connectionAttempt) return;
         bridge.disconnect();
@@ -5639,7 +5697,10 @@ if (window.HackGptAndroid?.openAppUpdate) {
   }
   for (const button of modeButtons) button.onclick = () => selectConnectionMode(button.dataset.mode);
   find('codex-new').onclick = () => openThread('').catch(onError);
-  find('codex-refresh').onclick = () => refresh().catch(onError);
+  find('codex-refresh').onclick = () => {
+    if (connectionMode === 'antigravity') loadQuota();
+    refresh().catch(onError);
+  };
   function clearSentAttachments(pendingKey) {
     const selection = pendingCodexFiles.get(pendingKey);
     if (!selection) return;
